@@ -73,7 +73,7 @@ export function TodoList() {
           </Button>
         </div>
 
-        {todos.length === 0 ? (
+        {todos && todos.length === 0 ? (
           <Empty
             image={<InboxOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
             description="No todos yet. Add your first task!"
