@@ -23,7 +23,7 @@ DATABASE_HOST=localhost
 DATABASE_PORT=3306
 DATABASE_USER=root
 DATABASE_PASSWORD=password
-DATABASE_NAME=todo_db
+DATABASE_NAME=flowo_db
 ```
 
 3. Start the application using Docker Compose:
