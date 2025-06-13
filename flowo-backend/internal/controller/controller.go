@@ -34,6 +34,18 @@ func (c *Controller) RegisterRoutes(router *gin.Engine) {
 			todos.PUT("/:id", c.UpdateTodo)
 			todos.DELETE("/:id", c.DeleteTodo)
 		}
+		v1.GET("products", c.GetAllProducts)
+		product := v1.Group("/product")
+		{
+
+			product.GET("/:id", c.GetProductByID)
+			product.GET("/flower-type/:flower_type", c.GetProductsByFlowerType)
+			product.POST("", c.CreateProduct)
+			product.PUT("/:id", c.UpdateProduct)
+			product.DELETE("/:id", c.DeleteProduct)
+		}
+		v1.GET("flower-types", c.GetAllFlowerTypes)
+
 	}
 }
 
@@ -181,4 +193,208 @@ func (c *Controller) DeleteTodo(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, model.NewResponse("Todo deleted successfully", nil))
+}
+
+// GetAllProducts godoc
+// @Summary Get all products
+// @Description get all products
+// @Tags products
+// @Accept json
+// @Produce json
+// @Success 200 {object} model.Response{data=[]model.Product}
+// @Failure 500 {object} model.Response
+// @Router /api/v1/products [get]
+func (c *Controller) GetAllProducts(ctx *gin.Context) {
+	products, err := c.service.GetAllProducts()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to fetch products", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Products fetched successfully", products))
+}
+
+// GetProductByID godoc
+// @Summary Get a product
+// @Description get product by ID
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Success 200 {object} model.Response{data=model.Product}
+// @Failure 400 {object} model.Response
+// @Failure 404 {object} model.Response
+// @Router /api/v1/product/{id} [get]
+func (c *Controller) GetProductByID(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid ID format", nil))
+		return
+	}
+
+	product, err := c.service.GetProductByID(uint(id))
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, model.NewResponse("Product not found", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Product fetched successfully", product))
+}
+
+// CreateProduct godoc
+// @Summary Create a product
+// @Description create new product
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param product body dto.ProductCreate true "Create product"
+// @Success 201 {object} model.Response{data=model.Product}
+// @Failure 400 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/product [post]
+func (c *Controller) CreateProduct(ctx *gin.Context) {
+	var input dto.ProductCreate
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid input", nil))
+		return
+	}
+
+	product, err := c.service.CreateProduct(&input)
+	if err != nil {
+		if err.Error() == "flower type not found" {
+			ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid flower type", nil))
+			return
+		}
+		log.Error().Err(err).Msg("Failed to create product")
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to create product", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, model.NewResponse("Product created successfully", product))
+}
+
+// UpdateProduct godoc
+// @Summary Update a product
+// @Description update product by ID
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Param product body dto.ProductCreate true "Update product"
+// @Success 200 {object} model.Response
+// @Failure 400 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/product/{id} [put]
+func (c *Controller) UpdateProduct(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid ID format", nil))
+		return
+	}
+
+	var input dto.ProductCreate
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid input", nil))
+		return
+	}
+
+	err = c.service.UpdateProduct(uint(id), &input)
+	if err != nil {
+		if err.Error() == "flower type not found" {
+			ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid flower type", nil))
+			return
+		}
+		if err.Error() == "not found" {
+			ctx.JSON(http.StatusNotFound, model.NewResponse("Product not found", nil))
+			return
+		}
+		log.Error().Err(err).Msg("Failed to update product")
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to update product", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Product updated successfully", nil))
+}
+
+// DeleteProduct godoc
+// @Summary Delete a product
+// @Description delete product by ID
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Success 200 {object} model.Response
+// @Failure 400 {object} model.Response
+// @Failure 404 {object} model.Response
+// @Router /api/v1/product/{id} [delete]
+func (c *Controller) DeleteProduct(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid ID format", nil))
+		return
+	}
+
+	if err := c.service.DeleteProduct(uint(id)); err != nil {
+		if err.Error() == "not found" {
+			ctx.JSON(http.StatusNotFound, model.NewResponse("Product not found", nil))
+			return
+		}
+		log.Error().Err(err).Msg("Failed to delete product")
+
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to delete product", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Product deleted successfully", nil))
+}
+
+// GetProductsByFlowerType godoc
+// @Summary Get products by flower type
+// @Description get products by flower type
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param flower_type path string true "Flower Type"
+// @Success 200 {object} model.Response{data=[]model.Product}
+// @Failure 400 {object} model.Response
+// @Failure 404 {object} model.Response
+// @Router /api/v1/product/flower-type/{flower_type} [get]
+func (c *Controller) GetProductsByFlowerType(ctx *gin.Context) {
+	flowerType := ctx.Param("flower_type")
+	if flowerType == "" {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Flower type is required", nil))
+		return
+	}
+
+	products, err := c.service.GetProductsByFlowerType(flowerType)
+	if err != nil {
+		if err.Error() == "flower type not found" {
+			ctx.JSON(http.StatusNotFound, model.NewResponse("Invalid flower type", nil))
+			return
+		}
+		log.Error().Err(err).Msg("Failed to fetch products by flower type")
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to fetch products", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Products fetched successfully", products))
+}
+
+// GetAllFlowerTypes godoc
+// @Summary Get all flower types
+// @Description get all flower types
+// @Tags flower-types
+// @Accept json
+// @Produce json
+// @Success 200 {object} model.Response{data=[]model.FlowerType}
+// @Failure 500 {object} model.Response
+// @Router /api/v1/flower-types [get]
+func (c *Controller) GetAllFlowerTypes(ctx *gin.Context) {
+	flowerTypes, err := c.service.GetAllFlowerTypes()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to fetch flower types", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Flower types fetched successfully", flowerTypes))
 }
