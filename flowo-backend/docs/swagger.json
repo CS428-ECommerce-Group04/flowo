@@ -22,6 +22,360 @@
     "host": "localhost:8081",
     "basePath": "/",
     "paths": {
+        "/api/v1/flower-types": {
+            "get": {
+                "description": "get all flower types",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "flower-types"
+                ],
+                "summary": "Get all flower types",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.FlowerType"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/product": {
+            "post": {
+                "description": "create new product",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Create a product",
+                "parameters": [
+                    {
+                        "description": "Create product",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ProductCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Product"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/product/flower-type/{flower_type}": {
+            "get": {
+                "description": "get products by flower type",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get products by flower type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Flower Type",
+                        "name": "flower_type",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Product"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/product/{id}": {
+            "get": {
+                "description": "get product by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Product"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "update product by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Update a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update product",
+                        "name": "product",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ProductCreate"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "delete product by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Delete a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products": {
+            "get": {
+                "description": "get all products",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get all products",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Product"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/todos": {
             "get": {
                 "description": "get all todos",
@@ -308,6 +662,55 @@
         }
     },
     "definitions": {
+        "dto.ProductCreate": {
+            "description": "Product creation request body",
+            "type": "object",
+            "required": [
+                "base_price",
+                "description",
+                "flower_type",
+                "name",
+                "status",
+                "stock_quantity"
+            ],
+            "properties": {
+                "base_price": {
+                    "description": "Base price of the product",
+                    "type": "number",
+                    "example": 29.99
+                },
+                "description": {
+                    "description": "Description of the product",
+                    "type": "string",
+                    "example": "A beautiful bouquet of red roses, perfect for any occasion."
+                },
+                "flower_type": {
+                    "description": "Flower type of the product (e.g., Rose, Tulip, Lily)",
+                    "type": "string",
+                    "example": "Rose"
+                },
+                "name": {
+                    "description": "Name of the product",
+                    "type": "string",
+                    "example": "Red Rose Bouquet"
+                },
+                "status": {
+                    "description": "Status of the product (NewFlower, OldFlower, LowStock)",
+                    "type": "string",
+                    "enum": [
+                        "NewFlower",
+                        "OldFlower",
+                        "LowStock"
+                    ],
+                    "example": "NewFlower"
+                },
+                "stock_quantity": {
+                    "description": "Stock quantity of the product",
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
         "dto.TodoCreate": {
             "description": "Todo creation request body",
             "type": "object",
@@ -334,6 +737,76 @@
                     "description": "Title of the todo item",
                     "type": "string",
                     "example": "Complete project documentation"
+                }
+            }
+        },
+        "model.FlowerType": {
+            "type": "object",
+            "properties": {
+                "flower_type_id": {
+                    "description": "Unique identifier of the flower type",
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "description": "Name of the flower type",
+                    "type": "string",
+                    "example": "Rose"
+                }
+            }
+        },
+        "model.Product": {
+            "type": "object",
+            "properties": {
+                "base_price": {
+                    "description": "Base price of the product",
+                    "type": "number",
+                    "example": 29.99
+                },
+                "created_at": {
+                    "description": "Timestamp when the product was created",
+                    "type": "string",
+                    "example": "2024-03-15T08:00:00Z"
+                },
+                "description": {
+                    "description": "Description of the product",
+                    "type": "string",
+                    "example": "A beautiful bouquet of red roses, perfect for any occasion."
+                },
+                "flower_type": {
+                    "description": "Flower type of the product (e.g., Rose, Tulip, Lily)",
+                    "type": "string",
+                    "example": "Rose"
+                },
+                "name": {
+                    "description": "Name of the product",
+                    "type": "string",
+                    "example": "Red Rose Bouquet"
+                },
+                "product_id": {
+                    "description": "Unique identifier of the product",
+                    "type": "integer",
+                    "example": 1
+                },
+                "status": {
+                    "description": "Status of the product (NewFlower, OldFlower, LowStock)",
+                    "type": "string",
+                    "enum": [
+                        "NewFlower",
+                        "OldFlower",
+                        "LowStock"
+                    ],
+                    "example": "NewFlower"
+                },
+                "stock_quantity": {
+                    "description": "Stock quantity of the product",
+                    "type": "integer",
+                    "example": 100
+                },
+                "updated_at": {
+                    "description": "Timestamp when the product was last updated",
+                    "type": "string",
+                    "example": "2024-03-15T08:00:00Z"
                 }
             }
         },

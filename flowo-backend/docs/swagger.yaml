@@ -1,5 +1,44 @@
 basePath: /
 definitions:
+  dto.ProductCreate:
+    description: Product creation request body
+    properties:
+      base_price:
+        description: Base price of the product
+        example: 29.99
+        type: number
+      description:
+        description: Description of the product
+        example: A beautiful bouquet of red roses, perfect for any occasion.
+        type: string
+      flower_type:
+        description: Flower type of the product (e.g., Rose, Tulip, Lily)
+        example: Rose
+        type: string
+      name:
+        description: Name of the product
+        example: Red Rose Bouquet
+        type: string
+      status:
+        description: Status of the product (NewFlower, OldFlower, LowStock)
+        enum:
+        - NewFlower
+        - OldFlower
+        - LowStock
+        example: NewFlower
+        type: string
+      stock_quantity:
+        description: Stock quantity of the product
+        example: 100
+        type: integer
+    required:
+    - base_price
+    - description
+    - flower_type
+    - name
+    - status
+    - stock_quantity
+    type: object
   dto.TodoCreate:
     description: Todo creation request body
     properties:
@@ -21,6 +60,60 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  model.FlowerType:
+    properties:
+      flower_type_id:
+        description: Unique identifier of the flower type
+        example: 1
+        type: integer
+      name:
+        description: Name of the flower type
+        example: Rose
+        type: string
+    type: object
+  model.Product:
+    properties:
+      base_price:
+        description: Base price of the product
+        example: 29.99
+        type: number
+      created_at:
+        description: Timestamp when the product was created
+        example: "2024-03-15T08:00:00Z"
+        type: string
+      description:
+        description: Description of the product
+        example: A beautiful bouquet of red roses, perfect for any occasion.
+        type: string
+      flower_type:
+        description: Flower type of the product (e.g., Rose, Tulip, Lily)
+        example: Rose
+        type: string
+      name:
+        description: Name of the product
+        example: Red Rose Bouquet
+        type: string
+      product_id:
+        description: Unique identifier of the product
+        example: 1
+        type: integer
+      status:
+        description: Status of the product (NewFlower, OldFlower, LowStock)
+        enum:
+        - NewFlower
+        - OldFlower
+        - LowStock
+        example: NewFlower
+        type: string
+      stock_quantity:
+        description: Stock quantity of the product
+        example: 100
+        type: integer
+      updated_at:
+        description: Timestamp when the product was last updated
+        example: "2024-03-15T08:00:00Z"
+        type: string
     type: object
   model.Response:
     properties:
@@ -76,6 +169,225 @@ info:
   title: Todo List API
   version: "1.0"
 paths:
+  /api/v1/flower-types:
+    get:
+      consumes:
+      - application/json
+      description: get all flower types
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.FlowerType'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get all flower types
+      tags:
+      - flower-types
+  /api/v1/product:
+    post:
+      consumes:
+      - application/json
+      description: create new product
+      parameters:
+      - description: Create product
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ProductCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Product'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Create a product
+      tags:
+      - products
+  /api/v1/product/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: delete product by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Delete a product
+      tags:
+      - products
+    get:
+      consumes:
+      - application/json
+      description: get product by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Product'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get a product
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: update product by ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update product
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ProductCreate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Update a product
+      tags:
+      - products
+  /api/v1/product/flower-type/{flower_type}:
+    get:
+      consumes:
+      - application/json
+      description: get products by flower type
+      parameters:
+      - description: Flower Type
+        in: path
+        name: flower_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Product'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get products by flower type
+      tags:
+      - products
+  /api/v1/products:
+    get:
+      consumes:
+      - application/json
+      description: get all products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Product'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get all products
+      tags:
+      - products
   /api/v1/todos:
     get:
       consumes:
