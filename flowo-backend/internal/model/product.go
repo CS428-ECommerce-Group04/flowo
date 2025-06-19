@@ -11,7 +11,7 @@ type Product struct {
 	FlowerType string `json:"flower_type" example:"Rose"`
 	// Base price of the product
 	BasePrice float64 `json:"base_price" example:"29.99"`
-	// Status of the product (NewFLower, OldFlower, LowStock)
+	// Status of the product (NewFlower, OldFlower, LowStock)
 	Status string `json:"status" example:"NewFlower" enums:"NewFlower,OldFlower,LowStock"`
 	// Stock quantity of the product
 	StockQuantity int `json:"stock_quantity" example:"100"`

@@ -15,10 +15,10 @@ type Repository interface {
 	Delete(id uint) error
 	GetFlowerTypeID(flowerType string) (uint, error)
 	GetAllProducts() ([]model.Product, error)
-	GetProductByID(ID uint) (*model.Product, error)
+	GetProductByID(id uint) (*model.Product, error)
 	CreateProduct(product *model.Product) error
 	UpdateProduct(id uint, product *dto.ProductCreate) error
-	DeleteProduct(ID uint) error
+	DeleteProduct(id uint) error
 	GetProductsByFlowerType(flowerType string) ([]model.Product, error)
 	GetAllFlowerTypes() ([]model.FlowerType, error)
 }
@@ -97,7 +97,7 @@ func (r *repository) GetFlowerTypeID(flowerType string) (uint, error) {
 }
 
 func (r *repository) GetAllProducts() ([]model.Product, error) {
-	query := "SELECT product_id, name, description, flower_type_id, base_price, status, stock_quantity, created_at, updated_at FROM FlowerProduct"
+	query := "SELECT product_id, fp.name, fp.description, ft.name as flower_type, base_price, status, stock_quantity, created_at, updated_at FROM FlowerProduct fp JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id"
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -113,9 +113,9 @@ func (r *repository) GetAllProducts() ([]model.Product, error) {
 	}
 	return products, nil
 }
-func (r *repository) GetProductByID(ID uint) (*model.Product, error) {
-	query := "SELECT product_id, name, description, flower_type_id, base_price, status, stock_quantity, created_at, updated_at FROM FlowerProduct WHERE product_id = ?"
-	row := r.db.QueryRow(query, ID)
+func (r *repository) GetProductByID(id uint) (*model.Product, error) {
+	query := "SELECT product_id, fp.name, fp.description, ft.name as flower_type, base_price, status, stock_quantity, created_at, updated_at FROM FlowerProduct fp JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id WHERE product_id = ?"
+	row := r.db.QueryRow(query, id)
 	var product model.Product
 	if err := row.Scan(&product.ProductID, &product.Name, &product.Description, &product.FlowerType, &product.BasePrice, &product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
 		if err == sql.ErrNoRows {
@@ -127,7 +127,7 @@ func (r *repository) GetProductByID(ID uint) (*model.Product, error) {
 }
 
 func (r *repository) CreateProduct(product *model.Product) error {
-	// First, find the flower type ID based on the name
+	// First, find the flower type id based on the name
 	flowerTypeID, err := r.GetFlowerTypeID(product.FlowerType)
 	if err != nil {
 		return err
@@ -146,9 +146,9 @@ func (r *repository) UpdateProduct(id uint, product *dto.ProductCreate) error {
 	_, err = r.db.Exec(query, product.Name, product.Description, flowerTypeID, product.BasePrice, product.Status, product.StockQuantity, id)
 	return err
 }
-func (r *repository) DeleteProduct(ID uint) error {
+func (r *repository) DeleteProduct(id uint) error {
 	query := "DELETE FROM FlowerProduct WHERE product_id = ?"
-	_, err := r.db.Exec(query, ID)
+	_, err := r.db.Exec(query, id)
 	return err
 }
 func (r *repository) GetProductsByFlowerType(flowerType string) ([]model.Product, error) {

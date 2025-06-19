@@ -57,6 +57,16 @@ cd flowo-backend
 docker-compose up -d
 ```
 
+OR
+
+```bash
+./rebuild-all.sh
+```
+
+(This will remove volume and start docker again)
+
+> **Remember to update swagger**.
+
 The application will be available at `http://localhost:8081`
 
 ### Running Locally

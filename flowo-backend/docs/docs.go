@@ -791,7 +791,7 @@ const docTemplate = `{
                     "example": 1
                 },
                 "status": {
-                    "description": "Status of the product (NewFLower, OldFlower, LowStock)",
+                    "description": "Status of the product (NewFlower, OldFlower, LowStock)",
                     "type": "string",
                     "enum": [
                         "NewFlower",

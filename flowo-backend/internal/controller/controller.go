@@ -304,7 +304,7 @@ func (c *Controller) UpdateProduct(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid flower type", nil))
 			return
 		}
-		if err.Error() == "not found" {
+		if err.Error() == "product not found" {
 			ctx.JSON(http.StatusNotFound, model.NewResponse("Product not found", nil))
 			return
 		}
