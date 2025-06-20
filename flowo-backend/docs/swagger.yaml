@@ -1,5 +1,19 @@
 basePath: /
 definitions:
+  dto.AddToCartRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    - user_id
+    type: object
   dto.CreateReviewRequest:
     properties:
       comment:
@@ -199,6 +213,37 @@ info:
   title: Todo List API
   version: "1.0"
 paths:
+  /api/v1/cart/add:
+    post:
+      consumes:
+      - application/json
+      description: Add a product with quantity to the user's cart. Stock will be updated
+        accordingly.
+      parameters:
+      - description: Add to cart request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddToCartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Add product to cart
+      tags:
+      - cart
   /api/v1/flower-types:
     get:
       consumes:

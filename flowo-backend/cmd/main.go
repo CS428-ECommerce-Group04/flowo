@@ -58,10 +58,13 @@ func main() {
 			NewGinEngine,
 			repository.NewRepository,
 			repository.NewReviewRepository,
+			repository.NewCartRepository,
 			service.NewService,
 			service.NewReviewService,
+			service.NewCartService,
 			controller.NewController,
 			controller.NewReviewController,
+			controller.NewCartController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -100,10 +103,12 @@ func RegisterRoutes(
 	cfg *config.Config,
 	controller *controller.Controller,
 	reviewCtrl *controller.ReviewController,
+	cartCtrl *controller.CartController,
 ) {
 	controller.RegisterRoutes(router)
 	v1 := router.Group("/api/v1")
-    reviewCtrl.RegisterRoutes(v1) 
+	reviewCtrl.RegisterRoutes(v1)
+	cartCtrl.RegisterRoutes(v1)
 	logger.Init()
 
 	server := &http.Server{
