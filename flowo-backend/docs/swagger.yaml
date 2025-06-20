@@ -1,5 +1,20 @@
 basePath: /
 definitions:
+  dto.CreateReviewRequest:
+    properties:
+      comment:
+        type: string
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+      user_id:
+        description: ProductID int    `json:"product_id" binding:"required"`
+        type: integer
+    required:
+    - rating
+    - user_id
+    type: object
   dto.ProductCreate:
     description: Product creation request body
     properties:
@@ -38,6 +53,21 @@ definitions:
     - name
     - status
     - stock_quantity
+    type: object
+  dto.ReviewResponse:
+    properties:
+      comment:
+        type: string
+      product_id:
+        type: integer
+      rating:
+        type: integer
+      review_date:
+        type: string
+      review_id:
+        type: integer
+      user_id:
+        type: integer
     type: object
   dto.TodoCreate:
     description: Todo creation request body
@@ -388,6 +418,69 @@ paths:
       summary: Get all products
       tags:
       - products
+  /api/v1/products/{productID}/reviews:
+    get:
+      description: Retrieve reviews by product ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ReviewResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get all reviews for a product
+      tags:
+      - reviews
+    post:
+      consumes:
+      - application/json
+      description: Submit a review for a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
+        type: integer
+      - description: Review body
+        in: body
+        name: review
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Create review for a product
+      tags:
+      - reviews
   /api/v1/todos:
     get:
       consumes:

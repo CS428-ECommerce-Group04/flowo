@@ -111,3 +111,7 @@ INSERT INTO UserProductInteraction (user_id, session_id, product_id, interaction
 VALUES
 (1, 'sess_abc123', 1, 'view', NOW()),
 (1, 'sess_abc123', 1, 'add_to_cart', NOW());
+
+-- Sample Reviews 
+INSERT INTO Review (product_id, user_id, rating, comment, review_date)
+VALUES (1, 1, 5, 'The product is very beautiful', NOW());

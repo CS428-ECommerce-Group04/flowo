@@ -57,8 +57,11 @@ func main() {
 			database.NewDB,
 			NewGinEngine,
 			repository.NewRepository,
+			repository.NewReviewRepository,
 			service.NewService,
+			service.NewReviewService,
 			controller.NewController,
+			controller.NewReviewController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -96,8 +99,11 @@ func RegisterRoutes(
 	router *gin.Engine,
 	cfg *config.Config,
 	controller *controller.Controller,
+	reviewCtrl *controller.ReviewController,
 ) {
 	controller.RegisterRoutes(router)
+	v1 := router.Group("/api/v1")
+    reviewCtrl.RegisterRoutes(v1) 
 	logger.Init()
 
 	server := &http.Server{
