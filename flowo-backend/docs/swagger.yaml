@@ -14,6 +14,19 @@ definitions:
     - quantity
     - user_id
     type: object
+  dto.CartItemResponse:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      price:
+        type: number
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    type: object
   dto.CreateReviewRequest:
     properties:
       comment:
@@ -68,6 +81,16 @@ definitions:
     - status
     - stock_quantity
     type: object
+  dto.RemoveCartItemRequest:
+    properties:
+      product_id:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - user_id
+    type: object
   dto.ReviewResponse:
     properties:
       comment:
@@ -104,6 +127,20 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  dto.UpdateCartItemRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    - user_id
     type: object
   model.FlowerType:
     properties:
@@ -213,6 +250,35 @@ info:
   title: Todo List API
   version: "1.0"
 paths:
+  /api/v1/cart/{userID}:
+    get:
+      description: Retrieve all items in the cart for a given user
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CartItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get cart items for user
+      tags:
+      - cart
   /api/v1/cart/add:
     post:
       consumes:
@@ -242,6 +308,66 @@ paths:
           schema:
             $ref: '#/definitions/model.Response'
       summary: Add product to cart
+      tags:
+      - cart
+  /api/v1/cart/remove:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a product from the user's cart
+      parameters:
+      - description: Remove cart item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RemoveCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Remove product from cart
+      tags:
+      - cart
+  /api/v1/cart/update:
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of an existing cart item
+      parameters:
+      - description: Update cart item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Update quantity of a product in cart
       tags:
       - cart
   /api/v1/flower-types:
