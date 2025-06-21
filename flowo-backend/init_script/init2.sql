@@ -115,3 +115,7 @@ VALUES
 -- Sample Reviews 
 INSERT INTO Review (product_id, user_id, rating, comment, review_date)
 VALUES (1, 1, 5, 'The product is very beautiful', NOW());
+
+ALTER TABLE PricingRule
+MODIFY COLUMN valid_from TIMESTAMP NULL DEFAULT NULL,
+MODIFY COLUMN valid_to TIMESTAMP NULL DEFAULT NULL;

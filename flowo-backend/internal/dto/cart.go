@@ -21,6 +21,6 @@ type CartItemResponse struct {
 	Quantity    int     `json:"quantity"`
 	Price       float64 `json:"price"`
 	//ImageURL      string  `json:"image_url,omitempty"`
-	//TotalPrice    float64 `json:"total_price"`         // Quantity * Price
-	//StockQuantity int     `json:"stock_quantity"`
+	EffectivePrice float64 `json:"effective_price"`
+	TotalPrice     float64 `json:"total_price"`
 }

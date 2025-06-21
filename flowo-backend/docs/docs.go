@@ -250,6 +250,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/pricing/rule": {
+            "post": {
+                "description": "Admin adds a new dynamic pricing rule",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pricing"
+                ],
+                "summary": "Add new pricing rule",
+                "parameters": [
+                    {
+                        "description": "New Pricing Rule",
+                        "name": "rule",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreatePricingRuleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/product": {
             "post": {
                 "description": "create new product",
@@ -967,6 +1013,10 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "effective_price": {
+                    "description": "ImageURL      string  ` + "`" + `json:\"image_url,omitempty\"` + "`" + `",
+                    "type": "number"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -978,6 +1028,64 @@ const docTemplate = `{
                 },
                 "quantity": {
                     "type": "integer"
+                },
+                "total_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.CreatePricingRuleRequest": {
+            "type": "object",
+            "required": [
+                "adjustment_type",
+                "adjustment_value",
+                "priority",
+                "rule_name"
+            ],
+            "properties": {
+                "adjustment_type": {
+                    "type": "string",
+                    "enum": [
+                        "percentage_discount",
+                        "fixed_discount",
+                        "override_price"
+                    ]
+                },
+                "adjustment_value": {
+                    "type": "number"
+                },
+                "applicable_flower_type_id": {
+                    "type": "integer"
+                },
+                "applicable_product_id": {
+                    "type": "integer"
+                },
+                "applicable_product_status": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "rule_name": {
+                    "type": "string"
+                },
+                "special_day_id": {
+                    "type": "integer"
+                },
+                "time_of_day_end": {
+                    "type": "string"
+                },
+                "time_of_day_start": {
+                    "type": "string"
+                },
+                "valid_from": {
+                    "type": "string"
+                },
+                "valid_to": {
+                    "type": "string"
                 }
             }
         },

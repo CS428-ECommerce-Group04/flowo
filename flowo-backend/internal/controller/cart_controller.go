@@ -120,9 +120,9 @@ func (ctrl *CartController) GetCartItems(c *gin.Context) {
 		return
 	}
 
-	items, err := ctrl.Service.GetCartItems(userID)
+	items, err := ctrl.Service.GetCartWithPrices(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get cart items"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get cart items with prices"})
 		return
 	}
 
