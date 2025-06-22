@@ -3,6 +3,8 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
 )
@@ -21,6 +23,15 @@ type Repository interface {
 	DeleteProduct(id uint) error
 	GetProductsByFlowerType(flowerType string) ([]model.Product, error)
 	GetAllFlowerTypes() ([]model.FlowerType, error)
+	
+	// product search and filtering methods
+	SearchProducts(query *dto.ProductSearchQuery) ([]model.Product, int, error)
+	GetProductDetailByID(id uint) (*model.Product, error)
+	GetProductImages(productID uint) ([]model.ProductImage, error)
+	GetProductOccasions(productID uint) ([]string, error)
+	GetAllOccasions() ([]model.Occasion, error)
+	GetPriceRange() (*model.PriceRange, error)
+	GetProductStatistics(productID uint) (averageRating float64, reviewCount int, salesRank int, error error)
 }
 
 type repository struct {
@@ -83,6 +94,7 @@ func (r *repository) Delete(id uint) error {
 	_, err := r.db.Exec(query, id)
 	return err
 }
+
 func (r *repository) GetFlowerTypeID(flowerType string) (uint, error) {
 	query := "SELECT flower_type_id FROM FlowerType WHERE name = ?"
 	row := r.db.QueryRow(query, flowerType)
@@ -97,27 +109,43 @@ func (r *repository) GetFlowerTypeID(flowerType string) (uint, error) {
 }
 
 func (r *repository) GetAllProducts() ([]model.Product, error) {
-	query := "SELECT product_id, fp.name, fp.description, ft.name as flower_type, base_price, status, stock_quantity, created_at, updated_at FROM FlowerProduct fp JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id"
+	query := `SELECT fp.product_id, fp.name, fp.description, ft.name as flower_type, 
+			  fp.base_price, fp.base_price as current_price, fp.status, fp.stock_quantity, 
+			  fp.created_at, fp.updated_at
+			  FROM FlowerProduct fp 
+			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var products []model.Product
 	for rows.Next() {
 		var product model.Product
-		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, &product.FlowerType, &product.BasePrice, &product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
+		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, 
+			&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+			&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, product)
 	}
 	return products, nil
 }
+
 func (r *repository) GetProductByID(id uint) (*model.Product, error) {
-	query := "SELECT product_id, fp.name, fp.description, ft.name as flower_type, base_price, status, stock_quantity, created_at, updated_at FROM FlowerProduct fp JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id WHERE product_id = ?"
+	query := `SELECT fp.product_id, fp.name, fp.description, ft.name as flower_type, 
+			  fp.base_price, fp.base_price as current_price, fp.status, fp.stock_quantity, 
+			  fp.created_at, fp.updated_at
+			  FROM FlowerProduct fp 
+			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id 
+			  WHERE fp.product_id = ?`
 	row := r.db.QueryRow(query, id)
+	
 	var product model.Product
-	if err := row.Scan(&product.ProductID, &product.Name, &product.Description, &product.FlowerType, &product.BasePrice, &product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
+	if err := row.Scan(&product.ProductID, &product.Name, &product.Description, 
+		&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+		&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("not found")
 		}
@@ -146,18 +174,25 @@ func (r *repository) UpdateProduct(id uint, product *dto.ProductCreate) error {
 	_, err = r.db.Exec(query, product.Name, product.Description, flowerTypeID, product.BasePrice, product.Status, product.StockQuantity, id)
 	return err
 }
+
 func (r *repository) DeleteProduct(id uint) error {
 	query := "DELETE FROM FlowerProduct WHERE product_id = ?"
 	_, err := r.db.Exec(query, id)
 	return err
 }
+
 func (r *repository) GetProductsByFlowerType(flowerType string) ([]model.Product, error) {
 	flowerTypeID, err := r.GetFlowerTypeID(flowerType)
 	if err != nil {
 		return nil, err
 	}
 
-	query := "SELECT product_id, name, description, flower_type_id, base_price, status, stock_quantity, created_at, updated_at FROM FlowerProduct WHERE flower_type_id = ?"
+	query := `SELECT fp.product_id, fp.name, fp.description, ft.name as flower_type, 
+			  fp.base_price, fp.base_price as current_price, fp.status, fp.stock_quantity, 
+			  fp.created_at, fp.updated_at
+			  FROM FlowerProduct fp 
+			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id 
+			  WHERE fp.flower_type_id = ?`
 	rows, err := r.db.Query(query, flowerTypeID)
 	if err != nil {
 		return nil, err
@@ -167,7 +202,9 @@ func (r *repository) GetProductsByFlowerType(flowerType string) ([]model.Product
 	var products []model.Product
 	for rows.Next() {
 		var product model.Product
-		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, &product.FlowerType, &product.BasePrice, &product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
+		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, 
+			&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+			&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, product)
@@ -175,8 +212,9 @@ func (r *repository) GetProductsByFlowerType(flowerType string) ([]model.Product
 
 	return products, nil
 }
+
 func (r *repository) GetAllFlowerTypes() ([]model.FlowerType, error) {
-	query := "SELECT flower_type_id, name FROM FlowerType"
+	query := "SELECT flower_type_id, name, description FROM FlowerType"
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -186,11 +224,301 @@ func (r *repository) GetAllFlowerTypes() ([]model.FlowerType, error) {
 	var flowerTypes []model.FlowerType
 	for rows.Next() {
 		var flowerType model.FlowerType
-		if err := rows.Scan(&flowerType.FlowerTypeID, &flowerType.Name); err != nil {
+		var description sql.NullString
+		if err := rows.Scan(&flowerType.FlowerTypeID, &flowerType.Name, &description); err != nil {
 			return nil, err
+		}
+		if description.Valid {
+			flowerType.Description = description.String
 		}
 		flowerTypes = append(flowerTypes, flowerType)
 	}
 
 	return flowerTypes, nil
+}
+
+// Enhanced methods for advanced search and filtering
+
+func (r *repository) SearchProducts(query *dto.ProductSearchQuery) ([]model.Product, int, error) {
+	// Build the base query (simplified version without complex subqueries)
+	baseQuery := `
+		SELECT fp.product_id, fp.name, fp.description, ft.name as flower_type, 
+			   fp.base_price, fp.base_price as current_price, fp.status, fp.stock_quantity, 
+			   fp.created_at, fp.updated_at,
+			   0 as average_rating,
+			   0 as review_count,
+			   999999 as sales_rank
+		FROM FlowerProduct fp 
+		JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id`
+
+	var conditions []string
+	var args []interface{}
+
+	// Build WHERE conditions
+	if query.Query != "" {
+		conditions = append(conditions, "(fp.name LIKE ? OR fp.description LIKE ?)")
+		searchTerm := "%" + query.Query + "%"
+		args = append(args, searchTerm, searchTerm)
+	}
+
+	if query.FlowerType != "" {
+		conditions = append(conditions, "ft.name = ?")
+		args = append(args, query.FlowerType)
+	}
+
+	if query.Occasion != "" {
+		baseQuery += " JOIN ProductOccasion po ON fp.product_id = po.product_id JOIN Occasion oc ON po.occasion_id = oc.occasion_id"
+		conditions = append(conditions, "oc.name = ?")
+		args = append(args, query.Occasion)
+	}
+
+	if query.PriceMin != nil {
+		conditions = append(conditions, "fp.base_price >= ?")
+		args = append(args, *query.PriceMin)
+	}
+
+	if query.PriceMax != nil {
+		conditions = append(conditions, "fp.base_price <= ?")
+		args = append(args, *query.PriceMax)
+	}
+
+	if query.Condition != "" {
+		conditions = append(conditions, "fp.status = ?")
+		args = append(args, query.Condition)
+	}
+
+	// Add WHERE clause if there are conditions
+	if len(conditions) > 0 {
+		baseQuery += " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	// Add ORDER BY
+	orderBy := r.buildOrderByClause(query.SortBy)
+	baseQuery += " ORDER BY " + orderBy
+
+	// Count total results with a simplified count query
+	countQuery := "SELECT COUNT(*) FROM FlowerProduct fp JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id"
+	if query.Occasion != "" {
+		countQuery += " JOIN ProductOccasion po ON fp.product_id = po.product_id JOIN Occasion oc ON po.occasion_id = oc.occasion_id"
+	}
+	if len(conditions) > 0 {
+		countQuery += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	
+	var total int
+	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// Add pagination
+	page := query.Page
+	if page < 1 {
+		page = 1
+	}
+	limit := query.Limit
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	offset := (page - 1) * limit
+	baseQuery += " LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	// Execute the query
+	rows, err := r.db.Query(baseQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var products []model.Product
+	for rows.Next() {
+		var product model.Product
+		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, 
+			&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+			&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt,
+			&product.AverageRating, &product.ReviewCount, &product.SalesRank); err != nil {
+			return nil, 0, err
+		}
+		products = append(products, product)
+	}
+
+	return products, total, nil
+}
+
+func (r *repository) buildOrderByClause(sortBy string) string {
+	switch sortBy {
+	case "price_asc":
+		return "fp.base_price ASC"
+	case "price_desc":
+		return "fp.base_price DESC"
+	case "name_asc":
+		return "fp.name ASC"
+	case "name_desc":
+		return "fp.name DESC"
+	case "newest":
+		return "fp.created_at DESC"
+	case "best_selling":
+		return "sales_rank ASC, fp.created_at DESC"
+	default:
+		return "fp.created_at DESC" // Default to newest
+	}
+}
+
+func (r *repository) GetProductDetailByID(id uint) (*model.Product, error) {
+	// Get basic product information with ratings and sales rank
+	query := `
+		SELECT fp.product_id, fp.name, fp.description, ft.name as flower_type, 
+			   fp.base_price, fp.base_price as current_price, fp.status, fp.stock_quantity, 
+			   fp.created_at, fp.updated_at,
+			   COALESCE(AVG(r.rating), 0) as average_rating,
+			   COUNT(r.review_id) as review_count,
+			   COALESCE(sales_data.sales_rank, 999999) as sales_rank
+		FROM FlowerProduct fp 
+		JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id
+		LEFT JOIN Review r ON fp.product_id = r.product_id
+		LEFT JOIN (
+			SELECT oi.product_id, ROW_NUMBER() OVER (ORDER BY SUM(oi.quantity) DESC) as sales_rank
+			FROM OrderItem oi
+			JOIN ` + "`Order`" + ` o ON oi.order_id = o.order_id
+			WHERE o.status = 'Completed'
+			GROUP BY oi.product_id
+		) sales_data ON fp.product_id = sales_data.product_id
+		WHERE fp.product_id = ?
+		GROUP BY fp.product_id, fp.name, fp.description, ft.name, fp.base_price, 
+				 fp.status, fp.stock_quantity, fp.created_at, fp.updated_at, sales_data.sales_rank`
+
+	row := r.db.QueryRow(query, id)
+	
+	var product model.Product
+	if err := row.Scan(&product.ProductID, &product.Name, &product.Description, 
+		&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+		&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt,
+		&product.AverageRating, &product.ReviewCount, &product.SalesRank); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("not found")
+		}
+		return nil, err
+	}
+
+	// Get product images
+	images, err := r.GetProductImages(id)
+	if err != nil {
+		return nil, err
+	}
+	product.Images = images
+
+	// Get product occasions
+	occasions, err := r.GetProductOccasions(id)
+	if err != nil {
+		return nil, err
+	}
+	product.Occasions = occasions
+
+	return &product, nil
+}
+
+func (r *repository) GetProductImages(productID uint) ([]model.ProductImage, error) {
+	query := "SELECT image_id, product_id, image_url, alt_text, is_primary FROM ProductImage WHERE product_id = ? ORDER BY is_primary DESC, image_id ASC"
+	rows, err := r.db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var images []model.ProductImage
+	for rows.Next() {
+		var image model.ProductImage
+		if err := rows.Scan(&image.ImageID, &image.ProductID, &image.ImageURL, &image.AltText, &image.IsPrimary); err != nil {
+			return nil, err
+		}
+		images = append(images, image)
+	}
+
+	return images, nil
+}
+
+func (r *repository) GetProductOccasions(productID uint) ([]string, error) {
+	query := `SELECT o.name FROM ProductOccasion po 
+			  JOIN Occasion o ON po.occasion_id = o.occasion_id 
+			  WHERE po.product_id = ?`
+	rows, err := r.db.Query(query, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var occasions []string
+	for rows.Next() {
+		var occasion string
+		if err := rows.Scan(&occasion); err != nil {
+			return nil, err
+		}
+		occasions = append(occasions, occasion)
+	}
+
+	return occasions, nil
+}
+
+func (r *repository) GetAllOccasions() ([]model.Occasion, error) {
+	query := "SELECT occasion_id, name FROM Occasion ORDER BY name"
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var occasions []model.Occasion
+	for rows.Next() {
+		var occasion model.Occasion
+		if err := rows.Scan(&occasion.OccasionID, &occasion.Name); err != nil {
+			return nil, err
+		}
+		occasions = append(occasions, occasion)
+	}
+
+	return occasions, nil
+}
+
+func (r *repository) GetPriceRange() (*model.PriceRange, error) {
+	query := "SELECT MIN(base_price), MAX(base_price) FROM FlowerProduct WHERE stock_quantity > 0"
+	row := r.db.QueryRow(query)
+	
+	var priceRange model.PriceRange
+	if err := row.Scan(&priceRange.Min, &priceRange.Max); err != nil {
+		return nil, err
+	}
+
+	return &priceRange, nil
+}
+
+func (r *repository) GetProductStatistics(productID uint) (averageRating float64, reviewCount int, salesRank int, error error) {
+	// Get rating statistics
+	ratingQuery := "SELECT COALESCE(AVG(rating), 0), COUNT(*) FROM Review WHERE product_id = ?"
+	if err := r.db.QueryRow(ratingQuery, productID).Scan(&averageRating, &reviewCount); err != nil {
+		return 0, 0, 0, err
+	}
+
+	// Get sales rank
+	salesQuery := `
+		SELECT COALESCE(ranking.rank, 999999) FROM (
+			SELECT oi.product_id, ROW_NUMBER() OVER (ORDER BY SUM(oi.quantity) DESC) as rank
+			FROM OrderItem oi
+			JOIN ` + "`Order`" + ` o ON oi.order_id = o.order_id
+			WHERE o.status = 'Completed'
+			GROUP BY oi.product_id
+		) ranking WHERE ranking.product_id = ?`
+	
+	if err := r.db.QueryRow(salesQuery, productID).Scan(&salesRank); err != nil {
+		if err == sql.ErrNoRows {
+			salesRank = 999999 // No sales yet
+		} else {
+			return 0, 0, 0, err
+		}
+	}
+
+	return averageRating, reviewCount, salesRank, nil
 }
