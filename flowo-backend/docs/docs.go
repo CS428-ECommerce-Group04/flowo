@@ -24,6 +24,188 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/cart/add": {
+            "post": {
+                "description": "Add a product with quantity to the user's cart. Stock will be updated accordingly.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cart"
+                ],
+                "summary": "Add product to cart",
+                "parameters": [
+                    {
+                        "description": "Add to cart request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AddToCartRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart/remove": {
+            "delete": {
+                "description": "Remove a product from the user's cart",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cart"
+                ],
+                "summary": "Remove product from cart",
+                "parameters": [
+                    {
+                        "description": "Remove cart item request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RemoveCartItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart/update": {
+            "put": {
+                "description": "Update the quantity of an existing cart item",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cart"
+                ],
+                "summary": "Update quantity of a product in cart",
+                "parameters": [
+                    {
+                        "description": "Update cart item request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateCartItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/cart/{userID}": {
+            "get": {
+                "description": "Retrieve all items in the cart for a given user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cart"
+                ],
+                "summary": "Get cart items for user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.CartItemResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/flower-types": {
             "get": {
                 "description": "get all flower types",
@@ -68,9 +250,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/occasions": {
-            "get": {
-                "description": "Get all available occasions for flower products",
+        "/api/v1/pricing/rule": {
+            "post": {
+                "description": "Admin adds a new dynamic pricing rule",
                 "consumes": [
                     "application/json"
                 ],
@@ -78,35 +260,179 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "occasions"
+                    "pricing"
                 ],
-                "summary": "Get all occasions",
+                "summary": "Add new pricing rule",
+                "parameters": [
+                    {
+                        "description": "New Pricing Rule",
+                        "name": "rule",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreatePricingRuleRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/model.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/model.Occasion"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/pricing/rule/{id}": {
+            "put": {
+                "description": "Update an existing pricing rule by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pricing"
+                ],
+                "summary": "Update a pricing rule",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pricing rule ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated pricing rule",
+                        "name": "rule",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.PricingRule"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete a pricing rule using its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pricing"
+                ],
+                "summary": "Delete a pricing rule",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pricing rule ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/pricing/rules": {
+            "get": {
+                "description": "Retrieve a list of all pricing rules",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pricing"
+                ],
+                "summary": "Get all pricing rules",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.PricingRule"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -422,184 +748,21 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/products/filters": {
+        "/api/v1/products/{productID}/reviews": {
             "get": {
-                "description": "Get all available filter options for product search including flower types, occasions, and price range",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Retrieve reviews by product ID",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "products"
+                    "reviews"
                 ],
-                "summary": "Get available filter options",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/model.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/model.FilterOptions"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/products/search": {
-            "get": {
-                "description": "Search and filter products by multiple criteria with pagination and sorting",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "products"
-                ],
-                "summary": "Search products with advanced filters",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query for product name or description",
-                        "name": "query",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by flower type",
-                        "name": "flower_type",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Filter by occasion",
-                        "name": "occasion",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Minimum price filter",
-                        "name": "price_min",
-                        "in": "query"
-                    },
-                    {
-                        "type": "number",
-                        "description": "Maximum price filter",
-                        "name": "price_max",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "NewFlower",
-                            "OldFlower",
-                            "LowStock"
-                        ],
-                        "type": "string",
-                        "description": "Filter by product condition",
-                        "name": "condition",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "price_asc",
-                            "price_desc",
-                            "name_asc",
-                            "name_desc",
-                            "newest",
-                            "best_selling"
-                        ],
-                        "type": "string",
-                        "description": "Sort by option",
-                        "name": "sort_by",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Page number (default: 1)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "Items per page (default: 20, max: 100)",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/model.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/model.ProductSearchResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/model.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/model.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/products/{id}": {
-            "get": {
-                "description": "Get comprehensive product details including images, occasions, ratings, and sales data",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "products"
-                ],
-                "summary": "Get detailed product information",
+                "summary": "Get all reviews for a product",
                 "parameters": [
                     {
                         "type": "integer",
                         "description": "Product ID",
-                        "name": "id",
+                        "name": "productID",
                         "in": "path",
                         "required": true
                     }
@@ -608,19 +771,10 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/model.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/model.Product"
-                                        }
-                                    }
-                                }
-                            ]
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.ReviewResponse"
+                            }
                         }
                     },
                     "400": {
@@ -629,8 +783,53 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.Response"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Submit a review for a specific product",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Create review for a product",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "productID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review body",
+                        "name": "review",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/model.Response"
                         }
@@ -930,6 +1129,129 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AddToCartRequest": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "quantity",
+                "user_id"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.CartItemResponse": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "effective_price": {
+                    "description": "ImageURL      string  ` + "`" + `json:\"image_url,omitempty\"` + "`" + `",
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "total_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "dto.CreatePricingRuleRequest": {
+            "type": "object",
+            "required": [
+                "adjustment_type",
+                "adjustment_value",
+                "priority",
+                "rule_name"
+            ],
+            "properties": {
+                "adjustment_type": {
+                    "type": "string",
+                    "enum": [
+                        "percentage_discount",
+                        "fixed_discount",
+                        "override_price"
+                    ]
+                },
+                "adjustment_value": {
+                    "type": "number"
+                },
+                "applicable_flower_type_id": {
+                    "type": "integer"
+                },
+                "applicable_product_id": {
+                    "type": "integer"
+                },
+                "applicable_product_status": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "rule_name": {
+                    "type": "string"
+                },
+                "special_day_id": {
+                    "type": "integer"
+                },
+                "time_of_day_end": {
+                    "type": "string"
+                },
+                "time_of_day_start": {
+                    "type": "string"
+                },
+                "valid_from": {
+                    "type": "string"
+                },
+                "valid_to": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.CreateReviewRequest": {
+            "type": "object",
+            "required": [
+                "rating",
+                "user_id"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 1
+                },
+                "user_id": {
+                    "description": "ProductID int    ` + "`" + `json:\"product_id\" binding:\"required\"` + "`" + `",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.ProductCreate": {
             "description": "Product creation request body",
             "type": "object",
@@ -979,6 +1301,44 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RemoveCartItemRequest": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "user_id"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ReviewResponse": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "rating": {
+                    "type": "integer"
+                },
+                "review_date": {
+                    "type": "string"
+                },
+                "review_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.TodoCreate": {
             "description": "Todo creation request body",
             "type": "object",
@@ -1008,41 +1368,29 @@ const docTemplate = `{
                 }
             }
         },
-        "model.FilterOptions": {
+        "dto.UpdateCartItemRequest": {
             "type": "object",
+            "required": [
+                "product_id",
+                "quantity",
+                "user_id"
+            ],
             "properties": {
-                "flower_types": {
-                    "description": "Available flower types",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.FlowerType"
-                    }
+                "product_id": {
+                    "type": "integer"
                 },
-                "occasions": {
-                    "description": "Available occasions",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Occasion"
-                    }
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 1
                 },
-                "price_range": {
-                    "description": "Price range",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.PriceRange"
-                        }
-                    ]
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },
         "model.FlowerType": {
             "type": "object",
             "properties": {
-                "description": {
-                    "description": "Description of the flower type",
-                    "type": "string",
-                    "example": "Classic romantic flower"
-                },
                 "flower_type_id": {
                     "description": "Unique identifier of the flower type",
                     "type": "integer",
@@ -1055,79 +1403,56 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Occasion": {
+        "model.PricingRule": {
             "type": "object",
             "properties": {
-                "name": {
-                    "description": "Name of the occasion",
-                    "type": "string",
-                    "example": "Valentine's Day"
+                "adjustment_type": {
+                    "type": "string"
                 },
-                "occasion_id": {
-                    "description": "Unique identifier of the occasion",
-                    "type": "integer",
-                    "example": 1
-                }
-            }
-        },
-        "model.PaginationInfo": {
-            "type": "object",
-            "properties": {
-                "has_next": {
-                    "description": "Whether there's a next page",
-                    "type": "boolean",
-                    "example": true
+                "adjustment_value": {
+                    "type": "number"
                 },
-                "has_prev": {
-                    "description": "Whether there's a previous page",
-                    "type": "boolean",
-                    "example": false
+                "applicable_flower_type_id": {
+                    "type": "integer"
                 },
-                "limit": {
-                    "description": "Number of items per page",
-                    "type": "integer",
-                    "example": 20
+                "applicable_product_id": {
+                    "type": "integer"
                 },
-                "page": {
-                    "description": "Current page number",
-                    "type": "integer",
-                    "example": 1
+                "applicable_product_status": {
+                    "type": "string"
                 },
-                "total": {
-                    "description": "Total number of items",
-                    "type": "integer",
-                    "example": 150
+                "is_active": {
+                    "type": "boolean"
                 },
-                "total_pages": {
-                    "description": "Total number of pages",
-                    "type": "integer",
-                    "example": 8
-                }
-            }
-        },
-        "model.PriceRange": {
-            "type": "object",
-            "properties": {
-                "max": {
-                    "description": "Maximum price in the catalog",
-                    "type": "number",
-                    "example": 199.99
+                "priority": {
+                    "type": "integer"
                 },
-                "min": {
-                    "description": "Minimum price in the catalog",
-                    "type": "number",
-                    "example": 5.99
+                "rule_id": {
+                    "type": "integer"
+                },
+                "rule_name": {
+                    "type": "string"
+                },
+                "special_day_id": {
+                    "type": "integer"
+                },
+                "time_of_day_end": {
+                    "type": "string"
+                },
+                "time_of_day_start": {
+                    "type": "string"
+                },
+                "valid_from": {
+                    "type": "string"
+                },
+                "valid_to": {
+                    "type": "string"
                 }
             }
         },
         "model.Product": {
             "type": "object",
             "properties": {
-                "average_rating": {
-                    "description": "Average rating from reviews",
-                    "type": "number",
-                    "example": 4.5
-                },
                 "base_price": {
                     "description": "Base price of the product",
                     "type": "number",
@@ -1137,11 +1462,6 @@ const docTemplate = `{
                     "description": "Timestamp when the product was created",
                     "type": "string",
                     "example": "2024-03-15T08:00:00Z"
-                },
-                "current_price": {
-                    "description": "Current price (after applying dynamic pricing rules)",
-                    "type": "number",
-                    "example": 25.49
                 },
                 "description": {
                     "description": "Description of the product",
@@ -1153,37 +1473,13 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Rose"
                 },
-                "images": {
-                    "description": "Images associated with the product",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.ProductImage"
-                    }
-                },
                 "name": {
                     "description": "Name of the product",
                     "type": "string",
                     "example": "Red Rose Bouquet"
                 },
-                "occasions": {
-                    "description": "Occasions this product is suitable for",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "product_id": {
                     "description": "Unique identifier of the product",
-                    "type": "integer",
-                    "example": 1
-                },
-                "review_count": {
-                    "description": "Total number of reviews",
-                    "type": "integer",
-                    "example": 23
-                },
-                "sales_rank": {
-                    "description": "Best-selling rank (for sorting)",
                     "type": "integer",
                     "example": 1
                 },
@@ -1206,64 +1502,6 @@ const docTemplate = `{
                     "description": "Timestamp when the product was last updated",
                     "type": "string",
                     "example": "2024-03-15T08:00:00Z"
-                }
-            }
-        },
-        "model.ProductImage": {
-            "type": "object",
-            "properties": {
-                "alt_text": {
-                    "description": "Alt text for accessibility",
-                    "type": "string",
-                    "example": "Red Rose Bouquet"
-                },
-                "image_id": {
-                    "description": "Unique identifier of the image",
-                    "type": "integer",
-                    "example": 1
-                },
-                "image_url": {
-                    "description": "URL of the image",
-                    "type": "string",
-                    "example": "https://example.com/images/rose.jpg"
-                },
-                "is_primary": {
-                    "description": "Whether this is the primary image",
-                    "type": "boolean",
-                    "example": true
-                },
-                "product_id": {
-                    "description": "Product ID this image belongs to",
-                    "type": "integer",
-                    "example": 1
-                }
-            }
-        },
-        "model.ProductSearchResponse": {
-            "type": "object",
-            "properties": {
-                "filters": {
-                    "description": "Filter options available",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.FilterOptions"
-                        }
-                    ]
-                },
-                "pagination": {
-                    "description": "Pagination information",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.PaginationInfo"
-                        }
-                    ]
-                },
-                "products": {
-                    "description": "List of products",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Product"
-                    }
                 }
             }
         },

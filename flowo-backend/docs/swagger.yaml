@@ -1,5 +1,90 @@
 basePath: /
 definitions:
+  dto.AddToCartRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    - user_id
+    type: object
+  dto.CartItemResponse:
+    properties:
+      description:
+        type: string
+      effective_price:
+        description: ImageURL      string  `json:"image_url,omitempty"`
+        type: number
+      name:
+        type: string
+      price:
+        type: number
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+      total_price:
+        type: number
+    type: object
+  dto.CreatePricingRuleRequest:
+    properties:
+      adjustment_type:
+        enum:
+        - percentage_discount
+        - fixed_discount
+        - override_price
+        type: string
+      adjustment_value:
+        type: number
+      applicable_flower_type_id:
+        type: integer
+      applicable_product_id:
+        type: integer
+      applicable_product_status:
+        type: string
+      is_active:
+        type: boolean
+      priority:
+        type: integer
+      rule_name:
+        type: string
+      special_day_id:
+        type: integer
+      time_of_day_end:
+        type: string
+      time_of_day_start:
+        type: string
+      valid_from:
+        type: string
+      valid_to:
+        type: string
+    required:
+    - adjustment_type
+    - adjustment_value
+    - priority
+    - rule_name
+    type: object
+  dto.CreateReviewRequest:
+    properties:
+      comment:
+        type: string
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+      user_id:
+        description: ProductID int    `json:"product_id" binding:"required"`
+        type: integer
+    required:
+    - rating
+    - user_id
+    type: object
   dto.ProductCreate:
     description: Product creation request body
     properties:
@@ -39,6 +124,31 @@ definitions:
     - status
     - stock_quantity
     type: object
+  dto.RemoveCartItemRequest:
+    properties:
+      product_id:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - user_id
+    type: object
+  dto.ReviewResponse:
+    properties:
+      comment:
+        type: string
+      product_id:
+        type: integer
+      rating:
+        type: integer
+      review_date:
+        type: string
+      review_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
   dto.TodoCreate:
     description: Todo creation request body
     properties:
@@ -61,29 +171,22 @@ definitions:
     required:
     - title
     type: object
-  model.FilterOptions:
+  dto.UpdateCartItemRequest:
     properties:
-      flower_types:
-        description: Available flower types
-        items:
-          $ref: '#/definitions/model.FlowerType'
-        type: array
-      occasions:
-        description: Available occasions
-        items:
-          $ref: '#/definitions/model.Occasion'
-        type: array
-      price_range:
-        allOf:
-        - $ref: '#/definitions/model.PriceRange'
-        description: Price range
+      product_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    - user_id
     type: object
   model.FlowerType:
     properties:
-      description:
-        description: Description of the flower type
-        example: Classic romantic flower
-        type: string
       flower_type_id:
         description: Unique identifier of the flower type
         example: 1
@@ -93,61 +196,39 @@ definitions:
         example: Rose
         type: string
     type: object
-  model.Occasion:
+  model.PricingRule:
     properties:
-      name:
-        description: Name of the occasion
-        example: Valentine's Day
+      adjustment_type:
         type: string
-      occasion_id:
-        description: Unique identifier of the occasion
-        example: 1
-        type: integer
-    type: object
-  model.PaginationInfo:
-    properties:
-      has_next:
-        description: Whether there's a next page
-        example: true
-        type: boolean
-      has_prev:
-        description: Whether there's a previous page
-        example: false
-        type: boolean
-      limit:
-        description: Number of items per page
-        example: 20
-        type: integer
-      page:
-        description: Current page number
-        example: 1
-        type: integer
-      total:
-        description: Total number of items
-        example: 150
-        type: integer
-      total_pages:
-        description: Total number of pages
-        example: 8
-        type: integer
-    type: object
-  model.PriceRange:
-    properties:
-      max:
-        description: Maximum price in the catalog
-        example: 199.99
+      adjustment_value:
         type: number
-      min:
-        description: Minimum price in the catalog
-        example: 5.99
-        type: number
+      applicable_flower_type_id:
+        type: integer
+      applicable_product_id:
+        type: integer
+      applicable_product_status:
+        type: string
+      is_active:
+        type: boolean
+      priority:
+        type: integer
+      rule_id:
+        type: integer
+      rule_name:
+        type: string
+      special_day_id:
+        type: integer
+      time_of_day_end:
+        type: string
+      time_of_day_start:
+        type: string
+      valid_from:
+        type: string
+      valid_to:
+        type: string
     type: object
   model.Product:
     properties:
-      average_rating:
-        description: Average rating from reviews
-        example: 4.5
-        type: number
       base_price:
         description: Base price of the product
         example: 29.99
@@ -156,10 +237,6 @@ definitions:
         description: Timestamp when the product was created
         example: "2024-03-15T08:00:00Z"
         type: string
-      current_price:
-        description: Current price (after applying dynamic pricing rules)
-        example: 25.49
-        type: number
       description:
         description: Description of the product
         example: A beautiful bouquet of red roses, perfect for any occasion.
@@ -168,30 +245,12 @@ definitions:
         description: Flower type of the product (e.g., Rose, Tulip, Lily)
         example: Rose
         type: string
-      images:
-        description: Images associated with the product
-        items:
-          $ref: '#/definitions/model.ProductImage'
-        type: array
       name:
         description: Name of the product
         example: Red Rose Bouquet
         type: string
-      occasions:
-        description: Occasions this product is suitable for
-        items:
-          type: string
-        type: array
       product_id:
         description: Unique identifier of the product
-        example: 1
-        type: integer
-      review_count:
-        description: Total number of reviews
-        example: 23
-        type: integer
-      sales_rank:
-        description: Best-selling rank (for sorting)
         example: 1
         type: integer
       status:
@@ -210,45 +269,6 @@ definitions:
         description: Timestamp when the product was last updated
         example: "2024-03-15T08:00:00Z"
         type: string
-    type: object
-  model.ProductImage:
-    properties:
-      alt_text:
-        description: Alt text for accessibility
-        example: Red Rose Bouquet
-        type: string
-      image_id:
-        description: Unique identifier of the image
-        example: 1
-        type: integer
-      image_url:
-        description: URL of the image
-        example: https://example.com/images/rose.jpg
-        type: string
-      is_primary:
-        description: Whether this is the primary image
-        example: true
-        type: boolean
-      product_id:
-        description: Product ID this image belongs to
-        example: 1
-        type: integer
-    type: object
-  model.ProductSearchResponse:
-    properties:
-      filters:
-        allOf:
-        - $ref: '#/definitions/model.FilterOptions'
-        description: Filter options available
-      pagination:
-        allOf:
-        - $ref: '#/definitions/model.PaginationInfo'
-        description: Pagination information
-      products:
-        description: List of products
-        items:
-          $ref: '#/definitions/model.Product'
-        type: array
     type: object
   model.Response:
     properties:
@@ -304,6 +324,126 @@ info:
   title: Todo List API
   version: "1.0"
 paths:
+  /api/v1/cart/{userID}:
+    get:
+      description: Retrieve all items in the cart for a given user
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CartItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get cart items for user
+      tags:
+      - cart
+  /api/v1/cart/add:
+    post:
+      consumes:
+      - application/json
+      description: Add a product with quantity to the user's cart. Stock will be updated
+        accordingly.
+      parameters:
+      - description: Add to cart request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddToCartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Add product to cart
+      tags:
+      - cart
+  /api/v1/cart/remove:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a product from the user's cart
+      parameters:
+      - description: Remove cart item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RemoveCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Remove product from cart
+      tags:
+      - cart
+  /api/v1/cart/update:
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of an existing cart item
+      parameters:
+      - description: Update cart item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Update quantity of a product in cart
+      tags:
+      - cart
   /api/v1/flower-types:
     get:
       consumes:
@@ -330,32 +470,130 @@ paths:
       summary: Get all flower types
       tags:
       - flower-types
-  /api/v1/occasions:
-    get:
+  /api/v1/pricing/rule:
+    post:
       consumes:
       - application/json
-      description: Get all available occasions for flower products
+      description: Admin adds a new dynamic pricing rule
+      parameters:
+      - description: New Pricing Rule
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreatePricingRuleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/model.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/model.Occasion'
-                  type: array
-              type: object
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
-      summary: Get all occasions
+      summary: Add new pricing rule
       tags:
-      - occasions
+      - pricing
+  /api/v1/pricing/rule/{id}:
+    delete:
+      description: Delete a pricing rule using its ID
+      parameters:
+      - description: Pricing rule ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a pricing rule
+      tags:
+      - pricing
+    put:
+      consumes:
+      - application/json
+      description: Update an existing pricing rule by ID
+      parameters:
+      - description: Pricing rule ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated pricing rule
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/model.PricingRule'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a pricing rule
+      tags:
+      - pricing
+  /api/v1/pricing/rules:
+    get:
+      description: Retrieve a list of all pricing rules
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.PricingRule'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all pricing rules
+      tags:
+      - pricing
   /api/v1/product:
     post:
       consumes:
@@ -549,16 +787,13 @@ paths:
       summary: Get all products
       tags:
       - products
-  /api/v1/products/{id}:
+  /api/v1/products/{productID}/reviews:
     get:
-      consumes:
-      - application/json
-      description: Get comprehensive product details including images, occasions,
-        ratings, and sales data
+      description: Retrieve reviews by product ID
       parameters:
       - description: Product ID
         in: path
-        name: id
+        name: productID
         required: true
         type: integer
       produces:
@@ -567,121 +802,43 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/model.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.Product'
-              type: object
+            items:
+              $ref: '#/definitions/dto.ReviewResponse'
+            type: array
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/model.Response'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/model.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
-      summary: Get detailed product information
+      summary: Get all reviews for a product
       tags:
-      - products
-  /api/v1/products/filters:
-    get:
+      - reviews
+    post:
       consumes:
       - application/json
-      description: Get all available filter options for product search including flower
-        types, occasions, and price range
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/model.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.FilterOptions'
-              type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/model.Response'
-      summary: Get available filter options
-      tags:
-      - products
-  /api/v1/products/search:
-    get:
-      consumes:
-      - application/json
-      description: Search and filter products by multiple criteria with pagination
-        and sorting
+      description: Submit a review for a specific product
       parameters:
-      - description: Search query for product name or description
-        in: query
-        name: query
-        type: string
-      - description: Filter by flower type
-        in: query
-        name: flower_type
-        type: string
-      - description: Filter by occasion
-        in: query
-        name: occasion
-        type: string
-      - description: Minimum price filter
-        in: query
-        name: price_min
-        type: number
-      - description: Maximum price filter
-        in: query
-        name: price_max
-        type: number
-      - description: Filter by product condition
-        enum:
-        - NewFlower
-        - OldFlower
-        - LowStock
-        in: query
-        name: condition
-        type: string
-      - description: Sort by option
-        enum:
-        - price_asc
-        - price_desc
-        - name_asc
-        - name_desc
-        - newest
-        - best_selling
-        in: query
-        name: sort_by
-        type: string
-      - description: 'Page number (default: 1)'
-        in: query
-        minimum: 1
-        name: page
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
         type: integer
-      - description: 'Items per page (default: 20, max: 100)'
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
+      - description: Review body
+        in: body
+        name: review
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateReviewRequest'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
-            allOf:
-            - $ref: '#/definitions/model.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/model.ProductSearchResponse'
-              type: object
+            $ref: '#/definitions/model.Response'
         "400":
           description: Bad Request
           schema:
@@ -690,9 +847,9 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
-      summary: Search products with advanced filters
+      summary: Create review for a product
       tags:
-      - products
+      - reviews
   /api/v1/todos:
     get:
       consumes:

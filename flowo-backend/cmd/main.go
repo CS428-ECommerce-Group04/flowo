@@ -12,6 +12,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
 
+	"flowo-backend/cache"
 	"flowo-backend/config"
 	"flowo-backend/database"
 	_ "flowo-backend/docs" // This will be created by swag
@@ -56,9 +57,22 @@ func main() {
 			NewConfig,
 			database.NewDB,
 			NewGinEngine,
+
+			cache.ProvideRedisCache,
+
 			repository.NewRepository,
+			repository.NewReviewRepository,
+			repository.NewCartRepository,
+			repository.NewPricingRuleRepository,
+
 			service.NewService,
+			service.NewReviewService,
+			service.NewCartService,
+			service.NewPricingService,
+			controller.NewPricingController,
 			controller.NewController,
+			controller.NewReviewController,
+			controller.NewCartController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -96,8 +110,15 @@ func RegisterRoutes(
 	router *gin.Engine,
 	cfg *config.Config,
 	controller *controller.Controller,
+	reviewCtrl *controller.ReviewController,
+	cartCtrl *controller.CartController,
+	pricingCtrl *controller.PricingController,
 ) {
 	controller.RegisterRoutes(router)
+	v1 := router.Group("/api/v1")
+	reviewCtrl.RegisterRoutes(v1)
+	cartCtrl.RegisterRoutes(v1)
+	pricingCtrl.RegisterRoutes(v1)
 	logger.Init()
 
 	server := &http.Server{

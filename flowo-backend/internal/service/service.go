@@ -6,6 +6,7 @@ import (
 	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
 	"flowo-backend/internal/repository"
+	"time"
 )
 
 type Service interface {
@@ -14,7 +15,7 @@ type Service interface {
 	GetTodoByID(id uint) (*model.Todo, error)
 	UpdateTodo(id uint, input *dto.TodoCreate) (*model.Todo, error)
 	DeleteTodo(id uint) error
-	
+
 	GetAllProducts() ([]model.Product, error)
 	GetProductByID(id uint) (*model.Product, error)
 	CreateProduct(input *dto.ProductCreate) (*model.Product, error)
@@ -22,20 +23,29 @@ type Service interface {
 	DeleteProduct(id uint) error
 	GetProductsByFlowerType(flowerType string) ([]model.Product, error)
 	GetAllFlowerTypes() ([]model.FlowerType, error)
+
+	GetAllProductsWithEffectivePrice() ([]dto.ProductResponse, error)
+	GetProductByIDWithEffectivePrice(id uint) (*dto.ProductResponse, error)
+
 	
 	// product search and filtering methods
 	SearchProducts(query *dto.ProductSearchQuery) (*model.ProductSearchResponse, error)
 	GetProductDetails(id uint) (*model.Product, error)
 	GetAllOccasions() ([]model.Occasion, error)
 	GetSearchFilters() (*model.FilterOptions, error)
+
 }
 
 type service struct {
-	repo repository.Repository
+	repo           repository.Repository
+	pricingService *PricingService
 }
 
-func NewService(repo repository.Repository) Service {
-	return &service{repo: repo}
+func NewService(repo repository.Repository, pricingService *PricingService) Service {
+	return &service{
+		repo:           repo,
+		pricingService: pricingService,
+	}
 }
 
 func (s *service) CreateTodo(input *dto.TodoCreate) (*model.Todo, error) {
@@ -188,6 +198,51 @@ func (s *service) GetAllFlowerTypes() ([]model.FlowerType, error) {
 	return flowerTypes, nil
 }
 
+func ToProductResponse(p model.Product, effectivePrice float64) dto.ProductResponse {
+	return dto.ProductResponse{
+		ProductID:      p.ProductID,
+		Name:           p.Name,
+		Description:    p.Description,
+		FlowerType:     p.FlowerType,
+		BasePrice:      p.BasePrice,
+		Status:         p.Status,
+		StockQuantity:  p.StockQuantity,
+		CreatedAt:      p.CreatedAt,
+		UpdatedAt:      p.UpdatedAt,
+		EffectivePrice: effectivePrice,
+	}
+}
+
+func (s *service) GetAllProductsWithEffectivePrice() ([]dto.ProductResponse, error) {
+	products, err := s.repo.GetAllProducts()
+  if err != nil {
+		return nil, err
+	}
+	var result []dto.ProductResponse
+	for _, p := range products {
+		price, err := s.pricingService.GetEffectivePriceCache(p, time.Now())
+		if err != nil {
+			price = p.BasePrice
+		}
+		result = append(result, ToProductResponse(p, price))
+	}
+	return result, nil
+}
+
+func (s *service) GetProductByIDWithEffectivePrice(id uint) (*dto.ProductResponse, error) {
+	product, err := s.repo.GetProductByID(id)
+  if err != nil {
+		return nil, err
+	}
+
+	price, err := s.pricingService.GetEffectivePrice(*product, time.Now())
+	if err != nil {
+		price = product.BasePrice
+	}
+
+	response := ToProductResponse(*product, price)
+	return &response, nil
+}
 // Enhanced methods for advanced search and filtering
 
 func (s *service) SearchProducts(query *dto.ProductSearchQuery) (*model.ProductSearchResponse, error) {
@@ -222,6 +277,7 @@ func (s *service) SearchProducts(query *dto.ProductSearchQuery) (*model.ProductS
 	if err != nil {
 		return nil, err
 	}
+
 
 	// Build pagination info
 	pagination := s.buildPaginationInfo(query.Page, query.Limit, total)
@@ -263,6 +319,7 @@ func (s *service) GetSearchFilters() (*model.FilterOptions, error) {
 	if err != nil {
 		return nil, err
 	}
+
 
 	// Get occasions
 	occasions, err := s.repo.GetAllOccasions()
