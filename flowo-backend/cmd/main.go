@@ -12,6 +12,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
 
+	"flowo-backend/cache"
 	"flowo-backend/config"
 	"flowo-backend/database"
 	_ "flowo-backend/docs" // This will be created by swag
@@ -56,10 +57,14 @@ func main() {
 			NewConfig,
 			database.NewDB,
 			NewGinEngine,
+
+			cache.ProvideRedisCache,
+
 			repository.NewRepository,
 			repository.NewReviewRepository,
 			repository.NewCartRepository,
 			repository.NewPricingRuleRepository,
+
 			service.NewService,
 			service.NewReviewService,
 			service.NewCartService,
