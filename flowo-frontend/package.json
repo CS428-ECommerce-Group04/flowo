@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@measured/puck": "^0.19.1",
+    "@tailwindcss/postcss": "^4.1.10",
+    "animejs": "^4.0.2",
     "classnames": "^2.3.2",
     "next": "^15.2.4",
+    "postcss": "^8.5.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
