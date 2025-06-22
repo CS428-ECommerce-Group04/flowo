@@ -34,18 +34,29 @@ func (c *Controller) RegisterRoutes(router *gin.Engine) {
 			todos.PUT("/:id", c.UpdateTodo)
 			todos.DELETE("/:id", c.DeleteTodo)
 		}
-		v1.GET("products", c.GetAllProducts)
+		
+		// Enhanced product routes
+		products := v1.Group("/products")
+		{
+			products.GET("", c.GetAllProducts)                    // Basic product listing
+			products.GET("/search", c.SearchProducts)             // Advanced search with filters
+			products.GET("/filters", c.GetProductFilters)         // Get available filter options
+			products.GET("/:id", c.GetProductDetails)             // Enhanced product details
+		}
+		
+		// Legacy single product routes (maintain backward compatibility)
 		product := v1.Group("/product")
 		{
-
 			product.GET("/:id", c.GetProductByID)
 			product.GET("/flower-type/:flower_type", c.GetProductsByFlowerType)
 			product.POST("", c.CreateProduct)
 			product.PUT("/:id", c.UpdateProduct)
 			product.DELETE("/:id", c.DeleteProduct)
 		}
+		
+		// Catalog routes
 		v1.GET("flower-types", c.GetAllFlowerTypes)
-
+		v1.GET("occasions", c.GetAllOccasions)
 	}
 }
 
@@ -397,4 +408,122 @@ func (c *Controller) GetAllFlowerTypes(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, model.NewResponse("Flower types fetched successfully", flowerTypes))
+}
+
+// SearchProducts godoc
+// @Summary Search products with advanced filters
+// @Description Search and filter products by multiple criteria with pagination and sorting
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param query query string false "Search query for product name or description"
+// @Param flower_type query string false "Filter by flower type"
+// @Param occasion query string false "Filter by occasion"
+// @Param price_min query number false "Minimum price filter"
+// @Param price_max query number false "Maximum price filter"
+// @Param condition query string false "Filter by product condition" Enums(NewFlower, OldFlower, LowStock)
+// @Param sort_by query string false "Sort by option" Enums(price_asc, price_desc, name_asc, name_desc, newest, best_selling)
+// @Param page query int false "Page number (default: 1)" minimum(1)
+// @Param limit query int false "Items per page (default: 20, max: 100)" minimum(1) maximum(100)
+// @Success 200 {object} model.Response{data=model.ProductSearchResponse}
+// @Failure 400 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/products/search [get]
+func (c *Controller) SearchProducts(ctx *gin.Context) {
+	var query dto.ProductSearchQuery
+	if err := ctx.ShouldBindQuery(&query); err != nil {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid query parameters", nil))
+		return
+	}
+
+	result, err := c.service.SearchProducts(&query)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to search products")
+		
+		// Handle specific validation errors
+		if err.Error() == "minimum price cannot be greater than maximum price" ||
+		   err.Error() == "invalid product condition" ||
+		   err.Error() == "invalid sort option" {
+			ctx.JSON(http.StatusBadRequest, model.NewResponse(err.Error(), nil))
+			return
+		}
+		
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to search products", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Products searched successfully", result))
+}
+
+// GetProductDetails godoc
+// @Summary Get detailed product information
+// @Description Get comprehensive product details including images, occasions, ratings, and sales data
+// @Tags products
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Success 200 {object} model.Response{data=model.Product}
+// @Failure 400 {object} model.Response
+// @Failure 404 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/products/{id} [get]
+func (c *Controller) GetProductDetails(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, model.NewResponse("Invalid ID format", nil))
+		return
+	}
+
+	product, err := c.service.GetProductDetails(uint(id))
+	if err != nil {
+		if err.Error() == "not found" {
+			ctx.JSON(http.StatusNotFound, model.NewResponse("Product not found", nil))
+			return
+		}
+		log.Error().Err(err).Msg("Failed to fetch product details")
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to fetch product details", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Product details fetched successfully", product))
+}
+
+// GetProductFilters godoc
+// @Summary Get available filter options
+// @Description Get all available filter options for product search including flower types, occasions, and price range
+// @Tags products
+// @Accept json
+// @Produce json
+// @Success 200 {object} model.Response{data=model.FilterOptions}
+// @Failure 500 {object} model.Response
+// @Router /api/v1/products/filters [get]
+func (c *Controller) GetProductFilters(ctx *gin.Context) {
+	filters, err := c.service.GetSearchFilters()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to fetch product filters")
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to fetch filter options", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Filter options fetched successfully", filters))
+}
+
+// GetAllOccasions godoc
+// @Summary Get all occasions
+// @Description Get all available occasions for flower products
+// @Tags occasions
+// @Accept json
+// @Produce json
+// @Success 200 {object} model.Response{data=[]model.Occasion}
+// @Failure 500 {object} model.Response
+// @Router /api/v1/occasions [get]
+func (c *Controller) GetAllOccasions(ctx *gin.Context) {
+	occasions, err := c.service.GetAllOccasions()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to fetch occasions")
+		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to fetch occasions", nil))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, model.NewResponse("Occasions fetched successfully", occasions))
 }

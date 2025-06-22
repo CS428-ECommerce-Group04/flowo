@@ -1,122 +1,38 @@
-# Todo Application
+# `next` recipe
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-4.9.5-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19-blue.svg)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-4.0-646CFF.svg)](https://vitejs.dev/)
-[![Ant Design](https://img.shields.io/badge/Ant%20Design-5.0-0170FE.svg)](https://ant.design/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+The `next` recipe showcases one of the most powerful ways to implement Puck using to provide an authoring tool for any route in your Next app.
 
-A modern, responsive Todo application built with React, TypeScript, and Ant Design. This project serves as a showcase of best practices in modern frontend development.
+## Demonstrates
 
-## Features
+- Next.js App Router implementation
+- JSON database implementation with HTTP API
+- Catch-all routes to use puck for any route on the platform
+- Incremental static regeneration (ISR) for all Puck pages
 
-- **Task Management**
-  - Create, read, update, and delete todos
-  - Task title and description
-  - Task status tracking
-  - List and grid view options
+## Usage
 
-- **User Experience**
-  - Clean and intuitive interface
-  - Status management (Pending, In Progress, Completed)
-  - Responsive design for all devices
-  - Modern Ant Design components
+Run the generator and enter `next` when prompted
 
-- **Technical Features**
-  - Type-safe development with TypeScript
-  - Fast development with Vite
-  - Efficient API integration with Axios
-  - State management with React hooks
-
-## Tech Stack
-
-- React 19
-- TypeScript 4.9
-- Vite 4.0
-- Ant Design 5.0
-- Axios
-- ESLint + Prettier
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v18 or higher recommended)
-- yarn or npm
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/tuannguyensn2001/skeleton-bootcamp-frontend
-cd skeleton-bootcamp-frontend
+```
+npx create-puck-app my-app
 ```
 
-2. Install dependencies:
-```bash
-yarn install
+Start the server
+
 ```
-
-3. Create a `.env` file in the root directory:
-```bash
-cp .env.example .env
-```
-
-4. Update the `.env` file with your API endpoint if needed:
-```
-VITE_API_BASE_URL=http://localhost:1/api/v1
-```
-
-### Development
-
-To start the development server:
-
-```bash
 yarn dev
 ```
 
-The application will be available at `http://localhost:5173`
+Navigate to the homepage at https://localhost:3000. To edit the homepage, access the Puck editor at https://localhost:3000/edit.
 
-### Building for Production
+You can do this for any route on the application, **even if the page doesn't exist**. For example, visit https://localhost:3000/hello/world and you'll receive a 404. You can author and publish a page by visiting https://localhost:3000/hello/world/edit. After publishing, go back to the original URL to see your page.
 
-To create a production build:
+## Using this recipe
 
-```bash
-yarn build
-```
+To adopt this recipe you will need to:
 
-To preview the production build:
+- **IMPORTANT** Add authentication to `/edit` routes. This can be done by modifying the example API routes in `/app/puck/api/route.ts` and server component in `/app/puck/[...puckPath]/page.tsx`. **If you don't do this, Puck will be completely public.**
+- Integrate your database into the API calls in `/app/puck/api/route.ts`
+- Implement a custom puck configuration in `puck.config.tsx`
 
-```bash
-yarn preview
-```
-
-### Linting
-
-To run the linter:
-
-```bash
-yarn lint
-```
-
-## Project Structure
-
-```
-src/
-├── components/     # React components
-├── constants/      # Constants and enums
-├── hooks/          # Custom React hooks
-├── services/       # API services
-├── types/          # TypeScript types and interfaces
-└── App.tsx         # Root component
-```
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| VITE_API_BASE_URL | Backend API URL | http://localhost:8081/api/v1 |
-
-## License
-
-This project is licensed under the MIT License.
+By default, this recipe will generate static pages by setting `dynamic` to [`force-static`](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#dynamic) in the `/app/[...puckPath]/page.tsx`. This will strip headers and cookies. If you need dynamic pages, you can delete this.
