@@ -61,8 +61,29 @@ definitions:
     required:
     - title
     type: object
+  model.FilterOptions:
+    properties:
+      flower_types:
+        description: Available flower types
+        items:
+          $ref: '#/definitions/model.FlowerType'
+        type: array
+      occasions:
+        description: Available occasions
+        items:
+          $ref: '#/definitions/model.Occasion'
+        type: array
+      price_range:
+        allOf:
+        - $ref: '#/definitions/model.PriceRange'
+        description: Price range
+    type: object
   model.FlowerType:
     properties:
+      description:
+        description: Description of the flower type
+        example: Classic romantic flower
+        type: string
       flower_type_id:
         description: Unique identifier of the flower type
         example: 1
@@ -72,8 +93,61 @@ definitions:
         example: Rose
         type: string
     type: object
+  model.Occasion:
+    properties:
+      name:
+        description: Name of the occasion
+        example: Valentine's Day
+        type: string
+      occasion_id:
+        description: Unique identifier of the occasion
+        example: 1
+        type: integer
+    type: object
+  model.PaginationInfo:
+    properties:
+      has_next:
+        description: Whether there's a next page
+        example: true
+        type: boolean
+      has_prev:
+        description: Whether there's a previous page
+        example: false
+        type: boolean
+      limit:
+        description: Number of items per page
+        example: 20
+        type: integer
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      total:
+        description: Total number of items
+        example: 150
+        type: integer
+      total_pages:
+        description: Total number of pages
+        example: 8
+        type: integer
+    type: object
+  model.PriceRange:
+    properties:
+      max:
+        description: Maximum price in the catalog
+        example: 199.99
+        type: number
+      min:
+        description: Minimum price in the catalog
+        example: 5.99
+        type: number
+    type: object
   model.Product:
     properties:
+      average_rating:
+        description: Average rating from reviews
+        example: 4.5
+        type: number
       base_price:
         description: Base price of the product
         example: 29.99
@@ -82,6 +156,10 @@ definitions:
         description: Timestamp when the product was created
         example: "2024-03-15T08:00:00Z"
         type: string
+      current_price:
+        description: Current price (after applying dynamic pricing rules)
+        example: 25.49
+        type: number
       description:
         description: Description of the product
         example: A beautiful bouquet of red roses, perfect for any occasion.
@@ -90,12 +168,30 @@ definitions:
         description: Flower type of the product (e.g., Rose, Tulip, Lily)
         example: Rose
         type: string
+      images:
+        description: Images associated with the product
+        items:
+          $ref: '#/definitions/model.ProductImage'
+        type: array
       name:
         description: Name of the product
         example: Red Rose Bouquet
         type: string
+      occasions:
+        description: Occasions this product is suitable for
+        items:
+          type: string
+        type: array
       product_id:
         description: Unique identifier of the product
+        example: 1
+        type: integer
+      review_count:
+        description: Total number of reviews
+        example: 23
+        type: integer
+      sales_rank:
+        description: Best-selling rank (for sorting)
         example: 1
         type: integer
       status:
@@ -114,6 +210,45 @@ definitions:
         description: Timestamp when the product was last updated
         example: "2024-03-15T08:00:00Z"
         type: string
+    type: object
+  model.ProductImage:
+    properties:
+      alt_text:
+        description: Alt text for accessibility
+        example: Red Rose Bouquet
+        type: string
+      image_id:
+        description: Unique identifier of the image
+        example: 1
+        type: integer
+      image_url:
+        description: URL of the image
+        example: https://example.com/images/rose.jpg
+        type: string
+      is_primary:
+        description: Whether this is the primary image
+        example: true
+        type: boolean
+      product_id:
+        description: Product ID this image belongs to
+        example: 1
+        type: integer
+    type: object
+  model.ProductSearchResponse:
+    properties:
+      filters:
+        allOf:
+        - $ref: '#/definitions/model.FilterOptions'
+        description: Filter options available
+      pagination:
+        allOf:
+        - $ref: '#/definitions/model.PaginationInfo'
+        description: Pagination information
+      products:
+        description: List of products
+        items:
+          $ref: '#/definitions/model.Product'
+        type: array
     type: object
   model.Response:
     properties:
@@ -195,6 +330,32 @@ paths:
       summary: Get all flower types
       tags:
       - flower-types
+  /api/v1/occasions:
+    get:
+      consumes:
+      - application/json
+      description: Get all available occasions for flower products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Occasion'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get all occasions
+      tags:
+      - occasions
   /api/v1/product:
     post:
       consumes:
@@ -386,6 +547,150 @@ paths:
           schema:
             $ref: '#/definitions/model.Response'
       summary: Get all products
+      tags:
+      - products
+  /api/v1/products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive product details including images, occasions,
+        ratings, and sales data
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Product'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get detailed product information
+      tags:
+      - products
+  /api/v1/products/filters:
+    get:
+      consumes:
+      - application/json
+      description: Get all available filter options for product search including flower
+        types, occasions, and price range
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.FilterOptions'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get available filter options
+      tags:
+      - products
+  /api/v1/products/search:
+    get:
+      consumes:
+      - application/json
+      description: Search and filter products by multiple criteria with pagination
+        and sorting
+      parameters:
+      - description: Search query for product name or description
+        in: query
+        name: query
+        type: string
+      - description: Filter by flower type
+        in: query
+        name: flower_type
+        type: string
+      - description: Filter by occasion
+        in: query
+        name: occasion
+        type: string
+      - description: Minimum price filter
+        in: query
+        name: price_min
+        type: number
+      - description: Maximum price filter
+        in: query
+        name: price_max
+        type: number
+      - description: Filter by product condition
+        enum:
+        - NewFlower
+        - OldFlower
+        - LowStock
+        in: query
+        name: condition
+        type: string
+      - description: Sort by option
+        enum:
+        - price_asc
+        - price_desc
+        - name_asc
+        - name_desc
+        - newest
+        - best_selling
+        in: query
+        name: sort_by
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ProductSearchResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Search products with advanced filters
       tags:
       - products
   /api/v1/todos:

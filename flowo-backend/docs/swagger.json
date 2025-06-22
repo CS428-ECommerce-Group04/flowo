@@ -66,6 +66,50 @@
                 }
             }
         },
+        "/api/v1/occasions": {
+            "get": {
+                "description": "Get all available occasions for flower products",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "occasions"
+                ],
+                "summary": "Get all occasions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/model.Occasion"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/product": {
             "post": {
                 "description": "create new product",
@@ -365,6 +409,228 @@
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/filters": {
+            "get": {
+                "description": "Get all available filter options for product search including flower types, occasions, and price range",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get available filter options",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.FilterOptions"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/search": {
+            "get": {
+                "description": "Search and filter products by multiple criteria with pagination and sorting",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Search products with advanced filters",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query for product name or description",
+                        "name": "query",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by flower type",
+                        "name": "flower_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by occasion",
+                        "name": "occasion",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum price filter",
+                        "name": "price_min",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Maximum price filter",
+                        "name": "price_max",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "NewFlower",
+                            "OldFlower",
+                            "LowStock"
+                        ],
+                        "type": "string",
+                        "description": "Filter by product condition",
+                        "name": "condition",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "price_asc",
+                            "price_desc",
+                            "name_asc",
+                            "name_desc",
+                            "newest",
+                            "best_selling"
+                        ],
+                        "type": "string",
+                        "description": "Sort by option",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Page number (default: 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Items per page (default: 20, max: 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.ProductSearchResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/products/{id}": {
+            "get": {
+                "description": "Get comprehensive product details including images, occasions, ratings, and sales data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get detailed product information",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/model.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/model.Product"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.Response"
                         }
                     },
                     "500": {
@@ -740,9 +1006,41 @@
                 }
             }
         },
+        "model.FilterOptions": {
+            "type": "object",
+            "properties": {
+                "flower_types": {
+                    "description": "Available flower types",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.FlowerType"
+                    }
+                },
+                "occasions": {
+                    "description": "Available occasions",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Occasion"
+                    }
+                },
+                "price_range": {
+                    "description": "Price range",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.PriceRange"
+                        }
+                    ]
+                }
+            }
+        },
         "model.FlowerType": {
             "type": "object",
             "properties": {
+                "description": {
+                    "description": "Description of the flower type",
+                    "type": "string",
+                    "example": "Classic romantic flower"
+                },
                 "flower_type_id": {
                     "description": "Unique identifier of the flower type",
                     "type": "integer",
@@ -755,9 +1053,79 @@
                 }
             }
         },
+        "model.Occasion": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Name of the occasion",
+                    "type": "string",
+                    "example": "Valentine's Day"
+                },
+                "occasion_id": {
+                    "description": "Unique identifier of the occasion",
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "model.PaginationInfo": {
+            "type": "object",
+            "properties": {
+                "has_next": {
+                    "description": "Whether there's a next page",
+                    "type": "boolean",
+                    "example": true
+                },
+                "has_prev": {
+                    "description": "Whether there's a previous page",
+                    "type": "boolean",
+                    "example": false
+                },
+                "limit": {
+                    "description": "Number of items per page",
+                    "type": "integer",
+                    "example": 20
+                },
+                "page": {
+                    "description": "Current page number",
+                    "type": "integer",
+                    "example": 1
+                },
+                "total": {
+                    "description": "Total number of items",
+                    "type": "integer",
+                    "example": 150
+                },
+                "total_pages": {
+                    "description": "Total number of pages",
+                    "type": "integer",
+                    "example": 8
+                }
+            }
+        },
+        "model.PriceRange": {
+            "type": "object",
+            "properties": {
+                "max": {
+                    "description": "Maximum price in the catalog",
+                    "type": "number",
+                    "example": 199.99
+                },
+                "min": {
+                    "description": "Minimum price in the catalog",
+                    "type": "number",
+                    "example": 5.99
+                }
+            }
+        },
         "model.Product": {
             "type": "object",
             "properties": {
+                "average_rating": {
+                    "description": "Average rating from reviews",
+                    "type": "number",
+                    "example": 4.5
+                },
                 "base_price": {
                     "description": "Base price of the product",
                     "type": "number",
@@ -767,6 +1135,11 @@
                     "description": "Timestamp when the product was created",
                     "type": "string",
                     "example": "2024-03-15T08:00:00Z"
+                },
+                "current_price": {
+                    "description": "Current price (after applying dynamic pricing rules)",
+                    "type": "number",
+                    "example": 25.49
                 },
                 "description": {
                     "description": "Description of the product",
@@ -778,13 +1151,37 @@
                     "type": "string",
                     "example": "Rose"
                 },
+                "images": {
+                    "description": "Images associated with the product",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ProductImage"
+                    }
+                },
                 "name": {
                     "description": "Name of the product",
                     "type": "string",
                     "example": "Red Rose Bouquet"
                 },
+                "occasions": {
+                    "description": "Occasions this product is suitable for",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "product_id": {
                     "description": "Unique identifier of the product",
+                    "type": "integer",
+                    "example": 1
+                },
+                "review_count": {
+                    "description": "Total number of reviews",
+                    "type": "integer",
+                    "example": 23
+                },
+                "sales_rank": {
+                    "description": "Best-selling rank (for sorting)",
                     "type": "integer",
                     "example": 1
                 },
@@ -807,6 +1204,64 @@
                     "description": "Timestamp when the product was last updated",
                     "type": "string",
                     "example": "2024-03-15T08:00:00Z"
+                }
+            }
+        },
+        "model.ProductImage": {
+            "type": "object",
+            "properties": {
+                "alt_text": {
+                    "description": "Alt text for accessibility",
+                    "type": "string",
+                    "example": "Red Rose Bouquet"
+                },
+                "image_id": {
+                    "description": "Unique identifier of the image",
+                    "type": "integer",
+                    "example": 1
+                },
+                "image_url": {
+                    "description": "URL of the image",
+                    "type": "string",
+                    "example": "https://example.com/images/rose.jpg"
+                },
+                "is_primary": {
+                    "description": "Whether this is the primary image",
+                    "type": "boolean",
+                    "example": true
+                },
+                "product_id": {
+                    "description": "Product ID this image belongs to",
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "model.ProductSearchResponse": {
+            "type": "object",
+            "properties": {
+                "filters": {
+                    "description": "Filter options available",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.FilterOptions"
+                        }
+                    ]
+                },
+                "pagination": {
+                    "description": "Pagination information",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.PaginationInfo"
+                        }
+                    ]
+                },
+                "products": {
+                    "description": "List of products",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Product"
+                    }
                 }
             }
         },
