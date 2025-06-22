@@ -1,4 +1,5 @@
 package dto
+
 // ProductCreate represents the data structure for creating a new product
 // @Description Product creation request body
 type ProductCreate struct {
@@ -16,6 +17,19 @@ type ProductCreate struct {
 	StockQuantity int `json:"stock_quantity" example:"100" binding:"required"`
 }
 
+
+type ProductResponse struct {
+	ProductID      uint    `json:"product_id"`
+	Name           string  `json:"name"`
+	Description    string  `json:"description"`
+	FlowerType     string  `json:"flower_type"`
+	BasePrice      float64 `json:"base_price"`
+	Status         string  `json:"status"`
+	StockQuantity  int     `json:"stock_quantity"`
+	CreatedAt      string  `json:"created_at"`
+	UpdatedAt      string  `json:"updated_at"`
+	EffectivePrice float64 `json:"effective_price"`
+}
 // ProductSearchQuery represents query parameters for product search
 // @Description Product search and filter parameters
 type ProductSearchQuery struct {
@@ -73,4 +87,5 @@ type ProductImageDTO struct {
 	AltText string `json:"alt_text" example:"Red Rose Bouquet"`
 	// Whether this is the primary image
 	IsPrimary bool `json:"is_primary" example:"true"`
+
 }

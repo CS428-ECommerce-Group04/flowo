@@ -7,6 +7,7 @@ import (
 
 	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
+	"strings"
 )
 
 type Repository interface {
@@ -23,6 +24,7 @@ type Repository interface {
 	DeleteProduct(id uint) error
 	GetProductsByFlowerType(flowerType string) ([]model.Product, error)
 	GetAllFlowerTypes() ([]model.FlowerType, error)
+	GetProductsByIDs(ids []int) (map[int]model.Product, error)
 	
 	// product search and filtering methods
 	SearchProducts(query *dto.ProductSearchQuery) ([]model.Product, int, error)
@@ -237,6 +239,44 @@ func (r *repository) GetAllFlowerTypes() ([]model.FlowerType, error) {
 	return flowerTypes, nil
 }
 
+func (r *repository) GetProductsByIDs(ids []int) (map[int]model.Product, error) {
+	if len(ids) == 0 {
+		return map[int]model.Product{}, nil
+	}
+
+	placeholders := "?" + strings.Repeat(",?", len(ids)-1)
+	query := `
+		SELECT p.product_id, p.name, p.description, p.base_price, p.status, p.stock_quantity,
+		       p.created_at, p.updated_at, f.name AS flower_type
+		FROM FlowerProduct p
+		JOIN FlowerType f ON p.flower_type_id = f.flower_type_id
+		WHERE p.product_id IN (` + placeholders + `)`
+
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+
+	rows, err := r.db.Query(query, args...)
+  if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	products := make(map[int]model.Product)
+	for rows.Next() {
+		var p model.Product
+		err := rows.Scan(
+			&p.ProductID, &p.Name, &p.Description, &p.BasePrice, &p.Status,
+			&p.StockQuantity, &p.CreatedAt, &p.UpdatedAt, &p.FlowerType,
+		)
+		if err != nil {
+			return nil, err
+		}
+		products[int(p.ProductID)] = p
+	}
+
+	return products, nil
 // Enhanced methods for advanced search and filtering
 
 func (r *repository) SearchProducts(query *dto.ProductSearchQuery) ([]model.Product, int, error) {

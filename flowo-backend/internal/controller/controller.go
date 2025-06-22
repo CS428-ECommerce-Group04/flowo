@@ -216,7 +216,7 @@ func (c *Controller) DeleteTodo(ctx *gin.Context) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/products [get]
 func (c *Controller) GetAllProducts(ctx *gin.Context) {
-	products, err := c.service.GetAllProducts()
+	products, err := c.service.GetAllProductsWithEffectivePrice()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, model.NewResponse("Failed to fetch products", nil))
 		return
@@ -243,7 +243,7 @@ func (c *Controller) GetProductByID(ctx *gin.Context) {
 		return
 	}
 
-	product, err := c.service.GetProductByID(uint(id))
+	product, err := c.service.GetProductByIDWithEffectivePrice(uint(id))
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, model.NewResponse("Product not found", nil))
 		return

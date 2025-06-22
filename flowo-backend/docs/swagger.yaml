@@ -1,5 +1,90 @@
 basePath: /
 definitions:
+  dto.AddToCartRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    - user_id
+    type: object
+  dto.CartItemResponse:
+    properties:
+      description:
+        type: string
+      effective_price:
+        description: ImageURL      string  `json:"image_url,omitempty"`
+        type: number
+      name:
+        type: string
+      price:
+        type: number
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+      total_price:
+        type: number
+    type: object
+  dto.CreatePricingRuleRequest:
+    properties:
+      adjustment_type:
+        enum:
+        - percentage_discount
+        - fixed_discount
+        - override_price
+        type: string
+      adjustment_value:
+        type: number
+      applicable_flower_type_id:
+        type: integer
+      applicable_product_id:
+        type: integer
+      applicable_product_status:
+        type: string
+      is_active:
+        type: boolean
+      priority:
+        type: integer
+      rule_name:
+        type: string
+      special_day_id:
+        type: integer
+      time_of_day_end:
+        type: string
+      time_of_day_start:
+        type: string
+      valid_from:
+        type: string
+      valid_to:
+        type: string
+    required:
+    - adjustment_type
+    - adjustment_value
+    - priority
+    - rule_name
+    type: object
+  dto.CreateReviewRequest:
+    properties:
+      comment:
+        type: string
+      rating:
+        maximum: 5
+        minimum: 1
+        type: integer
+      user_id:
+        description: ProductID int    `json:"product_id" binding:"required"`
+        type: integer
+    required:
+    - rating
+    - user_id
+    type: object
   dto.ProductCreate:
     description: Product creation request body
     properties:
@@ -39,6 +124,31 @@ definitions:
     - status
     - stock_quantity
     type: object
+  dto.RemoveCartItemRequest:
+    properties:
+      product_id:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - user_id
+    type: object
+  dto.ReviewResponse:
+    properties:
+      comment:
+        type: string
+      product_id:
+        type: integer
+      rating:
+        type: integer
+      review_date:
+        type: string
+      review_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
   dto.TodoCreate:
     description: Todo creation request body
     properties:
@@ -61,6 +171,20 @@ definitions:
     required:
     - title
     type: object
+  dto.UpdateCartItemRequest:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    - user_id
+    type: object
   model.FlowerType:
     properties:
       flower_type_id:
@@ -70,6 +194,37 @@ definitions:
       name:
         description: Name of the flower type
         example: Rose
+        type: string
+    type: object
+  model.PricingRule:
+    properties:
+      adjustment_type:
+        type: string
+      adjustment_value:
+        type: number
+      applicable_flower_type_id:
+        type: integer
+      applicable_product_id:
+        type: integer
+      applicable_product_status:
+        type: string
+      is_active:
+        type: boolean
+      priority:
+        type: integer
+      rule_id:
+        type: integer
+      rule_name:
+        type: string
+      special_day_id:
+        type: integer
+      time_of_day_end:
+        type: string
+      time_of_day_start:
+        type: string
+      valid_from:
+        type: string
+      valid_to:
         type: string
     type: object
   model.Product:
@@ -169,6 +324,126 @@ info:
   title: Todo List API
   version: "1.0"
 paths:
+  /api/v1/cart/{userID}:
+    get:
+      description: Retrieve all items in the cart for a given user
+      parameters:
+      - description: User ID
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CartItemResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get cart items for user
+      tags:
+      - cart
+  /api/v1/cart/add:
+    post:
+      consumes:
+      - application/json
+      description: Add a product with quantity to the user's cart. Stock will be updated
+        accordingly.
+      parameters:
+      - description: Add to cart request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddToCartRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Add product to cart
+      tags:
+      - cart
+  /api/v1/cart/remove:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a product from the user's cart
+      parameters:
+      - description: Remove cart item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RemoveCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Remove product from cart
+      tags:
+      - cart
+  /api/v1/cart/update:
+    put:
+      consumes:
+      - application/json
+      description: Update the quantity of an existing cart item
+      parameters:
+      - description: Update cart item request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCartItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Update quantity of a product in cart
+      tags:
+      - cart
   /api/v1/flower-types:
     get:
       consumes:
@@ -195,6 +470,130 @@ paths:
       summary: Get all flower types
       tags:
       - flower-types
+  /api/v1/pricing/rule:
+    post:
+      consumes:
+      - application/json
+      description: Admin adds a new dynamic pricing rule
+      parameters:
+      - description: New Pricing Rule
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreatePricingRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Add new pricing rule
+      tags:
+      - pricing
+  /api/v1/pricing/rule/{id}:
+    delete:
+      description: Delete a pricing rule using its ID
+      parameters:
+      - description: Pricing rule ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a pricing rule
+      tags:
+      - pricing
+    put:
+      consumes:
+      - application/json
+      description: Update an existing pricing rule by ID
+      parameters:
+      - description: Pricing rule ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated pricing rule
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/model.PricingRule'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a pricing rule
+      tags:
+      - pricing
+  /api/v1/pricing/rules:
+    get:
+      description: Retrieve a list of all pricing rules
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.PricingRule'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all pricing rules
+      tags:
+      - pricing
   /api/v1/product:
     post:
       consumes:
@@ -388,6 +787,69 @@ paths:
       summary: Get all products
       tags:
       - products
+  /api/v1/products/{productID}/reviews:
+    get:
+      description: Retrieve reviews by product ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ReviewResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get all reviews for a product
+      tags:
+      - reviews
+    post:
+      consumes:
+      - application/json
+      description: Submit a review for a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: productID
+        required: true
+        type: integer
+      - description: Review body
+        in: body
+        name: review
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Create review for a product
+      tags:
+      - reviews
   /api/v1/todos:
     get:
       consumes:
