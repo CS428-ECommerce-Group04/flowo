@@ -1,0 +1,16 @@
+# dependencies & builds
+node_modules
+dist
+build
+
+# VCS & IDEs
+.git
+.vscode
+.idea
+
+# env / misc
+.env*
+Dockerfile
+docker-compose*.yml
+
+public
