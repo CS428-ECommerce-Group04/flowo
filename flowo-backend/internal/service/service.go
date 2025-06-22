@@ -2,10 +2,10 @@ package service
 
 import (
 	"errors"
-	"math"
 	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
 	"flowo-backend/internal/repository"
+	"math"
 	"time"
 )
 
@@ -27,13 +27,11 @@ type Service interface {
 	GetAllProductsWithEffectivePrice() ([]dto.ProductResponse, error)
 	GetProductByIDWithEffectivePrice(id uint) (*dto.ProductResponse, error)
 
-	
 	// product search and filtering methods
 	SearchProducts(query *dto.ProductSearchQuery) (*model.ProductSearchResponse, error)
 	GetProductDetails(id uint) (*model.Product, error)
 	GetAllOccasions() ([]model.Occasion, error)
 	GetSearchFilters() (*model.FilterOptions, error)
-
 }
 
 type service struct {
@@ -207,15 +205,15 @@ func ToProductResponse(p model.Product, effectivePrice float64) dto.ProductRespo
 		BasePrice:      p.BasePrice,
 		Status:         p.Status,
 		StockQuantity:  p.StockQuantity,
-		CreatedAt:      p.CreatedAt,
-		UpdatedAt:      p.UpdatedAt,
+		CreatedAt:      p.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:      p.UpdatedAt.Format(time.RFC3339),
 		EffectivePrice: effectivePrice,
 	}
 }
 
 func (s *service) GetAllProductsWithEffectivePrice() ([]dto.ProductResponse, error) {
 	products, err := s.repo.GetAllProducts()
-  if err != nil {
+	if err != nil {
 		return nil, err
 	}
 	var result []dto.ProductResponse
@@ -231,7 +229,7 @@ func (s *service) GetAllProductsWithEffectivePrice() ([]dto.ProductResponse, err
 
 func (s *service) GetProductByIDWithEffectivePrice(id uint) (*dto.ProductResponse, error) {
 	product, err := s.repo.GetProductByID(id)
-  if err != nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -243,6 +241,7 @@ func (s *service) GetProductByIDWithEffectivePrice(id uint) (*dto.ProductRespons
 	response := ToProductResponse(*product, price)
 	return &response, nil
 }
+
 // Enhanced methods for advanced search and filtering
 
 func (s *service) SearchProducts(query *dto.ProductSearchQuery) (*model.ProductSearchResponse, error) {
@@ -277,7 +276,6 @@ func (s *service) SearchProducts(query *dto.ProductSearchQuery) (*model.ProductS
 	if err != nil {
 		return nil, err
 	}
-
 
 	// Build pagination info
 	pagination := s.buildPaginationInfo(query.Page, query.Limit, total)
@@ -319,7 +317,6 @@ func (s *service) GetSearchFilters() (*model.FilterOptions, error) {
 	if err != nil {
 		return nil, err
 	}
-
 
 	// Get occasions
 	occasions, err := s.repo.GetAllOccasions()

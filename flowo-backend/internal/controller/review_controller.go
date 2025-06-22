@@ -18,8 +18,8 @@ func NewReviewController(s *service.ReviewService) *ReviewController {
 }
 
 func (ctrl *ReviewController) RegisterRoutes(rg *gin.RouterGroup) {
-	rg.GET("/products/:productID/reviews", ctrl.GetReviewsByProduct)
-	rg.POST("/products/:productID/reviews", ctrl.CreateReview)
+	rg.GET("/products/:id/reviews", ctrl.GetReviewsByProduct)
+	rg.POST("/products/:id/reviews", ctrl.CreateReview)
 }
 
 // CreateReview godoc
@@ -28,12 +28,12 @@ func (ctrl *ReviewController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Tags reviews
 // @Accept json
 // @Produce json
-// @Param productID path int true "Product ID"
+// @Param id path int true "Product ID"
 // @Param review body dto.CreateReviewRequest true "Review body"
 // @Success 201 {object} model.Response
 // @Failure 400 {object} model.Response
 // @Failure 500 {object} model.Response
-// @Router /api/v1/products/{productID}/reviews [post]
+// @Router /api/v1/products/{id}/reviews [post]
 func (ctrl *ReviewController) CreateReview(c *gin.Context) {
 	var req dto.CreateReviewRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -41,7 +41,7 @@ func (ctrl *ReviewController) CreateReview(c *gin.Context) {
 		return
 	}
 
-	productID, err := strconv.Atoi(c.Param("productID"))
+	productID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
@@ -60,13 +60,13 @@ func (ctrl *ReviewController) CreateReview(c *gin.Context) {
 // @Description Retrieve reviews by product ID
 // @Tags reviews
 // @Produce json
-// @Param productID path int true "Product ID"
+// @Param id path int true "Product ID"
 // @Success 200 {array} dto.ReviewResponse
 // @Failure 400 {object} model.Response
 // @Failure 500 {object} model.Response
-// @Router /api/v1/products/{productID}/reviews [get]
+// @Router /api/v1/products/{id}/reviews [get]
 func (ctrl *ReviewController) GetReviewsByProduct(c *gin.Context) {
-	productID, err := strconv.Atoi(c.Param("productID"))
+	productID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID"})
 		return
