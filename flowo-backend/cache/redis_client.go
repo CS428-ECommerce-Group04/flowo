@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -41,5 +42,7 @@ func (r *RedisCache) Delete(key string) error {
 	return r.Client.Del(Ctx, key).Err()
 }
 func ProvideRedisCache() *RedisCache {
-	return NewRedisCache("localhost:6379", "", 0)
+	addr := os.Getenv("REDIS_ADDR")
+	password := os.Getenv("REDIS_PASSWORD")
+	return NewRedisCache(addr, password, 0)
 }
