@@ -10,6 +10,9 @@ type PricingRuleRepository interface {
 	GetActiveRules() ([]model.PricingRule, error)
 	IsRuleApplicable(rule model.PricingRule, product model.Product, now time.Time) bool
 	CreatePricingRule(rule model.PricingRule) error
+	GetAllRules() ([]model.PricingRule, error)
+	UpdateRule(rule model.PricingRule) error
+	DeleteRule(id int) error
 }
 
 type pricingRuleRepository struct {
@@ -58,54 +61,8 @@ func (r *pricingRuleRepository) GetActiveRules() ([]model.PricingRule, error) {
 	}
 	defer rows.Close()
 
-	rules := []model.PricingRule{}
-	for rows.Next() {
-		var rule model.PricingRule
-		var validFrom, validTo sql.NullTime
-		var prodID, typeID, specialDayID sql.NullInt64
-		var status, timeStart, timeEnd sql.NullString
-
-		err := rows.Scan(
-			&rule.RuleID, &rule.RuleName, &rule.Priority, &rule.AdjustmentType,
-			&rule.AdjustmentValue, &prodID, &typeID, &status,
-			&timeStart, &timeEnd, &specialDayID,
-			&validFrom, &validTo, &rule.IsActive,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if prodID.Valid {
-			v := uint(prodID.Int64)
-			rule.ApplicableProductID = &v
-		}
-		if typeID.Valid {
-			v := int(typeID.Int64)
-			rule.ApplicableFlowerTypeID = &v
-		}
-		if status.Valid {
-			rule.ApplicableProductStatus = &status.String
-		}
-		if timeStart.Valid {
-			rule.TimeOfDayStart = &timeStart.String
-		}
-		if timeEnd.Valid {
-			rule.TimeOfDayEnd = &timeEnd.String
-		}
-		if specialDayID.Valid {
-			v := int(specialDayID.Int64)
-			rule.SpecialDayID = &v
-		}
-		if validFrom.Valid {
-			rule.ValidFrom = &validFrom.Time
-		}
-		if validTo.Valid {
-			rule.ValidTo = &validTo.Time
-		}
-
-		rules = append(rules, rule)
-	}
-	return rules, nil
+	rules, err := scanRules(rows)
+	return rules, err
 }
 
 func (r *pricingRuleRepository) IsRuleApplicable(rule model.PricingRule, product model.Product, now time.Time) bool {
@@ -172,6 +129,96 @@ func (r *pricingRuleRepository) CreatePricingRule(rule model.PricingRule) error 
 	)
 
 	return err
+}
+
+func (r *pricingRuleRepository) GetAllRules() ([]model.PricingRule, error) {
+	query := `
+		SELECT 
+			rule_id, rule_name, priority, adjustment_type, adjustment_value,
+			applicable_product_id, applicable_flower_type_id, applicable_product_status,
+			time_of_day_start, time_of_day_end, special_day_id,
+			valid_from, valid_to, is_active
+		FROM PricingRule
+	`
+	rows, err := r.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanRules(rows)
+}
+
+func (r *pricingRuleRepository) UpdateRule(rule model.PricingRule) error {
+	_, err := r.DB.Exec(`
+		UPDATE PricingRule SET 
+			rule_name=?, priority=?, is_active=?, adjustment_type=?, adjustment_value=?,
+			applicable_product_id=?, applicable_flower_type_id=?, applicable_product_status=?,
+			time_of_day_start=?, time_of_day_end=?, special_day_id=?, valid_from=?, valid_to=?
+		WHERE rule_id=?`,
+		rule.RuleName, rule.Priority, rule.IsActive, rule.AdjustmentType, rule.AdjustmentValue,
+		rule.ApplicableProductID, rule.ApplicableFlowerTypeID, rule.ApplicableProductStatus,
+		rule.TimeOfDayStart, rule.TimeOfDayEnd, rule.SpecialDayID,
+		rule.ValidFrom, rule.ValidTo,
+		rule.RuleID,
+	)
+	return err
+}
+
+func (r *pricingRuleRepository) DeleteRule(id int) error {
+	_, err := r.DB.Exec("DELETE FROM PricingRule WHERE rule_id = ?", id)
+	return err
+}
+
+func scanRules(rows *sql.Rows) ([]model.PricingRule, error) {
+	rules := []model.PricingRule{}
+	for rows.Next() {
+		var rule model.PricingRule
+		var validFrom, validTo sql.NullTime
+		var prodID, typeID, specialDayID sql.NullInt64
+		var status, timeStart, timeEnd sql.NullString
+
+		err := rows.Scan(
+			&rule.RuleID, &rule.RuleName, &rule.Priority, &rule.AdjustmentType,
+			&rule.AdjustmentValue, &prodID, &typeID, &status,
+			&timeStart, &timeEnd, &specialDayID,
+			&validFrom, &validTo, &rule.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if prodID.Valid {
+			v := uint(prodID.Int64)
+			rule.ApplicableProductID = &v
+		}
+		if typeID.Valid {
+			v := int(typeID.Int64)
+			rule.ApplicableFlowerTypeID = &v
+		}
+		if status.Valid {
+			rule.ApplicableProductStatus = &status.String
+		}
+		if timeStart.Valid {
+			rule.TimeOfDayStart = &timeStart.String
+		}
+		if timeEnd.Valid {
+			rule.TimeOfDayEnd = &timeEnd.String
+		}
+		if specialDayID.Valid {
+			v := int(specialDayID.Int64)
+			rule.SpecialDayID = &v
+		}
+		if validFrom.Valid {
+			rule.ValidFrom = &validFrom.Time
+		}
+		if validTo.Valid {
+			rule.ValidTo = &validTo.Time
+		}
+
+		rules = append(rules, rule)
+	}
+	return rules, nil
 }
 
 func nullInt(ptr *int) interface{} {

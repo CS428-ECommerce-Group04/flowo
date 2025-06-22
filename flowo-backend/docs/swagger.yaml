@@ -196,6 +196,37 @@ definitions:
         example: Rose
         type: string
     type: object
+  model.PricingRule:
+    properties:
+      adjustment_type:
+        type: string
+      adjustment_value:
+        type: number
+      applicable_flower_type_id:
+        type: integer
+      applicable_product_id:
+        type: integer
+      applicable_product_status:
+        type: string
+      is_active:
+        type: boolean
+      priority:
+        type: integer
+      rule_id:
+        type: integer
+      rule_name:
+        type: string
+      special_day_id:
+        type: integer
+      time_of_day_end:
+        type: string
+      time_of_day_start:
+        type: string
+      valid_from:
+        type: string
+      valid_to:
+        type: string
+    type: object
   model.Product:
     properties:
       base_price:
@@ -467,6 +498,100 @@ paths:
           schema:
             $ref: '#/definitions/model.Response'
       summary: Add new pricing rule
+      tags:
+      - pricing
+  /api/v1/pricing/rule/{id}:
+    delete:
+      description: Delete a pricing rule using its ID
+      parameters:
+      - description: Pricing rule ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a pricing rule
+      tags:
+      - pricing
+    put:
+      consumes:
+      - application/json
+      description: Update an existing pricing rule by ID
+      parameters:
+      - description: Pricing rule ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated pricing rule
+        in: body
+        name: rule
+        required: true
+        schema:
+          $ref: '#/definitions/model.PricingRule'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a pricing rule
+      tags:
+      - pricing
+  /api/v1/pricing/rules:
+    get:
+      description: Retrieve a list of all pricing rules
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.PricingRule'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all pricing rules
       tags:
       - pricing
   /api/v1/product:

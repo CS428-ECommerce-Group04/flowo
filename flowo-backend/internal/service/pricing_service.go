@@ -83,6 +83,18 @@ func (s *PricingService) CreatePricingRule(req dto.CreatePricingRuleRequest) err
 	return s.Repo.CreatePricingRule(rule)
 }
 
+func (s *PricingService) GetAllRules() ([]model.PricingRule, error) {
+	return s.Repo.GetAllRules()
+}
+
+func (s *PricingService) UpdateRule(rule model.PricingRule) error {
+	return s.Repo.UpdateRule(rule)
+}
+
+func (s *PricingService) DeleteRule(id int) error {
+	return s.Repo.DeleteRule(id)
+}
+
 func intPtrToUint(ptr *int) *uint {
 	if ptr == nil {
 		return nil
