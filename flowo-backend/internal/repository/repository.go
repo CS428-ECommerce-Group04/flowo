@@ -7,7 +7,6 @@ import (
 
 	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
-	"strings"
 )
 
 type Repository interface {
@@ -25,7 +24,7 @@ type Repository interface {
 	GetProductsByFlowerType(flowerType string) ([]model.Product, error)
 	GetAllFlowerTypes() ([]model.FlowerType, error)
 	GetProductsByIDs(ids []int) (map[int]model.Product, error)
-	
+
 	// product search and filtering methods
 	SearchProducts(query *dto.ProductSearchQuery) ([]model.Product, int, error)
 	GetProductDetailByID(id uint) (*model.Product, error)
@@ -125,8 +124,8 @@ func (r *repository) GetAllProducts() ([]model.Product, error) {
 	var products []model.Product
 	for rows.Next() {
 		var product model.Product
-		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, 
-			&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description,
+			&product.FlowerType, &product.BasePrice, &product.CurrentPrice,
 			&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -143,10 +142,10 @@ func (r *repository) GetProductByID(id uint) (*model.Product, error) {
 			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id 
 			  WHERE fp.product_id = ?`
 	row := r.db.QueryRow(query, id)
-	
+
 	var product model.Product
-	if err := row.Scan(&product.ProductID, &product.Name, &product.Description, 
-		&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+	if err := row.Scan(&product.ProductID, &product.Name, &product.Description,
+		&product.FlowerType, &product.BasePrice, &product.CurrentPrice,
 		&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("not found")
@@ -204,8 +203,8 @@ func (r *repository) GetProductsByFlowerType(flowerType string) ([]model.Product
 	var products []model.Product
 	for rows.Next() {
 		var product model.Product
-		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, 
-			&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description,
+			&product.FlowerType, &product.BasePrice, &product.CurrentPrice,
 			&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -258,7 +257,7 @@ func (r *repository) GetProductsByIDs(ids []int) (map[int]model.Product, error) 
 	}
 
 	rows, err := r.db.Query(query, args...)
-  if err != nil {
+	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
@@ -277,6 +276,8 @@ func (r *repository) GetProductsByIDs(ids []int) (map[int]model.Product, error) 
 	}
 
 	return products, nil
+}
+
 // Enhanced methods for advanced search and filtering
 
 func (r *repository) SearchProducts(query *dto.ProductSearchQuery) ([]model.Product, int, error) {
@@ -344,7 +345,7 @@ func (r *repository) SearchProducts(query *dto.ProductSearchQuery) ([]model.Prod
 	if len(conditions) > 0 {
 		countQuery += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	
+
 	var total int
 	if err := r.db.QueryRow(countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, err
@@ -377,8 +378,8 @@ func (r *repository) SearchProducts(query *dto.ProductSearchQuery) ([]model.Prod
 	var products []model.Product
 	for rows.Next() {
 		var product model.Product
-		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description, 
-			&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+		if err := rows.Scan(&product.ProductID, &product.Name, &product.Description,
+			&product.FlowerType, &product.BasePrice, &product.CurrentPrice,
 			&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt,
 			&product.AverageRating, &product.ReviewCount, &product.SalesRank); err != nil {
 			return nil, 0, err
@@ -432,10 +433,10 @@ func (r *repository) GetProductDetailByID(id uint) (*model.Product, error) {
 				 fp.status, fp.stock_quantity, fp.created_at, fp.updated_at, sales_data.sales_rank`
 
 	row := r.db.QueryRow(query, id)
-	
+
 	var product model.Product
-	if err := row.Scan(&product.ProductID, &product.Name, &product.Description, 
-		&product.FlowerType, &product.BasePrice, &product.CurrentPrice, 
+	if err := row.Scan(&product.ProductID, &product.Name, &product.Description,
+		&product.FlowerType, &product.BasePrice, &product.CurrentPrice,
 		&product.Status, &product.StockQuantity, &product.CreatedAt, &product.UpdatedAt,
 		&product.AverageRating, &product.ReviewCount, &product.SalesRank); err != nil {
 		if err == sql.ErrNoRows {
@@ -526,7 +527,7 @@ func (r *repository) GetAllOccasions() ([]model.Occasion, error) {
 func (r *repository) GetPriceRange() (*model.PriceRange, error) {
 	query := "SELECT MIN(base_price), MAX(base_price) FROM FlowerProduct WHERE stock_quantity > 0"
 	row := r.db.QueryRow(query)
-	
+
 	var priceRange model.PriceRange
 	if err := row.Scan(&priceRange.Min, &priceRange.Max); err != nil {
 		return nil, err
@@ -551,7 +552,7 @@ func (r *repository) GetProductStatistics(productID uint) (averageRating float64
 			WHERE o.status = 'Completed'
 			GROUP BY oi.product_id
 		) ranking WHERE ranking.product_id = ?`
-	
+
 	if err := r.db.QueryRow(salesQuery, productID).Scan(&salesRank); err != nil {
 		if err == sql.ErrNoRows {
 			salesRank = 999999 // No sales yet
