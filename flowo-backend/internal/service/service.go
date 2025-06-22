@@ -23,6 +23,7 @@ type Service interface {
 	GetProductsByFlowerType(flowerType string) ([]model.Product, error)
 	GetAllFlowerTypes() ([]model.FlowerType, error)
 	GetAllProductsWithEffectivePrice() ([]dto.ProductResponse, error)
+	GetProductByIDWithEffectivePrice(id uint) (*dto.ProductResponse, error)
 }
 
 type service struct {
@@ -206,4 +207,19 @@ func (s *service) GetAllProductsWithEffectivePrice() ([]dto.ProductResponse, err
 		result = append(result, ToProductResponse(p, price))
 	}
 	return result, nil
+}
+
+func (s *service) GetProductByIDWithEffectivePrice(id uint) (*dto.ProductResponse, error) {
+	product, err := s.repo.GetProductByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	price, err := s.pricingService.GetEffectivePrice(*product, time.Now())
+	if err != nil {
+		price = product.BasePrice
+	}
+
+	response := ToProductResponse(*product, price)
+	return &response, nil
 }

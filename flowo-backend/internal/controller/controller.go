@@ -232,7 +232,7 @@ func (c *Controller) GetProductByID(ctx *gin.Context) {
 		return
 	}
 
-	product, err := c.service.GetProductByID(uint(id))
+	product, err := c.service.GetProductByIDWithEffectivePrice(uint(id))
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, model.NewResponse("Product not found", nil))
 		return
