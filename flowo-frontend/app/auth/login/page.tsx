@@ -1,39 +1,69 @@
 'use client';
 
 import { useState } from 'react';
-import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../lib/auth/firebase'; // Adjust the import path as necessary
+import { auth } from '../../../lib/auth/firebase';
+import { SessionManager } from '../../../lib/auth/session';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
-export default function SignUpPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
     setError('');
 
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_BACKEND_URL + '/auth/signup', {
+      // First, authenticate with Firebase to get the custom token from backend
+      const backendRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081'}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          password 
+        }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      const backendData = await backendRes.json();
+      if (!backendRes.ok) throw new Error(backendData.message);
 
-      await sendPasswordResetEmail(auth, email);
+      // Use the custom token from backend to sign in with Firebase
+      const { signInWithCustomToken } = await import('firebase/auth');
+      const userCredential = await signInWithCustomToken(auth, backendData.token);
+      const user = userCredential.user;
+
+      // Get Firebase ID token for future requests
+      const idToken = await user.getIdToken();
+
+      setMessage('Login successful! Redirecting...');
       
-
-      setMessage(`Verification email sent to ${email}`);
+      // Store session information using SessionManager
+      SessionManager.saveSession(
+        idToken,
+        {
+          sessionId: backendData.session.session_id,
+          expiresAt: backendData.session.expires_at,
+          createdAt: backendData.session.created_at,
+        },
+        backendData.user
+      );
+      
+      // Redirect to dashboard or home page after successful login
+      setTimeout(() => {
+        router.push('/dashboard'); // Change this to your desired redirect path
+      }, 1000);
 
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -44,19 +74,19 @@ export default function SignUpPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
+            Sign in to your account
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <Link 
-              href="/auth/login" 
+              href="/auth/signup" 
               className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
             >
-              sign in to your existing account
+              create a new account
             </Link>
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -74,6 +104,47 @@ export default function SignUpPage() {
                 placeholder="Enter your email address"
                 disabled={loading}
               />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Enter your password"
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                Remember me
+              </label>
+            </div>
+
+            <div className="text-sm">
+              <Link 
+                href="/auth/forgot-password" 
+                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
+              >
+                Forgot your password?
+              </Link>
             </div>
           </div>
 
@@ -93,10 +164,10 @@ export default function SignUpPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Creating account...
+                  Signing in...
                 </div>
               ) : (
-                'Sign Up'
+                'Sign in'
               )}
             </button>
           </div>

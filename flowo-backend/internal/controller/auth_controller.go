@@ -1,13 +1,17 @@
 package controller
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
+	"time"
 
 	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 
+	"flowo-backend/config"
 	"flowo-backend/internal/middleware"
 	"flowo-backend/internal/utils"
 )
@@ -18,19 +22,22 @@ func (ac *AuthController) RegisterRoutes(rg *gin.RouterGroup, authMiddleware *mi
 	{
 		// Public routes
 		auth.POST("/signup", ac.SignUpHandler)
+		auth.POST("/login", ac.LoginHandler)
 		auth.POST("/verify", ac.VerifyToken)
 	}
 }
 
 // AuthController handles authentication-related operations
 type AuthController struct {
-	firebaseAuth *auth.Client
+	firebaseAuth   *auth.Client
+	firebaseAPIKey string
 }
 
 // NewAuthController creates a new auth controller
-func NewAuthController(firebaseAuth *auth.Client) *AuthController {
+func NewAuthController(firebaseAuth *auth.Client, cfg *config.Config) *AuthController {
 	return &AuthController{
-		firebaseAuth: firebaseAuth,
+		firebaseAuth:   firebaseAuth,
+		firebaseAPIKey: cfg.Firebase.APIKey,
 	}
 }
 
@@ -59,10 +66,31 @@ type SignUpRequest struct {
 
 // SignUpResponse represents the response for signup
 type SignUpResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Email   string `json:"email"`
+	Success  bool   `json:"success"`
+	Message  string `json:"message"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+// LoginRequest represents the request body for logging in a user
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+// SessionInfo represents session information
+type SessionInfo struct {
+	SessionID string `json:"session_id"`
+	ExpiresAt int64  `json:"expires_at"`
+	CreatedAt int64  `json:"created_at"`
+}
+
+// LoginResponse represents the response for login
+type LoginResponse struct {
+	Success bool        `json:"success"`
+	Message string      `json:"message"`
+	Token   string      `json:"token"`
+	Session SessionInfo `json:"session"`
 }
 
 // SignUpHandler handles user signup process
@@ -149,14 +177,156 @@ func (ac *AuthController) SignUpHandler(c *gin.Context) {
 		return
 	}
 	response := SignUpResponse{
-		Success: true,
-		Message: "Account created successfully. Verification email will be sent.",
-		Email:   req.Email,
+		Success:  true,
+		Message:  "Account created successfully. Verification email will be sent.",
+		Email:    req.Email,
 		Password: tempPassword, // Include password for frontend to use
 	}
 
 	c.JSON(http.StatusOK, response)
 	log.Info().Str("email", req.Email).Msg("Signup process initiated successfully")
+}
+
+// LoginHandler handles user login process using Firebase REST API
+// @Summary Login user
+// @Description Authenticates user with email and password using Firebase REST API and returns user information with session
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body LoginRequest true "User login data"
+// @Success 200 {object} LoginResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/v1/auth/login [post]
+func (ac *AuthController) LoginHandler(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "bad_request",
+			"message": err.Error(),
+		})
+		log.Error().Err(err).Msg("Failed to bind JSON for user login")
+		return
+	}
+
+	// Get Firebase API key from config
+	if ac.firebaseAPIKey == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "configuration_error",
+			"message": "Firebase API key not configured",
+		})
+		log.Error().Msg("Firebase API key not configured in application config")
+		return
+	}
+
+	loginPayload := map[string]interface{}{
+		"email":             req.Email,
+		"password":          req.Password,
+		"returnSecureToken": true,
+	}
+
+	loginData, err := json.Marshal(loginPayload)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_server_error",
+			"message": "Failed to prepare authentication request",
+		})
+		log.Error().Err(err).Msg("Failed to marshal login payload")
+		return
+	}
+
+	firebaseLoginURL := "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + ac.firebaseAPIKey
+
+	// Make HTTP request to Firebase
+	resp, err := http.Post(firebaseLoginURL, "application/json", bytes.NewBuffer(loginData))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_server_error",
+			"message": "Failed to authenticate with Firebase",
+		})
+		log.Error().Err(err).Str("email", req.Email).Msg("Failed to send request to Firebase")
+		return
+	}
+	defer resp.Body.Close()
+
+	// Parse Firebase response
+	var firebaseResp map[string]interface{}
+
+	if err := json.NewDecoder(resp.Body).Decode(&firebaseResp); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_server_error",
+			"message": "Failed to parse authentication response",
+		})
+		log.Error().Err(err).Str("email", req.Email).Msg("Failed to decode Firebase response")
+		return
+	}
+	// Log response
+	log.Debug().Interface("firebase_response", firebaseResp).Msg("Firebase authentication response")
+
+	// Handle authentication errors
+	if resp.StatusCode != http.StatusOK {
+		errorMessage := "Authentication failed"
+		if errorObj, ok := firebaseResp["error"]; ok {
+			if errorMap, ok := errorObj.(map[string]interface{}); ok {
+				if message, ok := errorMap["message"].(string); ok {
+					switch message {
+					case "EMAIL_NOT_FOUND":
+						errorMessage = "Invalid email or password"
+					case "INVALID_PASSWORD":
+						errorMessage = "Invalid email or password"
+					case "USER_DISABLED":
+						errorMessage = "User account is disabled"
+					case "TOO_MANY_ATTEMPTS_TRY_LATER":
+						errorMessage = "Too many failed attempts. Please try again later"
+					default:
+						errorMessage = "Authentication failed"
+					}
+				}
+			}
+		}
+
+		statusCode := http.StatusUnauthorized
+		if resp.StatusCode >= 500 {
+			statusCode = http.StatusInternalServerError
+		}
+
+		c.JSON(statusCode, gin.H{
+			"error":   "authentication_failed",
+			"message": errorMessage,
+		})
+		log.Warn().Str("email", req.Email).Int("firebase_status", resp.StatusCode).Msg("Firebase authentication failed")
+		return
+	}
+
+
+	// Generate session cookie
+	expiresIn := time.Hour * 24
+	sessionCookie, err := ac.firebaseAuth.SessionCookie(c, firebaseResp["idToken"].(string), expiresIn)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_server_error",
+			"message": "Failed to generate session cookie",
+		})
+		log.Error().Err(err).Str("email", req.Email).Msg("Failed to create session cookie")
+		return
+	}
+
+
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("session_id", sessionCookie, int(expiresIn.Seconds()), "/", "", true, true)
+
+
+	response := make(map[string]string)
+	response["message"] = "Login successful"
+	response["authorized"] = "true"
+	response["email"] = req.Email
+
+	response["token"] = firebaseResp["idToken"].(string)
+	response["session_id"] = sessionCookie
+
+	c.JSON(http.StatusOK, response)
+
 }
 
 // VerifyToken verifies a Firebase ID token
@@ -203,10 +373,4 @@ func (ac *AuthController) VerifyToken(c *gin.Context) {
 		"uid":    token.UID,
 		"claims": token.Claims,
 	})
-}
-
-// CompleteSignupRequest represents the request for completing signup after email verification
-type CompleteSignupRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
 }

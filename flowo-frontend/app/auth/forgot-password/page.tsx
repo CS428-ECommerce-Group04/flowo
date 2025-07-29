@@ -1,39 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../lib/auth/firebase'; // Adjust the import path as necessary
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../../lib/auth/firebase';
 import Link from 'next/link';
 
-export default function SignUpPage() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
     setError('');
 
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_BACKEND_URL + '/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-
       await sendPasswordResetEmail(auth, email);
-      
-
-      setMessage(`Verification email sent to ${email}`);
-
+      setMessage(`Password reset email sent to ${email}. Please check your inbox and follow the instructions.`);
     } catch (err: any) {
-      setError(err.message || 'Signup failed');
+      setError(err.message || 'Failed to send password reset email');
     } finally {
       setLoading(false);
     }
@@ -44,19 +32,13 @@ export default function SignUpPage() {
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
+            Reset your password
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link 
-              href="/auth/login" 
-              className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
-            >
-              sign in to your existing account
-            </Link>
+            Enter your email address and we'll send you a link to reset your password.
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
+        <form className="mt-8 space-y-6" onSubmit={handleResetPassword}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -93,12 +75,21 @@ export default function SignUpPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Creating account...
+                  Sending...
                 </div>
               ) : (
-                'Sign Up'
+                'Send reset email'
               )}
             </button>
+          </div>
+
+          <div className="text-center">
+            <Link 
+              href="/auth/login" 
+              className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
+            >
+              Back to login
+            </Link>
           </div>
 
           {message && (

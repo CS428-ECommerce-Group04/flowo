@@ -2,9 +2,12 @@ package utils
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"regexp"
+	"time"
 )
 
 // GenerateSecurePassword generates a secure password of the specified length.
@@ -65,4 +68,26 @@ func ValidatePassword(password string) error {
 	}
 
 	return nil
+}
+
+// GenerateSessionID generates a unique session ID
+func GenerateSessionID() (string, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	// Add timestamp for uniqueness
+	timestamp := time.Now().UnixNano()
+	sessionData := fmt.Sprintf("%s-%d", base64.URLEncoding.EncodeToString(bytes), timestamp)
+
+	// Hash the session data for security
+	hash := sha256.Sum256([]byte(sessionData))
+	return base64.URLEncoding.EncodeToString(hash[:]), nil
+}
+
+// GetSessionExpiration returns the session expiration time (24 hours from now)
+func GetSessionExpiration() int64 {
+	return time.Now().Add(24 * time.Hour).Unix()
 }
