@@ -2,15 +2,19 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/auth"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/fx"
+	"google.golang.org/api/option"
 
 	"flowo-backend/cache"
 	"flowo-backend/config"
@@ -18,13 +22,14 @@ import (
 	_ "flowo-backend/docs" // This will be created by swag
 	"flowo-backend/internal/controller"
 	"flowo-backend/internal/logger"
+	"flowo-backend/internal/middleware"
 	"flowo-backend/internal/repository"
 	"flowo-backend/internal/service"
 )
 
-// @title           Todo List API
+// @title           Flowo List API
 // @version         1.0
-// @description     A modern RESTful API for managing your todos efficiently. This API provides comprehensive endpoints for creating, reading, updating, and deleting todo items.
+// @description     A modern RESTful API for managing your flower store efficiently.
 // @termsOfService  http://swagger.io/terms/
 
 // @contact.name   API Support Team
@@ -57,6 +62,8 @@ func main() {
 			NewConfig,
 			database.NewDB,
 			NewGinEngine,
+			NewFirebaseAuth,
+			NewAuthMiddleware,
 
 			cache.ProvideRedisCache,
 
@@ -69,10 +76,12 @@ func main() {
 			service.NewReviewService,
 			service.NewCartService,
 			service.NewPricingService,
+
 			controller.NewPricingController,
 			controller.NewController,
 			controller.NewReviewController,
 			controller.NewCartController,
+			controller.NewAuthController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -82,6 +91,29 @@ func main() {
 
 func NewConfig() (*config.Config, error) {
 	return config.NewConfig()
+}
+
+func NewFirebaseAuth(cfg *config.Config) (*auth.Client, error) {
+	ctx := context.Background()
+
+	// Initialize Firebase app with service account
+	opt := option.WithCredentialsFile(cfg.Firebase.CredentialsPath)
+	app, err := firebase.NewApp(ctx, nil, opt)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing Firebase app: %v", err)
+	}
+
+	// Get Firebase Auth client
+	authClient, err := app.Auth(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting Firebase Auth client: %v", err)
+	}
+
+	return authClient, nil
+}
+
+func NewAuthMiddleware(firebaseAuth *auth.Client) *middleware.AuthMiddleware {
+	return middleware.NewAuthMiddleware(firebaseAuth)
 }
 
 func NewGinEngine() *gin.Engine {
@@ -113,12 +145,19 @@ func RegisterRoutes(
 	reviewCtrl *controller.ReviewController,
 	cartCtrl *controller.CartController,
 	pricingCtrl *controller.PricingController,
+	authCtrl *controller.AuthController,
+	authMiddleware *middleware.AuthMiddleware,
 ) {
+
 	controller.RegisterRoutes(router)
+
 	v1 := router.Group("/api/v1")
+
 	reviewCtrl.RegisterRoutes(v1)
 	cartCtrl.RegisterRoutes(v1)
 	pricingCtrl.RegisterRoutes(v1)
+	authCtrl.RegisterRoutes(v1, authMiddleware)
+
 	logger.Init()
 
 	server := &http.Server{
