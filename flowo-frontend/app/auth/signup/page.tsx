@@ -26,9 +26,6 @@ export default function SignUpPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      const { password } = data;
-
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await sendPasswordResetEmail(auth, email);
 
       setMessage(`Verification email sent to ${email}`);
