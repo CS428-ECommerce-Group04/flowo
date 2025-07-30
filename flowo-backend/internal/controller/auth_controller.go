@@ -15,6 +15,7 @@ import (
 
 	"flowo-backend/config"
 	"flowo-backend/internal/middleware"
+	"flowo-backend/internal/service"
 	"flowo-backend/internal/utils"
 )
 
@@ -42,13 +43,16 @@ type AuthController struct {
 	firebaseAuth   *auth.Client
 	firebaseAPIKey string
 	IsProduction   bool
+	service        service.Service
 }
+
 // NewAuthController creates a new auth controller
-func NewAuthController(firebaseAuth *auth.Client, cfg *config.Config) *AuthController {
+func NewAuthController(firebaseAuth *auth.Client, cfg *config.Config, service service.Service) *AuthController {
 	return &AuthController{
 		firebaseAuth:   firebaseAuth,
 		firebaseAPIKey: cfg.Firebase.APIKey,
 		IsProduction:   cfg.IsProduction,
+		service:        service,
 	}
 }
 
@@ -189,7 +193,7 @@ func (ac *AuthController) SignUpHandler(c *gin.Context) {
 		EmailVerified(false).
 		Disabled(false)
 
-	_, err = ac.firebaseAuth.CreateUser(ctx, params)
+	firebaseUser, err := ac.firebaseAuth.CreateUser(ctx, params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "internal_server_error",
@@ -197,6 +201,16 @@ func (ac *AuthController) SignUpHandler(c *gin.Context) {
 		})
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to create user")
 		return
+	}
+
+	// Create user record in local database with minimal Firebase information
+	localUser, err := ac.service.CreateUser(firebaseUser.UID, req.Email, nil, nil)
+	if err != nil {
+		// Log error but don't fail the signup since Firebase user was already created
+		log.Error().Err(err).Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Msg("Failed to create user in local database")
+		// Note: In production, you might want to clean up the Firebase user or queue this for retry
+	} else {
+		log.Info().Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Int("user_id", localUser.UserID).Msg("User created successfully in both Firebase and local database")
 	}
 
 	// Send password reset email using Firebase REST API
@@ -340,7 +354,6 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 	// Generate session cookie
 	expiresIn := time.Hour * 24 * 5 // 5 days
 
-
 	idToken, ok := firebaseResp["idToken"].(string)
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -361,7 +374,7 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 	}
 
 	// Set secure cookie
-	secure := ac.IsProduction // Use config to determine if secure flag should be set
+	secure := ac.IsProduction                                                                 // Use config to determine if secure flag should be set
 	c.SetCookie("session_id", sessionCookie, int(expiresIn.Seconds()), "/", "", secure, true) // Set secure flag based on environment
 
 	// Return response without tokens (security best practice)
@@ -426,16 +439,39 @@ func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
 		return
 	}
 
+	// Ensure user exists in local database (create if doesn't exist)
+	localUser, err := ac.service.GetUserByFirebaseUID(decoded.UID)
+	if err != nil {
+		log.Error().Err(err).Str("uid", decoded.UID).Msg("Failed to get local user record")
+	} else if localUser == nil {
+		// User doesn't exist in local database, create them
+		localUser, err = ac.service.CreateUser(decoded.UID, userRecord.Email, nil, nil)
+		if err != nil {
+			log.Error().Err(err).Str("uid", decoded.UID).Str("email", userRecord.Email).Msg("Failed to create user in local database during auth check")
+		} else {
+			log.Info().Str("uid", decoded.UID).Str("email", userRecord.Email).Int("user_id", localUser.UserID).Msg("Created local user record during auth check")
+		}
+	}
+
 	log.Info().Str("uid", decoded.UID).Str("email", userRecord.Email).Msg("User session verified successfully")
+
+	// Build response with both Firebase and local user information
+	userResponse := gin.H{
+		"uid":            decoded.UID,
+		"email":          userRecord.Email,
+		"display_name":   userRecord.DisplayName,
+		"email_verified": userRecord.EmailVerified,
+	}
+
+	// Add local user ID if available
+	if localUser != nil {
+		userResponse["local_user_id"] = localUser.UserID
+		userResponse["role"] = localUser.Role
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"authenticated": true,
-		"user": gin.H{
-			"uid":            decoded.UID,
-			"email":          userRecord.Email,
-			"display_name":   userRecord.DisplayName,
-			"email_verified": userRecord.EmailVerified,
-		},
+		"user":          userResponse,
 		"session": gin.H{
 			"expires_at": decoded.Expires,
 			"issued_at":  decoded.IssuedAt,

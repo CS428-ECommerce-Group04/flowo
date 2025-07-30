@@ -32,6 +32,11 @@ type Service interface {
 	GetProductDetails(id uint) (*model.Product, error)
 	GetAllOccasions() ([]model.Occasion, error)
 	GetSearchFilters() (*model.FilterOptions, error)
+
+	// User service methods
+	CreateUser(firebaseUID, email string, username, fullName *string) (*model.User, error)
+	GetUserByFirebaseUID(firebaseUID string) (*model.User, error)
+	GetUserByEmail(email string) (*model.User, error)
 }
 
 type service struct {
@@ -398,4 +403,42 @@ func (s *service) buildPaginationInfo(page, limit, total int) *model.PaginationI
 		HasNext:    hasNext,
 		HasPrev:    hasPrev,
 	}
+}
+
+// CreateUser creates a new user with minimal Firebase information
+func (s *service) CreateUser(firebaseUID, email string, username, fullName *string) (*model.User, error) {
+	// Check if user already exists
+	existingUser, err := s.repo.GetUserByFirebaseUID(firebaseUID)
+	if err != nil {
+		return nil, err
+	}
+	if existingUser != nil {
+		return existingUser, nil // User already exists
+	}
+
+	user := &model.User{
+		FirebaseUID: firebaseUID,
+		Email:       email,
+		Username:    username,
+		FullName:    fullName,
+		Gender:      "Other",           // Default value
+		Role:        "RegisteredBuyer", // Default value
+	}
+
+	err = s.repo.CreateUser(user)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+// GetUserByFirebaseUID retrieves a user by Firebase UID
+func (s *service) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
+	return s.repo.GetUserByFirebaseUID(firebaseUID)
+}
+
+// GetUserByEmail retrieves a user by email
+func (s *service) GetUserByEmail(email string) (*model.User, error) {
+	return s.repo.GetUserByEmail(email)
 }

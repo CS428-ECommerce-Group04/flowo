@@ -13,13 +13,16 @@ CREATE TABLE IF NOT EXISTS todos (
 -- Table: User
 CREATE TABLE User (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(255) UNIQUE COMMENT 'Unique username',
-    password_hash VARCHAR(255) COMMENT 'Encrypted password',
-    email VARCHAR(255) UNIQUE COMMENT 'Unique email',
-    full_name VARCHAR(255),
-    role VARCHAR(50) COMMENT "('RegisteredBuyer', 'Admin')",
+    firebase_uid VARCHAR(255) UNIQUE NOT NULL COMMENT 'Firebase User UID for linking with Firebase Auth',
+    username VARCHAR(255) UNIQUE COMMENT 'Optional local username',
+    email VARCHAR(255) UNIQUE NOT NULL COMMENT 'User email address (cached from Firebase)',
+    full_name VARCHAR(255) COMMENT 'User display name (cached from Firebase)',
+    gender ENUM('Male', 'Female', 'Other') NOT NULL DEFAULT 'Other',
+    role ENUM('RegisteredBuyer', 'Admin') NOT NULL DEFAULT 'RegisteredBuyer' COMMENT "('RegisteredBuyer', 'Admin')",
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_firebase_uid (firebase_uid),
+    INDEX idx_email (email)
 );
 
 -- Table: Address

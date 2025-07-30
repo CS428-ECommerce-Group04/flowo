@@ -33,6 +33,11 @@ type Repository interface {
 	GetAllOccasions() ([]model.Occasion, error)
 	GetPriceRange() (*model.PriceRange, error)
 	GetProductStatistics(productID uint) (averageRating float64, reviewCount int, salesRank int, error error)
+
+	// User repository methods
+	CreateUser(user *model.User) error
+	GetUserByFirebaseUID(firebaseUID string) (*model.User, error)
+	GetUserByEmail(email string) (*model.User, error)
 }
 
 type repository struct {
@@ -562,4 +567,87 @@ func (r *repository) GetProductStatistics(productID uint) (averageRating float64
 	}
 
 	return averageRating, reviewCount, salesRank, nil
+}
+
+// CreateUser creates a new user in the database
+func (r *repository) CreateUser(user *model.User) error {
+	query := `
+		INSERT INTO User (firebase_uid, email, username, full_name, gender, role, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+	`
+
+	result, err := r.db.Exec(query, user.FirebaseUID, user.Email, user.Username, user.FullName, user.Gender, user.Role)
+	if err != nil {
+		return err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	user.UserID = int(id)
+	return nil
+}
+
+// GetUserByFirebaseUID retrieves a user by their Firebase UID
+func (r *repository) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
+	query := `
+		SELECT user_id, firebase_uid, email, username, full_name, gender, role, created_at, updated_at
+		FROM User
+		WHERE firebase_uid = ?
+	`
+
+	var user model.User
+	err := r.db.QueryRow(query, firebaseUID).Scan(
+		&user.UserID,
+		&user.FirebaseUID,
+		&user.Email,
+		&user.Username,
+		&user.FullName,
+		&user.Gender,
+		&user.Role,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // User not found
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// GetUserByEmail retrieves a user by their email
+func (r *repository) GetUserByEmail(email string) (*model.User, error) {
+	query := `
+		SELECT user_id, firebase_uid, email, username, full_name, gender, role, created_at, updated_at
+		FROM User
+		WHERE email = ?
+	`
+
+	var user model.User
+	err := r.db.QueryRow(query, email).Scan(
+		&user.UserID,
+		&user.FirebaseUID,
+		&user.Email,
+		&user.Username,
+		&user.FullName,
+		&user.Gender,
+		&user.Role,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // User not found
+		}
+		return nil, err
+	}
+
+	return &user, nil
 }
