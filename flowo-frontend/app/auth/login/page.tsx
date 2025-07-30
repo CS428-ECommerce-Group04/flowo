@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     try {
       // Authenticate with backend using session cookies
-      const backendRes = await fetch(`http://localhost:8081/api/v1/auth/login`, {
+      const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

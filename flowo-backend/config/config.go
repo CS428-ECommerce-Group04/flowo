@@ -10,6 +10,7 @@ type Config struct {
 	Database DatabaseConfig
 	Firebase FirebaseConfig
 	Domain   string
+	IsProduction bool
 }
 
 type ServerConfig struct {
@@ -53,6 +54,7 @@ func NewConfig() (*Config, error) {
 	config.Firebase.CredentialsPath = viper.GetString("FIREBASE_CREDENTIALS_PATH")
 	config.Firebase.APIKey = viper.GetString("FIREBASE_API_KEY")
 	config.Domain = viper.GetString("DOMAIN")
+	config.IsProduction = viper.GetBool("IS_PRODUCTION")
 
 	// Set default Firebase credentials path if not specified
 	if config.Firebase.CredentialsPath == "" {

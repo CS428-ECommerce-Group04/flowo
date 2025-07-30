@@ -116,14 +116,14 @@ func NewAuthMiddleware(firebaseAuth *auth.Client) *middleware.AuthMiddleware {
 	return middleware.NewAuthMiddleware(firebaseAuth)
 }
 
-func NewGinEngine() *gin.Engine {
+func NewGinEngine(cfg *config.Config) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 
 	// Configure CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // Add your frontend URLs
+		AllowOrigins:     []string{cfg.Domain}, // Add your frontend URLs
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},

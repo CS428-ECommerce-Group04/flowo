@@ -41,13 +41,14 @@ func (ac *AuthController) RegisterRoutes(rg *gin.RouterGroup, authMiddleware *mi
 type AuthController struct {
 	firebaseAuth   *auth.Client
 	firebaseAPIKey string
+	IsProduction   bool
 }
-
 // NewAuthController creates a new auth controller
 func NewAuthController(firebaseAuth *auth.Client, cfg *config.Config) *AuthController {
 	return &AuthController{
 		firebaseAuth:   firebaseAuth,
 		firebaseAPIKey: cfg.Firebase.APIKey,
+		IsProduction:   cfg.IsProduction,
 	}
 }
 
@@ -338,7 +339,18 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 
 	// Generate session cookie
 	expiresIn := time.Hour * 24 * 5 // 5 days
-	sessionCookie, err := ac.firebaseAuth.SessionCookie(c, firebaseResp["idToken"].(string), expiresIn)
+
+
+	idToken, ok := firebaseResp["idToken"].(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_response",
+			"message": "Invalid or missing idToken in authentication response",
+		})
+		log.Error().Str("email", req.Email).Msg("idToken is missing or not a string in Firebase response")
+		return
+	}
+	sessionCookie, err := ac.firebaseAuth.SessionCookie(c, idToken, expiresIn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "internal_server_error",
@@ -349,8 +361,8 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 	}
 
 	// Set secure cookie
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("session_id", sessionCookie, int(expiresIn.Seconds()), "/", "", false, true) // Set secure to false for development, true for production
+	secure := ac.IsProduction // Use config to determine if secure flag should be set
+	c.SetCookie("session_id", sessionCookie, int(expiresIn.Seconds()), "/", "", secure, true) // Set secure flag based on environment
 
 	// Return response without tokens (security best practice)
 	response := LoginResponse{
