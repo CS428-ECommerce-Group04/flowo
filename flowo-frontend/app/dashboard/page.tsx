@@ -2,39 +2,39 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SessionManager, UserData } from '../../lib/auth/session';
+import { checkAuth, logout, AuthUser } from '../../lib/auth/auth';
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const checkAuth = async () => {
-      const isValid = await SessionManager.refreshTokenIfNeeded();
+    // Check if user is authenticated using session cookie
+    const checkAuthStatus = async () => {
+      const authResponse = await checkAuth();
       
-      if (!isValid) {
+      if (!authResponse.authenticated || !authResponse.user) {
         router.push('/auth/login');
         return;
       }
 
-      const userData = SessionManager.getUserData();
-      if (userData) {
-        setUser(userData);
-      } else {
-        router.push('/auth/login');
-      }
-      
+      setUser(authResponse.user);
       setLoading(false);
     };
 
-    checkAuth();
+    checkAuthStatus();
   }, [router]);
 
-  const handleLogout = () => {
-    SessionManager.clearSession();
-    router.push('/auth/login');
+  const handleLogout = async () => {
+    setLoading(true);
+    const success = await logout();
+    if (success) {
+      router.push('/auth/login');
+    } else {
+      setLoading(false);
+      alert('Logout failed. Please try again.');
+    }
   };
 
   if (loading) {
@@ -86,21 +86,17 @@ export default function DashboardPage() {
                   <p><span className="font-medium text-gray-700">Email:</span> {user.email}</p>
                   <p><span className="font-medium text-gray-700">User ID:</span> {user.uid}</p>
                   <p><span className="font-medium text-gray-700">Display Name:</span> {user.display_name || 'Not set'}</p>
-                  <p><span className="font-medium text-gray-700">Phone:</span> {user.phone_number || 'Not set'}</p>
-                  <p><span className="font-medium text-gray-700">Account Status:</span> 
-                    <span className={`ml-1 px-2 py-1 rounded-full text-xs ${user.disabled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                      {user.disabled ? 'Disabled' : 'Active'}
+                  <p><span className="font-medium text-gray-700">Email Verified:</span> 
+                    <span className={`ml-1 px-2 py-1 rounded-full text-xs ${user.email_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {user.email_verified ? 'Verified' : 'Not Verified'}
                     </span>
                   </p>
-                  <p><span className="font-medium text-gray-700">Member Since:</span> {new Date(user.created_at * 1000).toLocaleDateString()}</p>
                 </div>
               </div>
 
               <div className="mt-6">
                 <p className="text-sm text-gray-500">
-                  Session expires: {SessionManager.getSessionInfo() ? 
-                    new Date(SessionManager.getSessionInfo()!.expiresAt * 1000).toLocaleString() : 
-                    'Unknown'}
+                  Authentication verified via session cookie
                 </p>
               </div>
             </div>

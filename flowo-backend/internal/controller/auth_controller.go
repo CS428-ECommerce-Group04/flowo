@@ -23,7 +23,14 @@ func (ac *AuthController) RegisterRoutes(rg *gin.RouterGroup, authMiddleware *mi
 		// Public routes
 		auth.POST("/signup", ac.SignUpHandler)
 		auth.POST("/login", ac.LoginHandler)
-		auth.POST("/verify", ac.VerifyToken)
+		auth.GET("/check-auth", ac.CheckAuthHandler)
+
+		// Protected routes - require authentication
+		protected := auth.Group("/")
+		protected.Use(authMiddleware.RequireAuth()) // This will check session cookie first, then Bearer token
+		{
+			protected.POST("/logout", ac.LogoutHandler)
+		}
 	}
 }
 
@@ -89,7 +96,6 @@ type SessionInfo struct {
 type LoginResponse struct {
 	Success bool        `json:"success"`
 	Message string      `json:"message"`
-	Token   string      `json:"token"`
 	Session SessionInfo `json:"session"`
 }
 
@@ -261,8 +267,6 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to decode Firebase response")
 		return
 	}
-	// Log response
-	log.Debug().Interface("firebase_response", firebaseResp).Msg("Firebase authentication response")
 
 	// Handle authentication errors
 	if resp.StatusCode != http.StatusOK {
@@ -299,9 +303,8 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 		return
 	}
 
-
 	// Generate session cookie
-	expiresIn := time.Hour * 24
+	expiresIn := time.Hour * 24 * 5 // 5 days
 	sessionCookie, err := ac.firebaseAuth.SessionCookie(c, firebaseResp["idToken"].(string), expiresIn)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -312,65 +315,111 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 		return
 	}
 
-
+	// Set secure cookie
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("session_id", sessionCookie, int(expiresIn.Seconds()), "/", "", true, true)
+	c.SetCookie("session_id", sessionCookie, int(expiresIn.Seconds()), "/", "", false, true) // Set secure to false for development, true for production
 
-
-	response := make(map[string]string)
-	response["message"] = "Login successful"
-	response["authorized"] = "true"
-	response["email"] = req.Email
-
-	response["token"] = firebaseResp["idToken"].(string)
-	response["session_id"] = sessionCookie
+	// Return response without tokens (security best practice)
+	response := LoginResponse{
+		Success: true,
+		Message: "Login successful",
+		Session: SessionInfo{
+			SessionID: sessionCookie,
+			ExpiresAt: time.Now().Add(expiresIn).Unix(),
+			CreatedAt: time.Now().Unix(),
+		},
+	}
 
 	c.JSON(http.StatusOK, response)
+	log.Info().Str("email", req.Email).Msg("User logged in successfully")
 
 }
 
-// VerifyToken verifies a Firebase ID token
-// @Summary Verify Firebase ID token
-// @Description Verify the provided Firebase ID token
+// CheckAuthHandler verifies the session cookie and returns user information
+// @Summary Check authentication status
+// @Description Verify session cookie and return user information if authenticated
 // @Tags auth
-// @Accept json
 // @Produce json
-// @Param token body map[string]string true "Token to verify"
 // @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/auth/verify [post]
-func (ac *AuthController) VerifyToken(c *gin.Context) {
-	var req map[string]string
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "bad_request",
-			"message": "Invalid request body",
-		})
-		return
-	}
-
-	idToken, exists := req["token"]
-	if !exists || idToken == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "bad_request",
-			"message": "Token is required",
-		})
-		return
-	}
-
-	token, err := ac.firebaseAuth.VerifyIDToken(context.Background(), idToken)
+// @Router /api/v1/auth/check-auth [get]
+func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
+	// Get session cookie
+	sessionCookie, err := c.Cookie("session_id")
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":   "unauthorized",
-			"message": "Invalid or expired token",
+			"error":         "unauthorized",
+			"message":       "No session found",
+			"authenticated": false,
 		})
 		return
 	}
 
+	// Verify session cookie
+	decoded, err := ac.firebaseAuth.VerifySessionCookie(context.Background(), sessionCookie)
+	if err != nil {
+		// Clear invalid cookie
+		c.SetCookie("session_id", "", -1, "/", "", false, true)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":         "unauthorized",
+			"message":       "Invalid or expired session",
+			"authenticated": false,
+		})
+		log.Warn().Err(err).Msg("Invalid session cookie")
+		return
+	}
+
+	// Get user information from Firebase
+	userRecord, err := ac.firebaseAuth.GetUser(context.Background(), decoded.UID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":         "internal_server_error",
+			"message":       "Failed to get user information",
+			"authenticated": false,
+		})
+		log.Error().Err(err).Str("uid", decoded.UID).Msg("Failed to get user record")
+		return
+	}
+
+	log.Info().Str("uid", decoded.UID).Str("email", userRecord.Email).Msg("User session verified successfully")
+
 	c.JSON(http.StatusOK, gin.H{
-		"valid":  true,
-		"uid":    token.UID,
-		"claims": token.Claims,
+		"authenticated": true,
+		"user": gin.H{
+			"uid":            decoded.UID,
+			"email":          userRecord.Email,
+			"display_name":   userRecord.DisplayName,
+			"email_verified": userRecord.EmailVerified,
+		},
+		"session": gin.H{
+			"expires_at": decoded.Expires,
+			"issued_at":  decoded.IssuedAt,
+		},
 	})
+}
+
+// LogoutHandler clears the session cookie
+// @Summary Logout user
+// @Description Clear session cookie and logout user (requires authentication)
+// @Tags auth
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/auth/logout [post]
+func (ac *AuthController) LogoutHandler(c *gin.Context) {
+	// Get user information from context (set by auth middleware)
+	userID, exists := c.Get("user_id")
+	if exists {
+		log.Info().Str("user_id", userID.(string)).Msg("User initiated logout")
+	}
+
+	// Clear the session cookie
+	c.SetCookie("session_id", "", -1, "/", "", false, true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Logged out successfully",
+	})
+
+	log.Info().Msg("User logged out successfully")
 }

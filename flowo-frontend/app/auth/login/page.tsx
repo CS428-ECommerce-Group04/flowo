@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { auth } from '../../../lib/auth/firebase';
-import { SessionManager } from '../../../lib/auth/session';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -21,12 +19,13 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // First, authenticate with Firebase to get the custom token from backend
-      const backendRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081'}/auth/login`, {
+      // Authenticate with backend using session cookies
+      const backendRes = await fetch(`http://localhost:8081/api/v1/auth/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: Include cookies in request
         body: JSON.stringify({ 
           email, 
           password 
@@ -34,28 +33,14 @@ export default function LoginPage() {
       });
 
       const backendData = await backendRes.json();
+      console.log('Backend response:', backendData);
       if (!backendRes.ok) throw new Error(backendData.message);
-
-      // Use the custom token from backend to sign in with Firebase
-      const { signInWithCustomToken } = await import('firebase/auth');
-      const userCredential = await signInWithCustomToken(auth, backendData.token);
-      const user = userCredential.user;
-
-      // Get Firebase ID token for future requests
-      const idToken = await user.getIdToken();
 
       setMessage('Login successful! Redirecting...');
       
-      // Store session information using SessionManager
-      SessionManager.saveSession(
-        idToken,
-        {
-          sessionId: backendData.session.session_id,
-          expiresAt: backendData.session.expires_at,
-          createdAt: backendData.session.created_at,
-        },
-        backendData.user
-      );
+      // The session cookie is automatically set by the backend
+      // No need to manually store session data in localStorage when using cookies
+      console.log('Session created:', backendData.session);
       
       // Redirect to dashboard or home page after successful login
       setTimeout(() => {
