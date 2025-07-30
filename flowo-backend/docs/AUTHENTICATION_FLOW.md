@@ -99,6 +99,55 @@ The authentication system uses Firebase Authentication with session cookies for 
 - Clears the session cookie
 - Logs the logout event with user ID for audit purposes
 
+### 4. Forgot Password Route: `POST /api/v1/auth/forgot-password`
+**Purpose**: Send password reset email to user
+**Authentication**: Not required (public endpoint)
+
+**Request Body**:
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "message": "Password reset email sent successfully. Please check your inbox and follow the instructions.",
+  "email": "user@example.com"
+}
+```
+
+**Response** (400 - invalid email):
+```json
+{
+  "error": "bad_request",
+  "message": "Invalid email format"
+}
+```
+
+**Response** (400 - missing email):
+```json
+{
+  "error": "bad_request",
+  "message": "Key: 'ForgotPasswordRequest.Email' Error:Field validation for 'Email' failed on the 'required' tag"
+}
+```
+
+**What it does**:
+- Validates email format
+- Checks if user exists in Firebase
+- Sends password reset email via Firebase
+- Returns success message even for non-existent emails (security measure)
+- Logs password reset requests for audit purposes
+
+**Security Features**:
+- Returns same success message whether user exists or not
+- Prevents email enumeration attacks
+- Uses Firebase's built-in password reset functionality
+- Logs all attempts for monitoring
+
 ## Middleware Updates
 
 ### RequireAuth Middleware

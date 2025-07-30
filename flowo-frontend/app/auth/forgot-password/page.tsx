@@ -18,7 +18,18 @@ export default function ForgotPasswordPage() {
     setError('');
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081'}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error('Failed to send password reset email');
+      const data = await res.json();
+      console.log('Backend response:', data);
+      if (!data.success) throw new Error(data.message || 'Failed to send password reset email');
+
       setMessage(`Password reset email sent to ${email}. Please check your inbox and follow the instructions.`);
     } catch (err: any) {
       setError(err.message || 'Failed to send password reset email');

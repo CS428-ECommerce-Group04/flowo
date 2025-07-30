@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../lib/auth/firebase'; // Adjust the import path as necessary
 import Link from 'next/link';
 
 export default function SignUpPage() {
@@ -18,7 +16,7 @@ export default function SignUpPage() {
     setError('');
 
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_BACKEND_URL + '/auth/signup', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081'}/api/v1/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -27,10 +25,8 @@ export default function SignUpPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      await sendPasswordResetEmail(auth, email);
-      
-
-      setMessage(`Verification email sent to ${email}`);
+      // Backend now handles sending the password reset email
+      setMessage(data.message);
 
     } catch (err: any) {
       setError(err.message || 'Signup failed');

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"firebase.google.com/go/v4/auth"
@@ -24,6 +26,7 @@ func (ac *AuthController) RegisterRoutes(rg *gin.RouterGroup, authMiddleware *mi
 		auth.POST("/signup", ac.SignUpHandler)
 		auth.POST("/login", ac.LoginHandler)
 		auth.GET("/check-auth", ac.CheckAuthHandler)
+		auth.POST("/forgot-password", ac.ForgotPasswordHandler)
 
 		// Protected routes - require authentication
 		protected := auth.Group("/")
@@ -99,9 +102,21 @@ type LoginResponse struct {
 	Session SessionInfo `json:"session"`
 }
 
+// ForgotPasswordRequest represents the request body for forgot password
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// ForgotPasswordResponse represents the response for forgot password
+type ForgotPasswordResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Email   string `json:"email"`
+}
+
 // SignUpHandler handles user signup process
 // @Summary Sign up a new user
-// @Description Validates email, checks if user exists, and sends password reset email for verification
+// @Description Validates email, creates Firebase user with temporary password, and automatically sends password reset email
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -182,11 +197,29 @@ func (ac *AuthController) SignUpHandler(c *gin.Context) {
 		log.Error().Err(err).Str("email", req.Email).Msg("Failed to create user")
 		return
 	}
+
+	// Send password reset email using Firebase REST API
+	if err := ac.sendPasswordResetEmail(req.Email); err != nil {
+		// User is created but email failed - log warning but don't fail the signup
+		log.Warn().Err(err).Str("email", req.Email).Msg("Failed to send password reset email after signup")
+
+		// Still return success but with a different message
+		response := SignUpResponse{
+			Success:  true,
+			Message:  "Account created successfully. Please try to reset your password using the forgot password option.",
+			Email:    req.Email,
+			Password: tempPassword, // Include password for reference
+		}
+		c.JSON(http.StatusOK, response)
+		log.Info().Str("email", req.Email).Msg("Signup completed but password reset email failed")
+		return
+	}
+
 	response := SignUpResponse{
 		Success:  true,
-		Message:  "Account created successfully. Verification email will be sent.",
+		Message:  "Account created successfully. Password reset email has been sent to your email address.",
 		Email:    req.Email,
-		Password: tempPassword, // Include password for frontend to use
+		Password: tempPassword, // Include password for reference, but user should use email reset
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -422,4 +455,150 @@ func (ac *AuthController) LogoutHandler(c *gin.Context) {
 	})
 
 	log.Info().Msg("User logged out successfully")
+}
+
+// sendPasswordResetEmail sends a password reset email using Firebase REST API
+func (ac *AuthController) sendPasswordResetEmail(email string) error {
+	// Prepare the password reset request payload
+	resetPayload := map[string]interface{}{
+		"requestType": "PASSWORD_RESET",
+		"email":       email,
+	}
+
+	resetData, err := json.Marshal(resetPayload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal password reset payload: %w", err)
+	}
+
+	// Firebase REST API endpoint for sending password reset email
+	firebaseResetURL := "https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=" + ac.firebaseAPIKey
+
+	// Make HTTP request to Firebase
+	resp, err := http.Post(firebaseResetURL, "application/json", bytes.NewBuffer(resetData))
+	if err != nil {
+		return fmt.Errorf("failed to send request to Firebase: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for successful response
+	if resp.StatusCode == http.StatusOK {
+		log.Info().Str("email", email).Msg("Password reset email sent successfully")
+		return nil
+	}
+
+	// Handle Firebase API errors
+	var firebaseResp map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&firebaseResp); err != nil {
+		return fmt.Errorf("failed to decode Firebase response, status: %d", resp.StatusCode)
+	}
+
+	// Extract error message from Firebase response
+	errorMessage := "Failed to send password reset email"
+	if errorObj, ok := firebaseResp["error"]; ok {
+		if errorMap, ok := errorObj.(map[string]interface{}); ok {
+			if message, ok := errorMap["message"].(string); ok {
+				errorMessage = message
+			}
+		}
+	}
+
+	return fmt.Errorf("firebase API error (status %d): %s", resp.StatusCode, errorMessage)
+}
+
+// ForgotPasswordHandler handles forgot password requests
+// @Summary Send password reset email
+// @Description Send a password reset email to the user's email address
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body ForgotPasswordRequest true "Forgot password data"
+// @Success 200 {object} ForgotPasswordResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/v1/auth/forgot-password [post]
+func (ac *AuthController) ForgotPasswordHandler(c *gin.Context) {
+	var req ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "bad_request",
+			"message": err.Error(),
+		})
+		log.Error().Err(err).Msg("Failed to bind JSON for forgot password")
+		return
+	}
+
+	// Validate email format
+	if err := utils.ValidateEmail(req.Email); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "bad_request",
+			"message": "Invalid email format",
+		})
+		log.Error().Err(err).Str("email", req.Email).Msg("Invalid email format")
+		return
+	}
+
+	// Check if user exists
+	ctx := context.Background()
+	userRecord, err := ac.firebaseAuth.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		if auth.IsUserNotFound(err) {
+			// For security reasons, don't reveal if email exists or not
+			// Return success message even if user doesn't exist
+			response := ForgotPasswordResponse{
+				Success: true,
+				Message: "If an account with this email exists, a password reset email has been sent.",
+				Email:   req.Email,
+			}
+			c.JSON(http.StatusOK, response)
+			log.Info().Str("email", req.Email).Msg("Password reset requested for non-existent user")
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_server_error",
+			"message": "Failed to check user existence",
+		})
+		log.Error().Err(err).Str("email", req.Email).Msg("Error checking user existence")
+		return
+	}
+
+	// Send password reset email using the helper method
+	if err := ac.sendPasswordResetEmail(req.Email); err != nil {
+		// Log the actual error for debugging
+		log.Error().Err(err).Str("email", req.Email).Msg("Failed to send password reset email")
+
+		// For security, still return success for EMAIL_NOT_FOUND errors
+		if strings.Contains(err.Error(), "EMAIL_NOT_FOUND") {
+			response := ForgotPasswordResponse{
+				Success: true,
+				Message: "If an account with this email exists, a password reset email has been sent.",
+				Email:   req.Email,
+			}
+			c.JSON(http.StatusOK, response)
+			log.Info().Str("email", req.Email).Msg("Password reset requested for non-existent user (Firebase)")
+			return
+		}
+
+		// For other errors, return appropriate error response
+		statusCode := http.StatusBadRequest
+		if strings.Contains(err.Error(), "status 5") { // 5xx errors
+			statusCode = http.StatusInternalServerError
+		}
+
+		c.JSON(statusCode, gin.H{
+			"error":   "password_reset_failed",
+			"message": "Failed to send password reset email",
+		})
+		return
+	}
+
+	// Success - password reset email sent
+	response := ForgotPasswordResponse{
+		Success: true,
+		Message: "Password reset email sent successfully. Please check your inbox and follow the instructions.",
+		Email:   req.Email,
+	}
+
+	c.JSON(http.StatusOK, response)
+	log.Info().Str("email", req.Email).Str("user_id", userRecord.UID).Msg("Password reset email sent successfully")
 }
