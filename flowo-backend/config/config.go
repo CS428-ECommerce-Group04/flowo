@@ -8,6 +8,9 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
+	Firebase FirebaseConfig
+	Domain   string
+	IsProduction bool
 }
 
 type ServerConfig struct {
@@ -20,6 +23,11 @@ type DatabaseConfig struct {
 	User     string
 	Password string
 	Name     string
+}
+
+type FirebaseConfig struct {
+	CredentialsPath string
+	APIKey          string
 }
 
 func NewConfig() (*Config, error) {
@@ -43,6 +51,15 @@ func NewConfig() (*Config, error) {
 	config.Database.User = viper.GetString("DATABASE_USER")
 	config.Database.Password = viper.GetString("DATABASE_PASSWORD")
 	config.Database.Name = viper.GetString("DATABASE_NAME")
+	config.Firebase.CredentialsPath = viper.GetString("FIREBASE_CREDENTIALS_PATH")
+	config.Firebase.APIKey = viper.GetString("FIREBASE_API_KEY")
+	config.Domain = viper.GetString("DOMAIN")
+	config.IsProduction = viper.GetBool("IS_PRODUCTION")
+
+	// Set default Firebase credentials path if not specified
+	if config.Firebase.CredentialsPath == "" {
+		config.Firebase.CredentialsPath = "private_key.json"
+	}
 
 	log.Info().Interface("config", config).Msg("Config loaded")
 	return &config, nil

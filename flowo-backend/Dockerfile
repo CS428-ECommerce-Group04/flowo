@@ -31,6 +31,7 @@ WORKDIR /app
 # Copy the binary from the builder stage
 COPY --from=0 /app/main .
 COPY --from=0 /app/.env .
+COPY --from=0 /app/private_key.json .
 
 # Expose the application port
 EXPOSE 8081
