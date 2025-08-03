@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,6 +33,7 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Tags orders
 // @Accept json
 // @Produce json
+// @Param user_id query int false "User ID for testing"
 // @Param request body dto.CreateOrderRequest true "Order details"
 // @Success 201 {object} model.Response
 // @Failure 400 {object} model.Response
@@ -38,16 +41,15 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/orders [post]
 func (ctrl *OrderController) CreateOrder(c *gin.Context) {
-	userIDValue, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized user"})
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
 		return
 	}
 
-	userIDStr := userIDValue.(string)
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
 		return
 	}
 
@@ -57,11 +59,16 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	fmt.Printf("[DEBUG] CreateOrderRequest received: %+v\n", req)
+
 	orderID, err := ctrl.Service.CreateOrder(userID, req)
 	if err != nil {
+		fmt.Println("[DEBUG] Error from CreateOrder service:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create order"})
 		return
 	}
+
+	fmt.Println("[DEBUG] Order created successfully with ID:", orderID)
 
 	c.JSON(http.StatusCreated, gin.H{"message": "order created", "order_id": orderID})
 }
@@ -71,27 +78,22 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 // @Description Retrieve all orders associated with the authenticated user from JWT (Firebase token)
 // @Tags orders
 // @Produce json
+// @Param user_id query int false "User ID for testing"
 // @Success 200 {array} dto.OrderResponse
 // @Failure 400 {object} model.Response
 // @Failure 401 {object} model.Response
 // @Failure 500 {object} model.Response
 // @Router /api/v1/orders [get]
 func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
-	userIDValue, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized user"})
-		return
-	}
-
-	userIDStr, ok := userIDValue.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID in context"})
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
 		return
 	}
 
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
 		return
 	}
 
@@ -110,6 +112,7 @@ func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
 // @Tags orders
 // @Accept json
 // @Produce json
+// @Param user_id query int false "User ID for testing"
 // @Param orderID path int true "Order ID"
 // @Param request body dto.UpdateOrderStatusRequest true "Update status request"
 // @Success 200 {object} model.Response
@@ -130,15 +133,9 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	userIDValue, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized user"})
-		return
-	}
-
-	userIDStr, ok := userIDValue.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user ID in context"})
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
 		return
 	}
 
@@ -150,12 +147,13 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "order status updated"})
 }
 
-// GetOrderByID godoc
+// GetOrderDetailByID godoc
 // @Summary Get order details
 // @Description Retrieve full details of a specific order (owner or admin only)
 // @Tags orders
 // @Produce json
 // @Param orderID path int true "Order ID"
+// @Param user_id query int false "User ID for testing"
 // @Success 200 {object} dto.OrderDetailResponse
 // @Failure 400 {object} model.Response
 // @Failure 401 {object} model.Response
@@ -169,12 +167,11 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 		return
 	}
 
-	userIDValue, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized user"})
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
 		return
 	}
-	userIDStr := userIDValue.(string)
 
 	ownerID, err := ctrl.Service.GetOrderOwnerID(orderID)
 	if err != nil {
