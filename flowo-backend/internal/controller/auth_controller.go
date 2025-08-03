@@ -43,16 +43,16 @@ type AuthController struct {
 	firebaseAuth   *auth.Client
 	firebaseAPIKey string
 	IsProduction   bool
-	service        service.Service
+	userService    service.UserService
 }
 
 // NewAuthController creates a new auth controller
-func NewAuthController(firebaseAuth *auth.Client, cfg *config.Config, service service.Service) *AuthController {
+func NewAuthController(firebaseAuth *auth.Client, cfg *config.Config, userService service.UserService) *AuthController {
 	return &AuthController{
 		firebaseAuth:   firebaseAuth,
 		firebaseAPIKey: cfg.Firebase.APIKey,
 		IsProduction:   cfg.IsProduction,
-		service:        service,
+		userService:    userService,
 	}
 }
 
@@ -204,7 +204,7 @@ func (ac *AuthController) SignUpHandler(c *gin.Context) {
 	}
 
 	// Create user record in local database with minimal Firebase information
-	localUser, err := ac.service.CreateUser(firebaseUser.UID, req.Email, nil, nil)
+	localUser, err := ac.userService.CreateUserFromFirebase(firebaseUser.UID, req.Email)
 	if err != nil {
 		// Log error but don't fail the signup since Firebase user was already created
 		log.Error().Err(err).Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Msg("Failed to create user in local database")
@@ -440,12 +440,12 @@ func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
 	}
 
 	// Ensure user exists in local database (create if doesn't exist)
-	localUser, err := ac.service.GetUserByFirebaseUID(decoded.UID)
+	localUser, err := ac.userService.GetUserByFirebaseUID(decoded.UID)
 	if err != nil {
 		log.Error().Err(err).Str("uid", decoded.UID).Msg("Failed to get local user record")
 	} else if localUser == nil {
 		// User doesn't exist in local database, create them
-		localUser, err = ac.service.CreateUser(decoded.UID, userRecord.Email, nil, nil)
+		localUser, err = ac.userService.CreateUserFromFirebase(decoded.UID, userRecord.Email)
 		if err != nil {
 			log.Error().Err(err).Str("uid", decoded.UID).Str("email", userRecord.Email).Msg("Failed to create user in local database during auth check")
 		} else {

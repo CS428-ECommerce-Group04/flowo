@@ -19,14 +19,18 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Get backend URL with proper fallback
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
+      console.log('Backend URL:', backendUrl); // Debug log
+      
       // Authenticate with backend using session cookies
-      const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
+      const backendRes = await fetch(`${backendUrl}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
         },
         credentials: 'include', // Important: Include cookies in request
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           email, 
           password 
         }),
