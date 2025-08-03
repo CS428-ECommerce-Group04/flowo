@@ -86,7 +86,9 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Hero Section - Adjusted top padding for larger header */}
-      <section className="pt-8 sm:pt-12 lg:pt-16 pb-12 md:pb-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 md:py-20 bg-slate-50 px-4 sm:px-6 lg:px-8"
+        style={{ background: 'linear-gradient(to bottom, #F8FDF4, #E8F5D8)' }}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
             <div className="order-2 lg:order-1">
@@ -144,7 +146,9 @@ export default function Landing() {
       </section>
 
       {/* About Section */}
-      <section className="py-12 md:py-20 bg-slate-50 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 md:py-20 bg-slate-50 px-4 sm:px-6 lg:px-8"
+        style={{ background: 'linear-gradient(to bottom, #F8FDF4, #E8F5D8)' }}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center mb-12 md:mb-16">
             <div>
