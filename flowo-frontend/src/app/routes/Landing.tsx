@@ -100,7 +100,7 @@ export default function Landing() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button onClick={() => navigate("/shop")}>Shop Now</Button>
-                <Button variant="outline">Learn More</Button>
+                <Button variant="outline" onClick={() => navigate("/learn-more")}>Learn More</Button>
               </div>
             </div>
             <div className="order-1 lg:order-2 relative">
