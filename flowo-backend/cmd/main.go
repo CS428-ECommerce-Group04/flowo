@@ -160,11 +160,11 @@ func RegisterRoutes(
 	v1 := router.Group("/api/v1")
 	authCtrl.RegisterRoutes(v1, authMiddleware)
 	reviewCtrl.RegisterRoutes(v1)
-	cartCtrl.RegisterRoutes(v1)
 	pricingCtrl.RegisterRoutes(v1)
 
 	v1.Use(authMiddleware.RequireAuth())
 
+	cartCtrl.RegisterRoutes(v1)
 	orderCtrl.RegisterRoutes(v1)
 
 	logger.Init()
