@@ -36,7 +36,7 @@ export default function Header() {
               to="/cart" 
               className="text-base sm:text-lg lg:text-xl font-medium text-slate-600 hover:text-green-700 transition-colors duration-200 hidden sm:block"
             >
-              Shop
+              Cart
             </Link>
 
             {/* Mobile Shop Link */}
@@ -44,7 +44,7 @@ export default function Header() {
               to="/cart" 
               className="text-sm font-medium text-slate-600 hover:text-green-700 transition-colors duration-200 sm:hidden"
             >
-              Shop
+              Cart
             </Link>
 
             {/* Menu Icon */}
