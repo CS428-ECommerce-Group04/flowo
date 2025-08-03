@@ -46,6 +46,7 @@ export default function Header() {
             >
               Cart
             </Link>
+
             {/* Menu Icon */}
             <button 
               className="p-2 sm:p-3 lg:p-4 hover:bg-slate-100 rounded-full transition-colors duration-200 group"
