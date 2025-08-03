@@ -407,6 +407,11 @@ func (s *recommendationService) getContentBasedRecommendations(userID int, limit
 	var recommendations []*dto.RecommendedProductDTO
 
 	// Recommend based on preferred flower types
+	if len(flowerPrefs) == 0 {
+		// Fallback to purchase history if no flower preferences
+		return s.getContentBasedFromHistory(userID, limit)
+	}
+
 	for flowerType, pref := range flowerPrefs {
 		if pref > 0.5 {
 			products, err := s.recommendationRepo.GetProductsByFlowerType(flowerType, 0, limit/len(flowerPrefs)+1)
@@ -442,6 +447,11 @@ func (s *recommendationService) getContentBasedFromHistory(userID int, limit int
 	}
 
 	var recommendations []*dto.RecommendedProductDTO
+	
+	if len(flowerTypeCount) == 0 {
+		return nil, errors.New("no flower preferences found from purchase history")
+	}
+	
 	for flowerType, count := range flowerTypeCount {
 		score := float64(count) / float64(len(purchaseHistory))
 		if score > 0.2 { // Only recommend if user has shown interest
@@ -465,6 +475,12 @@ func (s *recommendationService) getContentBasedFromHistory(userID int, limit int
 	return recommendations, nil
 }
 
+// scoredProduct holds a product with its calculated score
+type scoredProduct struct {
+	product model.Product
+	score   float64
+}
+
 func (s *recommendationService) getPopularityRecommendations(limit int) ([]*dto.RecommendedProductDTO, error) {
 	// Get all products and sort by popularity metrics
 	products, err := s.productRepo.GetAllProducts()
@@ -472,36 +488,40 @@ func (s *recommendationService) getPopularityRecommendations(limit int) ([]*dto.
 		return nil, err
 	}
 
-	// Calculate popularity score
-	for i := range products {
+	// Calculate popularity score and store in separate structure
+	var scoredProducts []scoredProduct
+	for _, product := range products {
 		score := 0.0
-		if products[i].AverageRating > 0 {
-			score += (products[i].AverageRating / 5.0) * 0.4
+		if product.AverageRating > 0 {
+			score += (product.AverageRating / 5.0) * 0.4
 		}
-		if products[i].ReviewCount > 0 {
-			score += math.Min(float64(products[i].ReviewCount)/100.0, 1.0) * 0.3
+		if product.ReviewCount > 0 {
+			score += math.Min(float64(product.ReviewCount)/100.0, 1.0) * 0.3
 		}
-		if products[i].SalesRank > 0 && products[i].SalesRank <= 1000 {
-			score += (1000.0 - float64(products[i].SalesRank)) / 1000.0 * 0.3
+		if product.SalesRank > 0 && product.SalesRank <= 1000 {
+			score += (1000.0 - float64(product.SalesRank)) / 1000.0 * 0.3
 		}
-		products[i].AverageRating = score // Temporary use for sorting
+		scoredProducts = append(scoredProducts, scoredProduct{
+			product: product,
+			score:   score,
+		})
 	}
 
 	// Sort by calculated score
-	sort.Slice(products, func(i, j int) bool {
-		return products[i].AverageRating > products[j].AverageRating
+	sort.Slice(scoredProducts, func(i, j int) bool {
+		return scoredProducts[i].score > scoredProducts[j].score
 	})
 
 	var recommendations []*dto.RecommendedProductDTO
-	for i, product := range products {
+	for i, sp := range scoredProducts {
 		if i >= limit {
 			break
 		}
 
-		productResponse := ToProductResponse(product, product.BasePrice)
+		productResponse := ToProductResponse(sp.product, sp.product.BasePrice)
 		recommendations = append(recommendations, &dto.RecommendedProductDTO{
 			Product:  productResponse,
-			Score:    product.AverageRating, // This is our calculated popularity score
+			Score:    sp.score, // This is our calculated popularity score
 			Reason:   "Popular among all customers",
 			Category: "popular",
 		})
