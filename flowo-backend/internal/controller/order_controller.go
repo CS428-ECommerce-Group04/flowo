@@ -6,17 +6,18 @@ import (
 	"net/http"
 	"strconv"
 
-	"fmt"
+	"flowo-backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 type OrderController struct {
-	Service *service.OrderService
+	orderService *service.OrderService
+	userService  service.UserService
 }
 
-func NewOrderController(s *service.OrderService) *OrderController {
-	return &OrderController{Service: s}
+func NewOrderController(os *service.OrderService, us service.UserService) *OrderController {
+	return &OrderController{orderService: os, userService: us}
 }
 
 func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
@@ -33,7 +34,7 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Tags orders
 // @Accept json
 // @Produce json
-// @Param user_id query int false "User ID for testing"
+// @Security BearerAuth
 // @Param request body dto.CreateOrderRequest true "Order details"
 // @Success 201 {object} model.Response
 // @Failure 400 {object} model.Response
@@ -41,34 +42,29 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/orders [post]
 func (ctrl *OrderController) CreateOrder(c *gin.Context) {
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
+	firebaseUID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	user, err := ctrl.userService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		return
 	}
 
 	var req dto.CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request format"})
 		return
 	}
 
-	fmt.Printf("[DEBUG] CreateOrderRequest received: %+v\n", req)
-
-	orderID, err := ctrl.Service.CreateOrder(userID, req)
+	orderID, err := ctrl.orderService.CreateOrder(user.UserID, req)
 	if err != nil {
-		fmt.Println("[DEBUG] Error from CreateOrder service:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create order"})
 		return
 	}
-
-	fmt.Println("[DEBUG] Order created successfully with ID:", orderID)
 
 	c.JSON(http.StatusCreated, gin.H{"message": "order created", "order_id": orderID})
 }
@@ -78,26 +74,26 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 // @Description Retrieve all orders associated with the authenticated user from JWT (Firebase token)
 // @Tags orders
 // @Produce json
-// @Param user_id query int false "User ID for testing"
+// @Security BearerAuth
 // @Success 200 {array} dto.OrderResponse
 // @Failure 400 {object} model.Response
 // @Failure 401 {object} model.Response
 // @Failure 500 {object} model.Response
 // @Router /api/v1/orders [get]
 func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
+	firebaseUID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+	user, err := ctrl.userService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		return
 	}
 
-	orders, err := ctrl.Service.GetUserOrders(userID)
+	orders, err := ctrl.orderService.GetUserOrders(user.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch orders"})
 		return
@@ -112,7 +108,7 @@ func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
 // @Tags orders
 // @Accept json
 // @Produce json
-// @Param user_id query int false "User ID for testing"
+// @Security BearerAuth
 // @Param orderID path int true "Order ID"
 // @Param request body dto.UpdateOrderStatusRequest true "Update status request"
 // @Success 200 {object} model.Response
@@ -133,13 +129,19 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
+	firebaseUID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	if err := ctrl.Service.UpdateStatus(orderID, req, userIDStr); err != nil {
+	user, err := ctrl.userService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
+	// check admin role
+	if err := ctrl.orderService.UpdateStatus(orderID, req, strconv.Itoa(user.UserID)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"})
 		return
 	}
@@ -152,8 +154,8 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 // @Description Retrieve full details of a specific order (owner or admin only)
 // @Tags orders
 // @Produce json
+// @Security BearerAuth
 // @Param orderID path int true "Order ID"
-// @Param user_id query int false "User ID for testing"
 // @Success 200 {object} dto.OrderDetailResponse
 // @Failure 400 {object} model.Response
 // @Failure 401 {object} model.Response
@@ -167,19 +169,25 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 		return
 	}
 
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id query param required for test"})
+	firebaseUID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	ownerID, err := ctrl.Service.GetOrderOwnerID(orderID)
+	user, err := ctrl.userService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
+
+	ownerID, err := ctrl.orderService.GetOrderOwnerID(orderID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot verify order owner"})
 		return
 	}
 
-	if strconv.Itoa(ownerID) != userIDStr {
+	if ownerID != user.UserID {
 		role, _ := c.Get("role")
 		if role != "admin" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
@@ -187,7 +195,7 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 		}
 	}
 
-	order, err := ctrl.Service.GetOrderDetailByID(orderID)
+	order, err := ctrl.orderService.GetOrderDetailByID(orderID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch order detail"})
 		return
