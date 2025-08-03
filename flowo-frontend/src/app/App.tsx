@@ -12,6 +12,8 @@ import Register from "@/app/routes/Register";
 import ForgotPassword from "@/app/routes/ForgotPassword";
 import TrackOrder from "@/app/routes/TrackOrder";
 import OrderTrackingDetail from "@/app/routes/OrderTrackingDetail";
+import ChatWidget from "@/components/chat/ChatWidget";
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -41,6 +43,7 @@ export default function App() {
                 <Route path="/track" element={<TrackOrder />} />
                 <Route path="/orders/:id" element={<OrderTrackingDetail />} />
               </Routes>
+              <ChatWidget />
             </>
           } />
         </Routes>
