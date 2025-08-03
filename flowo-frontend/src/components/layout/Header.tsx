@@ -31,21 +31,21 @@ export default function Header() {
               Shop
             </Link>
 
-            {/* Shopping Cart Icon */}
+            {/* Shop Link */}
             <Link 
               to="/cart" 
-              className="relative p-2 sm:p-3 lg:p-4 hover:bg-slate-100 rounded-full transition-colors duration-200 group"
-              aria-label="Shopping Cart"
+              className="text-base sm:text-lg lg:text-xl font-medium text-slate-600 hover:text-green-700 transition-colors duration-200 hidden sm:block"
             >
-              <div className="text-xl sm:text-2xl lg:text-3xl text-slate-600 group-hover:text-green-700 transition-colors duration-200">
-                🛒
-              </div>
-              {/* Optional: Cart item count badge */}
-              {/* <span className="absolute -top-1 -right-1 bg-pink-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                3
-              </span> */}
+              Cart
             </Link>
 
+            {/* Mobile Shop Link */}
+            <Link 
+              to="/cart" 
+              className="text-sm font-medium text-slate-600 hover:text-green-700 transition-colors duration-200 sm:hidden"
+            >
+              Cart
+            </Link>
             {/* Menu Icon */}
             <button 
               className="p-2 sm:p-3 lg:p-4 hover:bg-slate-100 rounded-full transition-colors duration-200 group"
