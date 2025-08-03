@@ -206,9 +206,19 @@ func (ac *AuthController) SignUpHandler(c *gin.Context) {
 	// Create user record in local database with minimal Firebase information
 	localUser, err := ac.userService.CreateUserFromFirebase(firebaseUser.UID, req.Email)
 	if err != nil {
-		// Log error but don't fail the signup since Firebase user was already created
-		log.Error().Err(err).Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Msg("Failed to create user in local database")
-		// Note: In production, you might want to clean up the Firebase user or queue this for retry
+		// Attempt to clean up the Firebase user to maintain consistency
+		cleanupErr := ac.firebaseAuth.DeleteUser(ctx, firebaseUser.UID)
+		if cleanupErr != nil {
+			log.Error().Err(err).Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Msg("Failed to create user in local database")
+			log.Error().Err(cleanupErr).Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Msg("Failed to clean up Firebase user after local DB creation failure")
+		} else {
+			log.Error().Err(err).Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Msg("Failed to create user in local database; Firebase user deleted for cleanup")
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_server_error",
+			"message": "Failed to create user account",
+		})
+		return
 	} else {
 		log.Info().Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Int("user_id", localUser.UserID).Msg("User created successfully in both Firebase and local database")
 	}
