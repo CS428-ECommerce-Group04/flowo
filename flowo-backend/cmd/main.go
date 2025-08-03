@@ -74,7 +74,6 @@ func main() {
 			repository.NewUserRepository,
 			repository.NewOrderRepository,
 
-
 			service.NewService,
 			service.NewReviewService,
 			service.NewCartService,
@@ -164,7 +163,7 @@ func RegisterRoutes(
 	cartCtrl.RegisterRoutes(v1)
 	pricingCtrl.RegisterRoutes(v1)
 
-	//v1.Use(authMiddleware.RequireAuth())
+	v1.Use(authMiddleware.RequireAuth())
 
 	orderCtrl.RegisterRoutes(v1)
 
