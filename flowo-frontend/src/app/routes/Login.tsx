@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { API_CONFIG } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthCard from '@/components/auth/AuthCard';
 import FormField from '@/components/auth/FormField';
@@ -10,19 +11,160 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { checkAuth } = useAuth();
+
+  // Email validation function
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
+  // Form validation
+  const validateForm = (): string | null => {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail) {
+      return 'Email address is required.';
+    }
+
+    if (!validateEmail(trimmedEmail)) {
+      return 'Please enter a valid email address.';
+    }
+
+    if (!trimmedPassword) {
+      return 'Password is required.';
+    }
+
+    if (trimmedPassword.length < 6) {
+      return 'Password must be at least 6 characters long.';
+    }
+
+    return null;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const result = await login(email, password);
-    
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.error || 'Login failed. Please try again.');
+    // Client-side validation
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim()
+        }),
+      });
+
+      if (response.status === 200) {
+        // Handle successful login
+        const data = await response.json();
+        
+        // Extract and store session token from response.session.session_id
+        let sessionToken = null;
+        if (data.session && data.session.session_id) {
+          sessionToken = data.session.session_id;
+        } else if (data.token) {
+          // Fallback to token field if session structure is different
+          sessionToken = data.token;
+        } else if (data.session_id) {
+          // Another possible structure
+          sessionToken = data.session_id;
+        }
+
+        if (sessionToken) {
+          // Store the session token securely using AuthTokenManager
+          localStorage.setItem('flowo_auth_token', sessionToken);
+          
+          // Also store any additional session data if needed
+          if (data.session) {
+            localStorage.setItem('flowo_session_data', JSON.stringify(data.session));
+          }
+        } else {
+          console.warn('No session token found in login response');
+        }
+
+        // Store user information if provided
+        if (data.user) {
+          localStorage.setItem('flowo_user', JSON.stringify(data.user));
+        } else if (data.email) {
+          // Create user object from response data
+          const userData = {
+            id: data.id || '',
+            email: data.email,
+            firstName: data.firstName || data.first_name || '',
+            lastName: data.lastName || data.last_name || '',
+            createdAt: data.createdAt || data.created_at || new Date().toISOString()
+          };
+          localStorage.setItem('flowo_user', JSON.stringify(userData));
+        }
+
+        // Update auth state by calling checkAuth to refresh the context
+        await checkAuth();
+
+        // Navigate to dashboard or home page
+        navigate('/');
+      } else if (response.status === 400) {
+        // Handle bad request
+        try {
+          const errorData = await response.json();
+          setError(errorData.message || errorData.error || 'Invalid request. Please check your input.');
+        } catch {
+          setError('Invalid request. Please check your email and password.');
+        }
+      } else if (response.status === 401) {
+        // Handle unauthorized (invalid credentials)
+        try {
+          const errorData = await response.json();
+          setError(errorData.message || errorData.error || 'Invalid email or password. Please try again.');
+        } catch {
+          setError('Invalid email or password. Please try again.');
+        }
+      } else if (response.status === 422) {
+        // Handle validation errors
+        try {
+          const errorData = await response.json();
+          if (errorData.errors && Array.isArray(errorData.errors)) {
+            setError(errorData.errors.join(', '));
+          } else {
+            setError(errorData.message || errorData.error || 'Validation failed. Please check your input.');
+          }
+        } catch {
+          setError('Validation failed. Please check your input.');
+        }
+      } else if (response.status === 500) {
+        // Handle server error
+        setError('Server error. Please try again later.');
+      } else {
+        // Handle other status codes
+        try {
+          const errorData = await response.json();
+          setError(errorData.message || errorData.error || 'An unexpected error occurred. Please try again.');
+        } catch {
+          setError('An unexpected error occurred. Please try again.');
+        }
+      }
+    } catch (error) {
+      // Handle network errors
+      console.error('Network error:', error);
+      setError('Unable to connect to the server. Please check your internet connection and try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 

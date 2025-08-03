@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "@/store/cart";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,35 @@ export default function Header() {
   const items = useCart((s) => s.items);
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, checkAuth } = useAuth();
+
+  // Determine if user is authenticated based on email presence
+  const isAuthenticated = !isLoading && user && user.email;
+
+  // Call checkAuth on component mount and when needed
+  useEffect(() => {
+    // Only call checkAuth if we don't have user data and we're not already loading
+    if (!user && !isLoading) {
+      checkAuth();
+    }
+  }, [user, isLoading, checkAuth]);
+
+  // Optional: Periodically check auth status (e.g., every 5 minutes)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only check if we think we're authenticated
+      if (user && user.email) {
+        checkAuth();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user, checkAuth]);
+
+  // Handle manual auth refresh (can be triggered by user actions)
+  const handleAuthRefresh = async () => {
+    await checkAuth();
+  };
 
   return (
     <>
@@ -63,32 +91,54 @@ export default function Header() {
               </Link>
 
               {/* User Authentication */}
-              {!isLoading && (
-                <div>
-                  {user ? (
-                    <div className="hidden md:flex items-center space-x-3">
-                      <span className="text-sm text-slate-600">
-                        Welcome, {user.firstName}
-                      </span>
+              <div className="flex items-center">
+                {isLoading ? (
+                  // Loading state
+                  <div className="hidden md:flex items-center space-x-3">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-slate-200 rounded w-20"></div>
                     </div>
-                  ) : (
-                    <div className="hidden md:flex items-center space-x-3">
-                      <Link 
-                        to="/login" 
-                        className="text-sm font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
-                      >
-                        Sign In
-                      </Link>
-                      <Link 
-                        to="/register" 
-                        className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors duration-200"
-                      >
-                        Sign Up
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                ) : isAuthenticated ? (
+                  // Authenticated state
+                  <div className="hidden md:flex items-center space-x-3">
+                    <span className="text-sm text-slate-600">
+                      Welcome, {user.firstName}
+                    </span>
+                    <span className="text-xs text-slate-500 max-w-[120px] truncate">
+                      ({user.email})
+                    </span>
+                    {/* Optional: Add refresh button for manual auth check */}
+                    <button
+                      onClick={handleAuthRefresh}
+                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                      title="Refresh authentication status"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  // Unauthenticated state - show Sign In/Sign Up buttons
+                  <div className="hidden md:flex items-center space-x-3">
+                    <Link 
+                      to="/login" 
+                      className="text-sm font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
+                      onClick={handleAuthRefresh} // Refresh auth state when navigating to login
+                    >
+                      Sign In
+                    </Link>
+                    <Link 
+                      to="/register" 
+                      className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors duration-200"
+                      onClick={handleAuthRefresh} // Refresh auth state when navigating to register
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
+              </div>
 
               {/* Menu Button */}
               <button
@@ -108,8 +158,8 @@ export default function Header() {
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)}
-        isLoggedIn={!!user}
-        user={user ? {
+        isLoggedIn={isAuthenticated}
+        user={isAuthenticated ? {
           name: `${user.firstName} ${user.lastName}`,
           email: user.email
         } : undefined}

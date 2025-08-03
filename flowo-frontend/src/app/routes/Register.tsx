@@ -1,26 +1,26 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import AuthCard from '@/components/auth/AuthCard';
 import FormField from '@/components/auth/FormField';
 import Button from '@/components/ui/Button';
 import ErrorMessage from '@/components/ui/ErrorMessage';
+import { API_CONFIG } from '@/config/api';
 
 export default function Register() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const { register, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Email validation function
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  };
+
+  const handleChange = (value: string) => {
+    setEmail(value);
     // Clear errors when user starts typing
     if (error) setError('');
   };
@@ -30,29 +30,56 @@ export default function Register() {
     setError('');
     setSuccess('');
 
-    // Client-side validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match. Please try again.');
+    // Client-side email validation
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Email address is required.');
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (!validateEmail(trimmedEmail)) {
+      setError('Please enter a valid email address.');
       return;
     }
 
-    const result = await register({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password
-    });
+    setIsLoading(true);
 
-    if (result.success) {
-      setSuccess('Account created successfully! Redirecting...');
-      setTimeout(() => navigate('/'), 1500);
-    } else {
-      setError(result.error || 'Registration failed. Please try again.');
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: trimmedEmail
+        }),
+      });
+
+      if (response.status === 200) {
+        setSuccess('Account created successfully! Check your email for further instructions.');
+        setTimeout(() => navigate('/login'), 2000);
+      } else if (response.status === 400) {
+        // Handle client error (bad request)
+        try {
+          const errorData = await response.json();
+          setError(errorData.message || 'Invalid request. Please check your email address.');
+        } catch {
+          setError('Invalid request. Please check your email address.');
+        }
+      } else if (response.status === 500) {
+        // Handle server error
+        setError('Server error. Please try again later.');
+      } else {
+        // Handle other status codes
+        setError('An unexpected error occurred. Please try again.');
+      }
+    } catch (error) {
+      // Handle network errors
+      console.error('Network error:', error);
+      setError('Unable to connect to the server. Please check your internet connection and try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -73,7 +100,7 @@ export default function Register() {
 
         {/* Description */}
         <p className="text-[#666666] text-lg leading-7 mb-8 text-center">
-          Join Flowo today and discover the perfect flowers for every occasion.
+          Join Flowo today and discover the perfect flowers for every occasion. Enter your email to get started.
         </p>
       </div>
 
@@ -94,47 +121,12 @@ export default function Register() {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            label="First Name"
-            placeholder="Enter your first name"
-            value={formData.firstName}
-            onChange={(value) => handleChange('firstName', value)}
-            required
-          />
-          <FormField
-            label="Last Name"
-            placeholder="Enter your last name"
-            value={formData.lastName}
-            onChange={(value) => handleChange('lastName', value)}
-            required
-          />
-        </div>
-
         <FormField
           label="Email Address"
           type="email"
           placeholder="Enter your email address"
-          value={formData.email}
-          onChange={(value) => handleChange('email', value)}
-          required
-        />
-
-        <FormField
-          label="Password"
-          type="password"
-          placeholder="Create a password (min. 6 characters)"
-          value={formData.password}
-          onChange={(value) => handleChange('password', value)}
-          required
-        />
-
-        <FormField
-          label="Confirm Password"
-          type="password"
-          placeholder="Confirm your password"
-          value={formData.confirmPassword}
-          onChange={(value) => handleChange('confirmPassword', value)}
+          value={email}
+          onChange={handleChange}
           required
         />
 
