@@ -10,7 +10,8 @@ import LearnMore from "@/app/routes/LearnMore";
 import Login from "@/app/routes/Login";
 import Register from "@/app/routes/Register";
 import ForgotPassword from "@/app/routes/ForgotPassword";
-
+import TrackOrder from "@/app/routes/TrackOrder";
+import OrderTrackingDetail from "@/app/routes/OrderTrackingDetail";
 export default function App() {
   return (
     <BrowserRouter>
@@ -37,6 +38,8 @@ export default function App() {
                 <Route path="/billing" element={<div className="p-8">Billing Page</div>} />
                 <Route path="/reports" element={<div className="p-8">Reports Page</div>} />
                 <Route path="/analytics" element={<div className="p-8">Analytics Page</div>} />
+                <Route path="/track" element={<TrackOrder />} />
+                <Route path="/orders/:id" element={<OrderTrackingDetail />} />
               </Routes>
             </>
           } />
