@@ -26,7 +26,7 @@ export default function Landing() {
     },
     {
       id: "sunflowers",
-      slug: "sunflowers",
+      slug: "sunflowers", 
       name: "Sunflowers",
       description: "Bright and cheerful sunflowers to bring sunshine to any day",
       price: 20.00,
@@ -85,15 +85,15 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Hero Section */}
-      <section className="py-12 md:py-20 px-4 sm:px-6 lg:px-8">
+      {/* Hero Section - Adjusted top padding for larger header */}
+      <section className="pt-8 sm:pt-12 lg:pt-16 pb-12 md:pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
             <div className="order-2 lg:order-1">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-green-800 leading-tight mb-4 md:mb-6">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-green-800 leading-tight mb-4 md:mb-6">
                 Fresh Flowers for Every Occasion
               </h1>
-              <p className="text-lg md:text-xl text-slate-600 leading-relaxed mb-6 md:mb-8">
+              <p className="text-lg md:text-xl lg:text-2xl text-slate-600 leading-relaxed mb-6 md:mb-8">
                 Discover our beautiful collection of handpicked flowers, perfect for weddings, birthdays, anniversaries, and everyday moments that matter.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -102,7 +102,7 @@ export default function Landing() {
               </div>
             </div>
             <div className="order-1 lg:order-2 relative">
-              <div className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] overflow-hidden rounded-2xl shadow-2xl">
+              <div className="w-full h-64 sm:h-80 md:h-96 lg:h-[500px] xl:h-[600px] overflow-hidden rounded-2xl shadow-2xl">
                 <img
                   src="images/landingflowo.png"
                   alt="Beautiful flower bouquet"
@@ -118,8 +118,8 @@ export default function Landing() {
       <section className="py-12 md:py-20 bg-white">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-green-800 mb-4">Featured Flowers</h2>
-            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-green-800 mb-4">Featured Flowers</h2>
+            <p className="text-lg md:text-xl lg:text-2xl text-slate-600 max-w-4xl mx-auto">
               Handpicked fresh flowers delivered daily to ensure the highest quality for our customers
             </p>
           </div>
@@ -148,7 +148,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center mb-12 md:mb-16">
             <div>
-              <div className="w-full h-64 sm:h-80 lg:h-96 overflow-hidden rounded-2xl shadow-lg">
+              <div className="w-full h-64 sm:h-80 lg:h-96 xl:h-[500px] overflow-hidden rounded-2xl shadow-lg">
                 <img
                   src="images/landingshop.png"
                   alt="Bloom & Blossom flower shop"
@@ -157,11 +157,11 @@ export default function Landing() {
               </div>
             </div>
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-green-800 mb-4 md:mb-6">About Bloom & Blossom</h2>
-              <p className="text-base md:text-lg text-slate-600 leading-relaxed mb-4 md:mb-6">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-green-800 mb-4 md:mb-6">About Bloom & Blossom</h2>
+              <p className="text-base md:text-lg lg:text-xl text-slate-600 leading-relaxed mb-4 md:mb-6">
                 For over 20 years, we have been creating beautiful floral arrangements that bring joy and beauty to life's most important moments. Our passionate team of florists carefully selects each flower to ensure freshness and quality.
               </p>
-              <p className="text-base md:text-lg text-slate-600 leading-relaxed">
+              <p className="text-base md:text-lg lg:text-xl text-slate-600 leading-relaxed">
                 From intimate bouquets to grand wedding arrangements, we take pride in our craftsmanship and attention to detail. Every arrangement tells a story and expresses emotions that words cannot capture.
               </p>
             </div>
@@ -191,15 +191,15 @@ export default function Landing() {
       <section className="py-12 md:py-20 bg-white px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-green-800 mb-4">Get In Touch</h2>
-            <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-green-800 mb-4">Get In Touch</h2>
+            <p className="text-lg md:text-xl lg:text-2xl text-slate-600 max-w-4xl mx-auto">
               Visit our shop or contact us for custom arrangements and special orders
             </p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8 md:gap-12">
             <div>
-              <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-6 md:mb-8">Contact Information</h3>
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-green-800 mb-6 md:mb-8">Contact Information</h3>
               <ContactItem
                 icon="📍"
                 title="Address"
@@ -223,7 +223,7 @@ export default function Landing() {
             </div>
 
             <div>
-              <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-6 md:mb-8">Send us a Message</h3>
+              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-green-800 mb-6 md:mb-8">Send us a Message</h3>
               <ContactForm />
             </div>
           </div>
@@ -231,10 +231,10 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-green-800 py-6 md:py-8">
+      <footer className="bg-green-800 py-8 md:py-12">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <p className="text-white text-sm">
+            <p className="text-white text-sm md:text-base lg:text-lg">
               © Flowo 2025. All rights reserved.
             </p>
           </div>
