@@ -1,0 +1,50 @@
+[
+  {
+    "id": "ORD-2024-001",
+    "customer": "Sarah Johnson",
+    "total": 85,
+    "orderDate": "2024-01-15",
+    "status": "out_for_delivery",
+    "items": ["🌹", "🌼", "🌿"]
+  },
+  {
+    "id": "ORD-2024-002",
+    "customer": "Michael Chen",
+    "total": 50,
+    "orderDate": "2024-01-16",
+    "status": "processing",
+    "items": ["🌻", "🥀"]
+  },
+  {
+    "id": "ORD-2024-003",
+    "customer": "Emily Rodriguez",
+    "total": 76,
+    "orderDate": "2024-01-12",
+    "status": "delivered",
+    "items": ["🌷", "💐", "🌺"]
+  },
+  {
+    "id": "ORD-2024-004",
+    "customer": "David Wilson",
+    "total": 157,
+    "orderDate": "2024-01-14",
+    "status": "out_for_delivery",
+    "items": ["🌹", "🌿", "🌸", "🌼"]
+  },
+  {
+    "id": "ORD-2024-005",
+    "customer": "Lisa Thompson",
+    "total": 65,
+    "orderDate": "2024-01-16",
+    "status": "processing",
+    "items": ["🌷", "🌻"]
+  },
+  {
+    "id": "ORD-2024-006",
+    "customer": "Robert Kim",
+    "total": 69,
+    "orderDate": "2024-01-10",
+    "status": "delivered",
+    "items": ["🌺", "🌸"]
+  }
+]

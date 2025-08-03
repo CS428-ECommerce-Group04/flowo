@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ORD-2024-001",
+    "status": "out_for_delivery",
+    "eta": "Today, 2:00 PM – 6:00 PM",
+    "address": "123 Main Street, Anytown, ST 12345",
+    "customer": "Sarah Johnson",
+    "phone": "+1 (555) 123-4567",
+    "driver": { "name": "Mike Rodriguez", "phone": "+1 (555) 987-1234", "vehicle": "White Honda Civic · ABC 123", "initials": "MR" },
+    "timeline": [
+      { "key": "placed", "title": "Order Placed", "desc": "Your order has been successfully placed and payment confirmed", "at": "January 15, 2024 – 9:30 AM", "status": "done" },
+      { "key": "confirmed", "title": "Order Confirmed", "desc": "We have received your order and are preparing your beautiful flowers", "at": "January 15, 2024 – 9:45 AM", "status": "done" },
+      { "key": "preparing", "title": "Preparing Your Order", "desc": "Our florists are carefully arranging your fresh flowers", "at": "January 15, 2024 – 11:15 AM", "status": "done" },
+      { "key": "qc", "title": "Quality Check", "desc": "Final quality inspection to ensure perfection", "at": "January 15, 2024 – 1:20 PM", "status": "done" },
+      { "key": "ofd", "title": "Out for Delivery", "desc": "Your order is on its way! Our delivery partner will contact you shortly", "at": "January 15, 2024 – 1:45 PM", "status": "current" },
+      { "key": "delivered", "title": "Delivered", "desc": "Your beautiful flowers have been delivered successfully", "status": "pending" }
+    ],
+    "items": [
+      { "id": "p1", "name": "Mixed Bouquet", "qty": 1, "price": 35, "tags": ["bouquets","anniversary"], "icon": "💐" },
+      { "id": "p3", "name": "Pink Roses", "qty": 2, "price": 25, "tags": ["roses","valentines"], "icon": "🌹" }
+    ],
+    "subtotal": 85
+  }
+]
