@@ -10,6 +10,7 @@ import LearnMore from "@/app/routes/LearnMore";
 import Login from "@/app/routes/Login";
 import Register from "@/app/routes/Register";
 import ForgotPassword from "@/app/routes/ForgotPassword";
+import ChatWidget from "@/components/chat/ChatWidget";
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
                 <Route path="/reports" element={<div className="p-8">Reports Page</div>} />
                 <Route path="/analytics" element={<div className="p-8">Analytics Page</div>} />
               </Routes>
+              <ChatWidget />
             </>
           } />
         </Routes>
