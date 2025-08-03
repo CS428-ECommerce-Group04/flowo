@@ -72,18 +72,22 @@ func main() {
 			repository.NewCartRepository,
 			repository.NewPricingRuleRepository,
 			repository.NewUserRepository,
+			repository.NewOrderRepository,
+
 
 			service.NewService,
 			service.NewReviewService,
 			service.NewCartService,
 			service.NewPricingService,
 			service.NewUserService,
+			service.NewOrderService,
 
 			controller.NewPricingController,
 			controller.NewController,
 			controller.NewReviewController,
 			controller.NewCartController,
 			controller.NewAuthController,
+			controller.NewOrderController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -147,6 +151,7 @@ func RegisterRoutes(
 	reviewCtrl *controller.ReviewController,
 	cartCtrl *controller.CartController,
 	pricingCtrl *controller.PricingController,
+	orderCtrl *controller.OrderController,
 	authCtrl *controller.AuthController,
 	authMiddleware *middleware.AuthMiddleware,
 ) {
@@ -154,11 +159,14 @@ func RegisterRoutes(
 	controller.RegisterRoutes(router)
 
 	v1 := router.Group("/api/v1")
-
+	authCtrl.RegisterRoutes(v1, authMiddleware)
 	reviewCtrl.RegisterRoutes(v1)
 	cartCtrl.RegisterRoutes(v1)
 	pricingCtrl.RegisterRoutes(v1)
-	authCtrl.RegisterRoutes(v1, authMiddleware)
+
+	//v1.Use(authMiddleware.RequireAuth())
+
+	orderCtrl.RegisterRoutes(v1)
 
 	logger.Init()
 

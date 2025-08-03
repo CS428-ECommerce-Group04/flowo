@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	//"errors"
 	"flowo-backend/internal/model"
-	"fmt"
 )
 
 type ReviewRepository interface {
@@ -26,9 +25,6 @@ func (r *reviewRepository) CreateReview(review *model.Review) error {
 	query := `INSERT INTO Review (product_id, user_id, rating, comment, review_date)
 	          VALUES (?, ?, ?, ?, NOW())`
 	_, err := r.db.Exec(query, review.ProductID, review.UserID, review.Rating, review.Comment)
-	if err != nil {
-		fmt.Println("❌ DB INSERT ERROR:", err) // 👈 in lỗi thực tế
-	}
 	return err
 }
 
