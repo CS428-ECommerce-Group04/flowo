@@ -19,8 +19,6 @@ require (
 	google.golang.org/api v0.231.0
 )
 
-require google.golang.org/appengine v1.6.8 // indirect
-
 require (
 	cel.dev/expr v0.23.1 // indirect
 	cloud.google.com/go v0.121.0 // indirect
@@ -32,7 +30,6 @@ require (
 	cloud.google.com/go/longrunning v0.6.7 // indirect
 	cloud.google.com/go/monitoring v1.24.2 // indirect
 	cloud.google.com/go/storage v1.53.0 // indirect
-	firebase.google.com/go v3.13.0+incompatible
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.51.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.51.0 // indirect

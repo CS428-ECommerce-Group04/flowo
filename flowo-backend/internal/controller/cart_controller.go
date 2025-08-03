@@ -108,6 +108,7 @@ func (ctrl *CartController) RemoveCartItem(c *gin.Context) {
 // @Description Retrieve all items in the cart for a given user
 // @Tags cart
 // @Produce json
+// @Security BearerAuth
 // @Param userID path int true "User ID"
 // @Success 200 {array} dto.CartItemResponse
 // @Failure 400 {object} model.Response
