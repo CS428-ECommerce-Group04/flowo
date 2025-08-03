@@ -71,11 +71,13 @@ func main() {
 			repository.NewReviewRepository,
 			repository.NewCartRepository,
 			repository.NewPricingRuleRepository,
+			repository.NewUserRepository,
 
 			service.NewService,
 			service.NewReviewService,
 			service.NewCartService,
 			service.NewPricingService,
+			service.NewUserService,
 
 			controller.NewPricingController,
 			controller.NewController,
