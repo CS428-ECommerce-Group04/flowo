@@ -130,7 +130,9 @@ func (s *userService) UpdateUserFromFirebase(firebaseUID string) (*model.User, e
 	}
 
 	// Update local user with Firebase data
-	localUser.Email = firebaseUser.Email
+	if firebaseUser.Email != "" {
+		localUser.Email = firebaseUser.Email
+	}
 	if firebaseUser.DisplayName != "" {
 		localUser.FullName = &firebaseUser.DisplayName
 	}
