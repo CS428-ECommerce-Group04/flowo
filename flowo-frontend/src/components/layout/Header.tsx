@@ -6,6 +6,7 @@ export default function Header() {
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link to="/" className="font-extrabold text-green-700">Flowo</Link>
         <div className="space-x-4 text-slate-600">
+          <Link to="/shop" className="hover:text-green-700">Shop</Link>
           <Link to="/cart">🛒</Link>
           <button>☰</button>
         </div>
