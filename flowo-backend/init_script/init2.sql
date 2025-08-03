@@ -1,10 +1,10 @@
 
 USE flowo_db;
 -- Sample Users
-INSERT INTO User (username, password_hash, email, full_name, role, created_at, updated_at)
+INSERT INTO User (firebase_uid, username, email, full_name, gender, role, created_at, updated_at)
 VALUES
-('john_doe', 'hashed_password_123', 'john@example.com', 'John Doe', 'RegisteredBuyer', NOW(), NOW()),
-('admin_user', 'hashed_admin_pass', 'admin@example.com', 'Admin User', 'Admin', NOW(), NOW());
+('firebase_uid_john_doe', 'john_doe', 'john@example.com', 'John Doe', 'Male', 'RegisteredBuyer', NOW(), NOW()),
+('firebase_uid_admin_user', 'admin_user', 'admin@example.com', 'Admin User', 'Other', 'Admin', NOW(), NOW());
 
 -- Sample Addresses
 INSERT INTO Address (user_id, recipient_name, phone_number, street_address, city, postal_code, country, is_default_shipping)

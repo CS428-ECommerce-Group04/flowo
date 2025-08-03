@@ -13,6 +13,7 @@ type CartRepository interface {
 	RemoveCartItem(cartID int, productID int) error
 	GetCartItems(cartID int) ([]model.CartItem, error)
 	GetCartIDByUser(userID int) (int, error)
+	ClearCart(cartID int) error
 }
 
 type cartRepository struct {
@@ -63,23 +64,23 @@ func (r *cartRepository) AddOrUpdateCartItem(cartID int, productID int, quantity
 		return errors.New("not enough stock")
 	}
 
-	// 2. Decrease stock quantity in Flower Product
-	_, err = tx.Exec(`
-        UPDATE FlowerProduct 
-        SET stock_quantity = stock_quantity - ? 
-        WHERE product_id = ?`, quantity, productID)
-	if err != nil {
-		return err
-	}
+	// // 2. Decrease stock quantity in Flower Product
+	// _, err = tx.Exec(`
+	//     UPDATE FlowerProduct
+	//     SET stock_quantity = stock_quantity - ?
+	//     WHERE product_id = ?`, quantity, productID)
+	// if err != nil {
+	// 	return err
+	// }
 
-	// 3. Update status in Flower Product if stock is low
-	_, err = tx.Exec(`
-        UPDATE FlowerProduct 
-        SET status = 'LowStock' 
-        WHERE product_id = ? AND stock_quantity < 5`, productID)
-	if err != nil {
-		return err
-	}
+	// // 3. Update status in Flower Product if stock is low
+	// _, err = tx.Exec(`
+	//     UPDATE FlowerProduct
+	//     SET status = 'LowStock'
+	//     WHERE product_id = ? AND stock_quantity < 5`, productID)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// 4. Check if CartItem already exists
 	var existingQty int
@@ -148,38 +149,38 @@ func (r *cartRepository) UpdateCartItemQuantity(cartID int, productID int, newQt
 		if err != nil {
 			return err
 		}
-		if currentStock < diff {
+		if currentStock < newQty {
 			return errors.New("not enough stock")
 		}
-		_, err = tx.Exec(`
-			UPDATE FlowerProduct 
-			SET stock_quantity = stock_quantity - ? 
-			WHERE product_id = ?`, diff, productID)
-		if err != nil {
-			return err
-		}
-	} else {
-		// 4. If decrease quantity, we just update stock
-		_, err = tx.Exec(`
-			UPDATE FlowerProduct 
-			SET stock_quantity = stock_quantity + ? 
-			WHERE product_id = ?`, -diff, productID)
-		if err != nil {
-			return err
-		}
-	}
+		// _, err = tx.Exec(`
+		// 	UPDATE FlowerProduct
+		// 	SET stock_quantity = stock_quantity - ?
+		// 	WHERE product_id = ?`, diff, productID)
+		// if err != nil {
+		// 	return err
+		// }
+	} //else {
+	// 	// 4. If decrease quantity, we just update stock
+	// 	_, err = tx.Exec(`
+	// 		UPDATE FlowerProduct
+	// 		SET stock_quantity = stock_quantity + ?
+	// 		WHERE product_id = ?`, -diff, productID)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
-	// 5. update status in Flower Product if stock is low
-	_, err = tx.Exec(`
-	UPDATE FlowerProduct 
-	SET status = CASE 
-		WHEN stock_quantity < 5 THEN 'LowStock'
-		WHEN stock_quantity >= 5 THEN 'NewFlower'
-	END 
-	WHERE product_id = ?`, productID)
-	if err != nil {
-		return err
-	}
+	// // 5. update status in Flower Product if stock is low
+	// _, err = tx.Exec(`
+	// UPDATE FlowerProduct
+	// SET status = CASE
+	// 	WHEN stock_quantity < 5 THEN 'LowStock'
+	// 	WHEN stock_quantity >= 5 THEN 'NewFlower'
+	// END
+	// WHERE product_id = ?`, productID)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// 6. Update quantity in CartItem
 	_, err = tx.Exec(`
@@ -220,20 +221,20 @@ func (r *cartRepository) RemoveCartItem(cartID, productID int) error {
 		return err
 	}
 
-	// 3. increase stock quantity in Flower Product
-	_, err = tx.Exec(`
-		UPDATE FlowerProduct 
-		SET stock_quantity = stock_quantity + ? 
-		WHERE product_id = ?`, qty, productID)
+	// // 3. increase stock quantity in Flower Product
+	// _, err = tx.Exec(`
+	// 	UPDATE FlowerProduct
+	// 	SET stock_quantity = stock_quantity + ?
+	// 	WHERE product_id = ?`, qty, productID)
 
-	//4. Update status
-	_, err = tx.Exec(`
-		UPDATE FlowerProduct 
-		SET status = 'NewFlower' 
-		WHERE product_id = ? AND stock_quantity > 5`, productID)
-	if err != nil {
-		return err
-	}
+	// //4. Update status
+	// _, err = tx.Exec(`
+	// 	UPDATE FlowerProduct
+	// 	SET status = 'NewFlower'
+	// 	WHERE product_id = ? AND stock_quantity > 5`, productID)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return err
 }
@@ -270,4 +271,9 @@ func (r *cartRepository) GetCartIDByUser(userID int) (int, error) {
 		return 0, err
 	}
 	return cartID, nil
+}
+
+func (r *cartRepository) ClearCart(cartID int) error {
+	_, err := r.DB.Exec("DELETE FROM CartItem WHERE cart_id = ?", cartID)
+	return err
 }
