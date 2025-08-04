@@ -172,11 +172,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'GET',
         headers: {
           'accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          // 'Authorization': `Bearer ${token}`,
+          
           // Alternative header formats if your API expects different format:
           // 'Session-ID': token,
           // 'X-Session-Token': token,
         },
+        credentials: "include",
       });
 
       if (response.status === 200) {
@@ -280,6 +282,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: sanitizedEmail,
           password: password.trim()
         }),
+        credentials: 'include'
       });
 
       if (response.status === 200) {
@@ -463,6 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'accept': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
+        credentials: 'include'
       });
 
       if (response.status === 200) {
