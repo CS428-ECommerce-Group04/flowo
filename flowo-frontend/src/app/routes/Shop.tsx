@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useCart } from "@/store/cart";
 import { useNavigate } from "react-router-dom";
+import { resolveProductImage } from "@/data/productImages";
 
+/* ------------------------------- API types ------------------------------- */
 
 type ApiResponse<T> = { message?: string; data: T };
 
@@ -15,7 +17,7 @@ type ApiProduct = {
   price?: number;
   image_url?: string;
   primaryImageUrl?: string;
-  status?: string;               // 'NewFlower' | 'OldFlower' | 'LowStock'
+  status?: string; // 'NewFlower' | 'OldFlower' | 'LowStock'
   flower_type?: string;
   stock_quantity?: number;
   slug?: string;
@@ -30,9 +32,14 @@ const API_BASE =
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
+/** Map API product -> UI product */
 function mapApiToShopUI(p: ApiProduct) {
   const id = String(p.id ?? p.product_id ?? "");
   const price = Number(p.effective_price ?? p.price ?? p.base_price ?? 0);
+  const slug = p.slug ?? (p.name ? slugify(p.name) : id);
+
+  const imageFromApi = p.image_url ?? p.primaryImageUrl;
+  const image = imageFromApi ?? resolveProductImage(p.name, slug);
 
   return {
     id,
@@ -40,20 +47,23 @@ function mapApiToShopUI(p: ApiProduct) {
     description: p.description ?? "",
     type: p.flower_type ?? "bouquet",
     price,
-    image: p.image_url ?? p.primaryImageUrl ?? "/images/placeholder.png",
+    image,
     tags: Array.isArray(p.tags)
       ? p.tags
-      : [p.flower_type, p.status].filter(Boolean) as string[],
+      : ([p.flower_type, p.status].filter(Boolean) as string[]),
     compareAtPrice:
-      p.base_price && price && price < p.base_price ? Number(p.base_price) : undefined,
+      p.base_price && price && price < p.base_price
+        ? Number(p.base_price)
+        : undefined,
     stock: p.stock_quantity ?? undefined,
-    slug: p.slug ?? (p.name ? slugify(p.name) : id),
-    care: "",                         // optional field your UI reads
+    slug,
+    care: "", // optional field your UI reads
     featured: p.status === "NewFlower",
   };
 }
 
-// --- Pattern Components ---
+/* ------------------------------ UI bits ---------------------------------- */
+
 function TagBadge({ children }: { children: React.ReactNode }) {
   return (
     <span
@@ -92,7 +102,8 @@ function BestsellerBadge() {
   );
 }
 
-// Enhanced Search Autocomplete Component
+/* ------------------------ Search Autocomplete ---------------------------- */
+
 function SearchAutocomplete({
   value,
   onChange,
@@ -112,43 +123,35 @@ function SearchAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Generate suggestions based on input
   const generateSuggestions = (query: string) => {
     if (!query.trim()) return [];
-
-    const lowerQuery = query.toLowerCase();
-    const matches = products.filter(product => 
-      product.name.toLowerCase().includes(lowerQuery) || 
-      product.description.toLowerCase().includes(lowerQuery) || 
-      product.type.toLowerCase().includes(lowerQuery) || 
-      product.tags?.some((tag: string) => tag.toLowerCase().includes(lowerQuery)) || 
-      product.care?.toLowerCase().includes(lowerQuery)
+    const lower = query.toLowerCase();
+    const matches = products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(lower) ||
+        p.description.toLowerCase().includes(lower) ||
+        p.type.toLowerCase().includes(lower) ||
+        p.tags?.some((t: string) => t.toLowerCase().includes(lower)) ||
+        p.care?.toLowerCase().includes(lower)
     );
-
-    // Sort by relevance (exact name matches first, then description matches)
     return matches
       .sort((a, b) => {
-        const aNameMatch = a.name.toLowerCase().includes(lowerQuery);
-        const bNameMatch = b.name.toLowerCase().includes(lowerQuery);
-        
-        if (aNameMatch && !bNameMatch) return -1;
-        if (!aNameMatch && bNameMatch) return 1;
-        
-        // If both or neither match name, sort by name alphabetically
+        const aName = a.name.toLowerCase().includes(lower);
+        const bName = b.name.toLowerCase().includes(lower);
+        if (aName && !bName) return -1;
+        if (!aName && bName) return 1;
         return a.name.localeCompare(b.name);
       })
-      .slice(0, 6); // Limit to 6 suggestions
+      .slice(0, 6);
   };
 
-  // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    onChange(newValue);
-    
-    if (newValue.trim()) {
-      const newSuggestions = generateSuggestions(newValue);
-      setSuggestions(newSuggestions);
-      setShowSuggestions(newSuggestions.length > 0);
+    const v = e.target.value;
+    onChange(v);
+    if (v.trim()) {
+      const list = generateSuggestions(v);
+      setSuggestions(list);
+      setShowSuggestions(list.length > 0);
       setSelectedIndex(-1);
     } else {
       setSuggestions([]);
@@ -157,30 +160,22 @@ function SearchAutocomplete({
     }
   };
 
-  // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || suggestions.length === 0) return;
-
     switch (e.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         e.preventDefault();
-        setSelectedIndex(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : 0
-        );
+        setSelectedIndex((p) => (p < suggestions.length - 1 ? p + 1 : 0));
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         e.preventDefault();
-        setSelectedIndex(prev => 
-          prev > 0 ? prev - 1 : suggestions.length - 1
-        );
+        setSelectedIndex((p) => (p > 0 ? p - 1 : suggestions.length - 1));
         break;
-      case 'Enter':
+      case "Enter":
         e.preventDefault();
-        if (selectedIndex >= 0) {
-          handleSuggestionSelect(suggestions[selectedIndex]);
-        }
+        if (selectedIndex >= 0) handleSuggestionSelect(suggestions[selectedIndex]);
         break;
-      case 'Escape':
+      case "Escape":
         setShowSuggestions(false);
         setSelectedIndex(-1);
         inputRef.current?.blur();
@@ -188,7 +183,6 @@ function SearchAutocomplete({
     }
   };
 
-  // Handle suggestion selection
   const handleSuggestionSelect = (product: any) => {
     onChange(product.name);
     setShowSuggestions(false);
@@ -197,33 +191,33 @@ function SearchAutocomplete({
     inputRef.current?.blur();
   };
 
-  // Close suggestions when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const onDocClick = (event: MouseEvent) => {
       if (
-        suggestionsRef.current && 
-        !suggestionsRef.current.contains(event.target as Node) && 
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node) &&
         !inputRef.current?.contains(event.target as Node)
       ) {
         setShowSuggestions(false);
         setSelectedIndex(-1);
       }
     };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  // Highlight matching text in suggestions
   const highlightMatch = (text: string, query: string) => {
     if (!query.trim()) return text;
-    
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')})`, 'gi');
+    const regex = new RegExp(
+      `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi"
+    );
     const parts = text.split(regex);
-    
-    return parts.map((part, index) => 
+    return parts.map((part, i) =>
       regex.test(part) ? (
-        <span key={index} className="bg-yellow-200 font-medium">{part}</span>
+        <span key={i} className="bg-yellow-200 font-medium">
+          {part}
+        </span>
       ) : (
         part
       )
@@ -241,12 +235,10 @@ function SearchAutocomplete({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => {
-            if (value.trim() && suggestions.length > 0) {
-              setShowSuggestions(true);
-            }
+            if (value.trim() && suggestions.length > 0) setShowSuggestions(true);
           }}
           className="rounded-[8px] border border-[#dddddd] px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-[#2d5016] focus:border-transparent pr-10"
-          style={{ 
+          style={{
             fontSize: 16,
             color: "#2d5016",
             background: "#fff",
@@ -254,33 +246,23 @@ function SearchAutocomplete({
           }}
         />
 
-        {/* Search Icon */}
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-          <svg
-            className="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
+        {/* Search icon */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
 
-        {/* Clear Button */}
+        {/* Clear */}
         {value && (
           <button
             onClick={() => {
-              onChange('');
+              onChange("");
               setShowSuggestions(false);
               setSuggestions([]);
               inputRef.current?.focus();
             }}
-            className="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -289,93 +271,63 @@ function SearchAutocomplete({
         )}
       </div>
 
-      {/* Suggestions Dropdown */}
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
           className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#dddddd] rounded-[8px] shadow-lg max-h-80 overflow-y-auto z-50"
-          style={{ 
-            boxShadow: "0 4px 12px 0 rgba(0,0,0,0.15), 0 2px 6px 0 rgba(0,0,0,0.10)",
-          }}
+          style={{ boxShadow: "0 4px 12px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.10)" }}
         >
-          {suggestions.map((product, index) => (
+          {suggestions.map((p, index) => (
             <div
-              key={product.id}
+              key={p.id}
               className={`px-4 py-3 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
-                index === selectedIndex
-                  ? 'bg-[#f0f8f0] border-l-4 border-l-[#2d5016]'
-                  : 'hover:bg-gray-50'
+                index === selectedIndex ? "bg-[#f0f8f0] border-l-4 border-l-[#2d5016]" : "hover:bg-gray-50"
               }`}
-              onClick={() => handleSuggestionSelect(product)}
+              onClick={() => handleSuggestionSelect(p)}
             >
               <div className="flex items-start gap-3">
-                {/* Product Image */}
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-12 h-12 object-cover rounded-md flex-shrink-0"
-                />
-
+                <img src={p.image} alt={p.name} className="w-12 h-12 object-cover rounded-md flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  {/* Product Name */}
                   <div className="font-semibold text-[#2d5016] text-sm mb-1">
-                    {highlightMatch(product.name, value)}
-                    {product.featured && (
-                      <span className="ml-2 text-xs bg-[#e91e63] text-white px-2 py-0.5 rounded">
-                        Bestseller
-                      </span>
+                    {highlightMatch(p.name, value)}
+                    {p.featured && (
+                      <span className="ml-2 text-xs bg-[#e91e63] text-white px-2 py-0.5 rounded">Bestseller</span>
                     )}
                   </div>
-
-                  {/* Product Description */}
                   <div className="text-gray-600 text-xs mb-1 line-clamp-2">
-                    {highlightMatch(product.description, value)}
+                    {highlightMatch(p.description, value)}
                   </div>
-
-                  {/* Product Details */}
                   <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded">
-                      {product.type}
-                    </span>
-                    {product.tags && product.tags.length > 0 && (
+                    <span className="bg-gray-100 px-2 py-0.5 rounded">{p.type}</span>
+                    {p.tags && p.tags.length > 0 && (
                       <span>
-                        {product.tags.slice(0, 2).map((tag: string) => (
-                          <span key={tag} className="text-blue-600 mr-1">
-                            #{tag}
-                          </span>
+                        {p.tags.slice(0, 2).map((t: string) => (
+                          <span key={t} className="text-blue-600 mr-1">#{t}</span>
                         ))}
                       </span>
                     )}
-                    <span className="text-green-600">
-                      {product.stock} in stock
-                    </span>
+                    <span className="text-green-600">{p.stock} in stock</span>
                   </div>
                 </div>
-
-                {/* Price */}
                 <div className="text-right flex-shrink-0">
-                  {product.compareAtPrice && (
-                    <div className="text-xs text-gray-400 line-through">
-                      ${product.compareAtPrice}
-                    </div>
+                  {p.compareAtPrice && (
+                    <div className="text-xs text-gray-400 line-through">${p.compareAtPrice}</div>
                   )}
-                  <div className="font-semibold text-[#2d5016]">
-                    ${product.price}
-                  </div>
+                  <div className="font-semibold text-[#2d5016]">${p.price}</div>
                 </div>
               </div>
             </div>
           ))}
-
-          {/* Footer */}
           <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-t">
-            {suggestions.length} result{suggestions.length !== 1 ? 's' : ''} • Use ↑↓ arrows, Enter to select
+            {suggestions.length} result{suggestions.length !== 1 ? "s" : ""} • Use ↑↓, Enter
           </div>
         </div>
       )}
     </div>
   );
 }
+
+/* ------------------------------ Cards ------------------------------------ */
 
 function FlowerCard({
   product,
@@ -391,24 +343,18 @@ function FlowerCard({
   return (
     <div
       className="w-full rounded-[16px] bg-white shadow cursor-pointer"
-      style={{ 
+      style={{
         marginBottom: 32,
         boxShadow: isHighlighted
-          ? "0 0 0 2px #e91e63, 0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)"
-          : "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)",
+          ? "0 0 0 2px #e91e63, 0 2px 8px rgba(0,0,0,0.04)"
+          : "0 2px 8px rgba(0,0,0,0.04)",
         transition: "transform 0.2s, box-shadow 0.2s",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateY(-2px)";
-        e.currentTarget.style.boxShadow = isHighlighted
-          ? "0 0 0 2px #e91e63, 0 4px 12px 0 rgba(0,0,0,0.08), 0 2px 6px 0 rgba(0,0,0,0.08)"
-          : "0 4px 12px 0 rgba(0,0,0,0.08), 0 2px 6px 0 rgba(0,0,0,0.08)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = isHighlighted
-          ? "0 0 0 2px #e91e63, 0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)"
-          : "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)";
       }}
     >
       <div className="relative" onClick={onNavigateToDetail}>
@@ -421,7 +367,7 @@ function FlowerCard({
           src={product.image}
           alt={product.name}
           className="w-full"
-          style={{ 
+          style={{
             height: 256,
             objectFit: "cover",
             borderTopLeftRadius: 16,
@@ -433,25 +379,13 @@ function FlowerCard({
         <div className="flex flex-col gap-1">
           <h3
             className="font-bold cursor-pointer hover:text-opacity-80"
-            style={{ 
-              color: "#2d5016",
-              fontSize: 20,
-              lineHeight: "28px",
-              fontWeight: 700,
-              transition: "opacity 0.2s",
-            }}
+            style={{ color: "#2d5016", fontSize: 20, lineHeight: "28px", fontWeight: 700 }}
             onClick={onNavigateToDetail}
           >
             {product.name}
           </h3>
           <p
-            style={{ 
-              color: "#666",
-              fontSize: 16,
-              lineHeight: "24px",
-              fontWeight: 400,
-              marginBottom: 4,
-            }}
+            style={{ color: "#666", fontSize: 16, lineHeight: "24px", fontWeight: 400, marginBottom: 4 }}
             onClick={onNavigateToDetail}
           >
             {product.description}
@@ -464,34 +398,16 @@ function FlowerCard({
         </div>
         <div className="flex items-center justify-between mt-2">
           <span className="flex items-baseline" onClick={onNavigateToDetail}>
-            <span
-              style={{ 
-                color: "#2d5016",
-                fontWeight: 700,
-                fontSize: 24,
-                lineHeight: "32px",
-                marginRight: 2,
-              }}
-            >
-              $
-            </span>
-            <span
-              style={{ 
-                color: "#2d5016",
-                fontWeight: 700,
-                fontSize: 24,
-                lineHeight: "32px",
-              }}
-            >
+            <span style={{ color: "#2d5016", fontWeight: 700, fontSize: 24, marginRight: 2 }}>$</span>
+            <span style={{ color: "#2d5016", fontWeight: 700, fontSize: 24 }}>
               {product.price.toFixed(2)}
             </span>
             {product.compareAtPrice && (
               <span
-                style={{ 
+                style={{
                   color: "#666",
                   fontWeight: 400,
                   fontSize: 16,
-                  lineHeight: "24px",
                   textDecoration: "line-through",
                   marginLeft: 8,
                 }}
@@ -502,15 +418,13 @@ function FlowerCard({
           </span>
           <button
             className="rounded-[8px] px-6 py-2 font-medium hover:bg-opacity-90"
-            style={{ 
+            style={{
               background: "#e91e63",
               color: "#fff",
               fontWeight: 500,
               fontSize: 16,
-              lineHeight: "24px",
               minWidth: 135,
               minHeight: 40,
-              transition: "background-color 0.2s",
             }}
             onClick={(e) => {
               e.stopPropagation();
@@ -524,6 +438,8 @@ function FlowerCard({
     </div>
   );
 }
+
+/* ----------------------------- Pagination -------------------------------- */
 
 function Pagination({
   page,
@@ -540,16 +456,7 @@ function Pagination({
     <div className="flex gap-2 justify-center my-8">
       <button
         className="rounded-[8px] border border-[#dddddd] px-6 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ 
-          minWidth: 91,
-          minHeight: 41,
-          color: "#2d5016",
-          fontWeight: 400,
-          fontSize: 16,
-          lineHeight: "24px",
-          background: "#fff",
-          transition: "background-color 0.2s",
-        }}
+        style={{ minWidth: 91, minHeight: 41, color: "#2d5016", background: "#fff" }}
         onClick={onPrev}
         disabled={page === 1}
       >
@@ -557,16 +464,7 @@ function Pagination({
       </button>
       <button
         className="rounded-[8px] border border-[#dddddd] px-6 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ 
-          minWidth: 60,
-          minHeight: 41,
-          color: "#2d5016",
-          fontWeight: 400,
-          fontSize: 16,
-          lineHeight: "24px",
-          background: "#fff",
-          transition: "background-color 0.2s",
-        }}
+        style={{ minWidth: 60, minHeight: 41, color: "#2d5016", background: "#fff" }}
         onClick={onNext}
         disabled={page === totalPages}
       >
@@ -576,7 +474,8 @@ function Pagination({
   );
 }
 
-// --- Replace your current useProducts() with this one ---
+/* ----------------------------- Data hook --------------------------------- */
+
 function useProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -591,10 +490,9 @@ function useProducts() {
       try {
         const res = await fetch(`${API_BASE}/products`, {
           headers: { Accept: "application/json" },
-          credentials: 'include'
+          credentials: "include",
         });
 
-        // Read once (avoids “body stream already read”)
         const raw = await res.text();
         if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
 
@@ -626,7 +524,8 @@ function useProducts() {
   return { data, loading, error };
 }
 
-// --- Main Shop Page ---
+/* ------------------------------- Page ------------------------------------ */
+
 export default function Shop() {
   const add = useCart((s) => s.add);
   const navigate = useNavigate();
@@ -665,9 +564,7 @@ export default function Shop() {
     }
 
     if (selectedTags.length > 0) {
-      list = list.filter((p) =>
-        selectedTags.every((tag) => p.tags && p.tags.includes(tag))
-      );
+      list = list.filter((p) => selectedTags.every((tag) => p.tags && p.tags.includes(tag)));
     }
 
     if (highlightedProductId) {
@@ -692,9 +589,7 @@ export default function Shop() {
   function handleTagToggle(tag: string) {
     setHighlightedProductId(null);
     setPage(1);
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }
 
   function handleReset() {
@@ -742,51 +637,30 @@ export default function Shop() {
   return (
     <main
       className="w-full min-h-screen"
-      style={{
-        background: "#fefefe",
-        fontFamily: "Inter, sans-serif",
-        color: "#2d5016",
-      }}
+      style={{ background: "#fefefe", fontFamily: "Inter, sans-serif", color: "#2d5016" }}
     >
       <div className="flex flex-col items-center w-full px-2 md:px-0">
         <h1
           className="mt-8 mb-2"
-          style={{
-            color: "#2d5016",
-            fontWeight: 700,
-            fontSize: 36,
-            lineHeight: "40px",
-            textAlign: "center",
-            width: 435,
-            maxWidth: "100%",
-          }}
+          style={{ color: "#2d5016", fontWeight: 700, fontSize: 36, lineHeight: "40px", textAlign: "center", width: 435, maxWidth: "100%" }}
         >
           Fresh Flowers Collection
         </h1>
         <p
           className="mb-8"
-          style={{
-            color: "#666",
-            fontWeight: 400,
-            fontSize: 20,
-            lineHeight: "28px",
-            textAlign: "center",
-            width: 618,
-            maxWidth: "100%",
-          }}
+          style={{ color: "#666", fontWeight: 400, fontSize: 20, lineHeight: "28px", textAlign: "center", width: 618, maxWidth: "100%" }}
         >
-          Discover our beautiful selection of handpicked flowers, perfect for
-          every occasion and moment that matters.
+          Discover our beautiful selection of handpicked flowers, perfect for every occasion and moment that matters.
         </p>
 
-        {/* Controls Card */}
+        {/* Controls */}
         <section
           className="w-full max-w-5xl mb-8"
           style={{
             background: "#fff",
             borderRadius: 16,
             boxShadow:
-              "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)",
+              "0 2px 8px rgba(0,0,0,0.04), 0 1.5px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04), 0 0.5px 1px rgba(0,0,0,0.04), 0 0.25px 0.5px rgba(0,0,0,0.04)",
             padding: 32,
             marginBottom: 32,
           }}
@@ -794,9 +668,7 @@ export default function Shop() {
           {loading ? (
             <div className="text-center py-4">Loading...</div>
           ) : error ? (
-            <div className="text-center py-4 text-red-500">
-              Error loading products. Please try again.
-            </div>
+            <div className="text-center py-4 text-red-500">Error loading products. Please try again.</div>
           ) : (
             <>
               <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
@@ -814,17 +686,16 @@ export default function Shop() {
                   />
                 </div>
 
-                {ALL_TAGS.length > MAX_VISIBLE_TAGS && (
+                {ALL_TAGS.length > 6 && (
                   <div className="flex items-center gap-2">
                     <button
-                      className="rounded-[8px] px-4 py-2 flex items-center gap-2 hover:opacity-90 transition-opacity"
+                      className="rounded-[8px] px-4 py-2 flex items-center gap-2 hover:opacity-90"
                       style={{
                         background: showFilters ? "#2d5016" : "#fff",
                         color: showFilters ? "#fff" : "#2d5016",
                         border: "1px solid #dddddd",
                         fontWeight: 500,
                         fontSize: 16,
-                        lineHeight: "24px",
                         minWidth: 100,
                       }}
                       onClick={toggleFilters}
@@ -848,15 +719,8 @@ export default function Shop() {
                       )}
                     </button>
                     <button
-                      className="rounded-[8px] px-4 py-2 hover:opacity-90 transition-opacity"
-                      style={{
-                        background: "#2d5016",
-                        color: "#fff",
-                        fontWeight: 500,
-                        fontSize: 16,
-                        lineHeight: "24px",
-                        minWidth: 79,
-                      }}
+                      className="rounded-[8px] px-4 py-2 hover:opacity-90"
+                      style={{ background: "#2d5016", color: "#fff", fontWeight: 500, fontSize: 16, minWidth: 79 }}
                       onClick={handleReset}
                       type="button"
                     >
@@ -866,39 +730,36 @@ export default function Shop() {
                 )}
               </div>
 
-              {(ALL_TAGS.length <= MAX_VISIBLE_TAGS || showFilters) && (
+              {(ALL_TAGS.length <= 6 || showFilters) && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {ALL_TAGS.map((tag) => (
                     <button
                       key={tag}
-                      className="rounded-[8px] px-4 py-2 hover:opacity-90 transition-opacity"
+                      className="rounded-[8px] px-4 py-2 hover:opacity-90"
                       style={{
                         background: selectedTags.includes(tag) ? "#2d5016" : "#fff",
                         color: selectedTags.includes(tag) ? "#fff" : "#2d5016",
                         border: "1px solid #dddddd",
                         fontWeight: 500,
                         fontSize: 16,
-                        lineHeight: "24px",
                         minWidth: 80,
                       }}
-                      onClick={() => handleTagToggle(tag)}
+                      onClick={() => {
+                        setHighlightedProductId(null);
+                        setPage(1);
+                        setSelectedTags((prev) =>
+                          prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                        );
+                      }}
                       type="button"
                     >
                       {tag.charAt(0).toUpperCase() + tag.slice(1)}
                     </button>
                   ))}
-                  {ALL_TAGS.length <= MAX_VISIBLE_TAGS && (
+                  {ALL_TAGS.length <= 6 && (
                     <button
-                      className="rounded-[8px] px-4 py-2 hover:opacity-90 transition-opacity"
-                      style={{
-                        background: "#2d5016",
-                        color: "#fff",
-                        fontWeight: 500,
-                        fontSize: 16,
-                        lineHeight: "24px",
-                        minWidth: 79,
-                        marginLeft: 8,
-                      }}
+                      className="rounded-[8px] px-4 py-2 hover:opacity-90"
+                      style={{ background: "#2d5016", color: "#fff", fontWeight: 500, fontSize: 16, minWidth: 79, marginLeft: 8 }}
                       onClick={handleReset}
                       type="button"
                     >
@@ -909,43 +770,22 @@ export default function Shop() {
               )}
 
               <div className="flex items-center gap-4 mt-2">
-                <span
-                  style={{
-                    color: "#666",
-                    fontWeight: 400,
-                    fontSize: 14,
-                    lineHeight: "20px",
-                  }}
-                >
-                  Sort by:
-                </span>
+                <span style={{ color: "#666", fontSize: 14 }}>Sort by:</span>
                 <select
                   value={sortKey}
-                  onChange={(e) => handleSortChange(e)}
-                  className="rounded-[8px] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5016]"
-                  style={{
-                    background: "#d9d9d9",
-                    fontSize: 16,
-                    color: "#000",
-                    minWidth: 185,
-                    minHeight: 38,
-                    border: "none",
+                  onChange={(e) => {
+                    setSortKey(e.target.value as any);
+                    setPage(1);
                   }}
+                  className="rounded-[8px] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5016]"
+                  style={{ background: "#d9d9d9", fontSize: 16, color: "#000", minWidth: 185, border: "none" }}
                 >
                   <option value="name-asc">Name A-Z</option>
                   <option value="price-asc">Price ↑</option>
                   <option value="price-desc">Price ↓</option>
                 </select>
-                <span
-                  className="ml-auto"
-                  style={{
-                    color: "#666",
-                    fontWeight: 400,
-                    fontSize: 14,
-                    lineHeight: "20px",
-                  }}
-                >
-                  Showing {paged.length} of {filtered.length} products
+                <span className="ml-auto" style={{ color: "#666", fontSize: 14 }}>
+                  Showing {Math.min(filtered.length - (page - 1) * 4, paged.length)} of {filtered.length} products
                 </span>
               </div>
             </>
@@ -961,7 +801,7 @@ export default function Shop() {
               background: "#f8fdf4",
               borderRadius: 16,
               boxShadow:
-                "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)",
+                "0 2px 8px rgba(0,0,0,0.04), 0 1.5px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04)",
               padding: 24,
               marginBottom: 32,
             }}
@@ -970,33 +810,11 @@ export default function Shop() {
               <img
                 src={recommended.image}
                 alt={recommended.name}
-                style={{
-                  width: 120,
-                  height: 80,
-                  objectFit: "cover",
-                  borderRadius: 12,
-                  marginRight: 24,
-                }}
+                style={{ width: 120, height: 80, objectFit: "cover", borderRadius: 12, marginRight: 24 }}
               />
               <div>
-                <div
-                  style={{
-                    color: "#2d5016",
-                    fontWeight: 700,
-                    fontSize: 18,
-                    lineHeight: "28px",
-                  }}
-                >
-                  Recommended for you (click to filter)
-                </div>
-                <div
-                  style={{
-                    color: "#666",
-                    fontWeight: 400,
-                    fontSize: 16,
-                    lineHeight: "24px",
-                  }}
-                >
+                <div style={{ color: "#2d5016", fontWeight: 700, fontSize: 18 }}>Recommended for you (click to filter)</div>
+                <div style={{ color: "#666", fontSize: 16 }}>
                   {recommended.name} – {recommended.description}
                 </div>
               </div>
@@ -1004,38 +822,32 @@ export default function Shop() {
           </section>
         )}
 
-        {/* Product List */}
+        {/* Product list */}
         <section className="w-full max-w-5xl">
           {loading ? (
-            <div className="text-center text-lg text-[#2d5016] py-12">
-              Loading products...
-            </div>
+            <div className="text-center text-lg text-[#2d5016] py-12">Loading products...</div>
           ) : error ? (
-            <div className="text-center text-lg text-red-500 py-12">
-              Error loading products. Please try again.
-            </div>
+            <div className="text-center text-lg text-red-500 py-12">Error loading products. Please try again.</div>
           ) : paged.length === 0 ? (
-            <div className="text-center text-lg text-[#2d5016] py-12">
-              No products found.
-            </div>
+            <div className="text-center text-lg text-[#2d5016] py-12">No products found.</div>
           ) : (
-            paged.map((product) => (
-              <div key={product.id} id={`product-${product.id}`}>
+            paged.map((p) => (
+              <div key={p.id} id={`product-${p.id}`}>
                 <FlowerCard
-                  product={product}
-                  isHighlighted={product.id === highlightedProductId}
+                  product={p}
+                  isHighlighted={p.id === highlightedProductId}
                   onAddToCart={() =>
                     add({
-                      id: product.id,
-                      name: product.name,
-                      price: product.price,
+                      id: p.id,
+                      name: p.name,
+                      price: p.price,
                       qty: 1,
-                      image: product.image,
-                      description: product.description,
-                      tags: product.tags,
+                      image: p.image,
+                      description: p.description,
+                      tags: p.tags,
                     })
                   }
-                  onNavigateToDetail={() => handleNavigateToProduct(product)}
+                  onNavigateToDetail={() => navigate(`/products/${p.slug}`)}
                 />
               </div>
             ))
@@ -1047,8 +859,8 @@ export default function Shop() {
           <Pagination
             page={page}
             totalPages={totalPages}
-            onPrev={() => setPage((p) => Math.max(1, p - 1))}
-            onNext={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onPrev={() => setPage((x) => Math.max(1, x - 1))}
+            onNext={() => setPage((x) => Math.min(totalPages, x + 1))}
           />
         )}
 
@@ -1063,17 +875,7 @@ export default function Shop() {
             justifyContent: "center",
           }}
         >
-          <span
-            style={{
-              color: "#fff",
-              fontWeight: 400,
-              fontSize: 18,
-              lineHeight: "28px",
-              textAlign: "center",
-            }}
-          >
-            © 2024 Flowo. All rights reserved.
-          </span>
+          <span style={{ color: "#fff", fontSize: 18 }}>© 2024 Flowo. All rights reserved.</span>
         </footer>
       </div>
     </main>
