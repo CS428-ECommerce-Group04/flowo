@@ -4,7 +4,7 @@ import "time"
 
 type Order struct {
 	OrderID           int       `json:"order_id"`
-	UserID            int       `json:"user_id"`
+	FirebaseUID       string    `json:"firebase_uid"`
 	ShippingAddressID int       `json:"shipping_address_id"`
 	BillingAddressID  int       `json:"billing_address_id"`
 	OrderDate         time.Time `json:"order_date"`

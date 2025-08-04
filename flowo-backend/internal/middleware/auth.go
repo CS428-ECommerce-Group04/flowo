@@ -84,7 +84,7 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		}
 
 		// Store user information in the context
-		c.Set("user_id", token.UID)
+		c.Set("firebase_uid", token.UID)
 		c.Set("user_email", token.Claims["email"])
 		c.Set("firebase_token", token)
 
@@ -120,7 +120,7 @@ func (m *AuthMiddleware) RequireSessionAuth() gin.HandlerFunc {
 		}
 
 		// Store user information in the context
-		c.Set("user_id", token.UID)
+		c.Set("firebase_uid", token.UID)
 		c.Set("user_email", token.Claims["email"])
 		c.Set("firebase_token", token)
 
@@ -128,14 +128,14 @@ func (m *AuthMiddleware) RequireSessionAuth() gin.HandlerFunc {
 	}
 }
 
-// GetUserID gets the user ID from the context
-func GetUserID(c *gin.Context) (string, bool) {
-	userID, exists := c.Get("user_id")
+// GetFirebaseUserID gets the Firebase user ID from the context
+func GetFirebaseUserID(c *gin.Context) (string, bool) {
+	firebaseUID, exists := c.Get("firebase_uid")
 	if !exists {
 		return "", false
 	}
 
-	uid, ok := userID.(string)
+	uid, ok := firebaseUID.(string)
 	return uid, ok
 }
 

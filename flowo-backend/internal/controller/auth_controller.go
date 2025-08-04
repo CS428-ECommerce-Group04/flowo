@@ -220,7 +220,7 @@ func (ac *AuthController) SignUpHandler(c *gin.Context) {
 		})
 		return
 	} else {
-		log.Info().Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Int("user_id", localUser.UserID).Msg("User created successfully in both Firebase and local database")
+		log.Info().Str("email", req.Email).Str("firebase_uid", firebaseUser.UID).Str("firebase_uid", localUser.FirebaseUID).Msg("User created successfully in both Firebase and local database")
 	}
 
 	// Send password reset email using Firebase REST API
@@ -392,7 +392,7 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 		Success: true,
 		Message: "Login successful",
 		Session: SessionInfo{
-			SessionID: sessionCookie,
+			SessionID: "",
 			ExpiresAt: time.Now().Add(expiresIn).Unix(),
 			CreatedAt: time.Now().Unix(),
 		},
@@ -459,7 +459,7 @@ func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
 		if err != nil {
 			log.Error().Err(err).Str("uid", decoded.UID).Str("email", userRecord.Email).Msg("Failed to create user in local database during auth check")
 		} else {
-			log.Info().Str("uid", decoded.UID).Str("email", userRecord.Email).Int("user_id", localUser.UserID).Msg("Created local user record during auth check")
+			log.Info().Str("uid", decoded.UID).Str("email", userRecord.Email).Str("firebase_uid", localUser.FirebaseUID).Msg("Created local user record during auth check")
 		}
 	}
 
@@ -473,9 +473,9 @@ func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
 		"email_verified": userRecord.EmailVerified,
 	}
 
-	// Add local user ID if available
+	// Add local user data if available
 	if localUser != nil {
-		userResponse["local_user_id"] = localUser.UserID
+		userResponse["firebase_uid"] = localUser.FirebaseUID
 		userResponse["role"] = localUser.Role
 	}
 
@@ -499,9 +499,9 @@ func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
 // @Router /api/v1/auth/logout [post]
 func (ac *AuthController) LogoutHandler(c *gin.Context) {
 	// Get user information from context (set by auth middleware)
-	userID, exists := c.Get("user_id")
+	firebaseUID, exists := c.Get("firebase_uid")
 	if exists {
-		log.Info().Str("user_id", userID.(string)).Msg("User initiated logout")
+		log.Info().Str("firebase_uid", firebaseUID.(string)).Msg("User initiated logout")
 	}
 
 	// Clear the session cookie
@@ -658,5 +658,5 @@ func (ac *AuthController) ForgotPasswordHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
-	log.Info().Str("email", req.Email).Str("user_id", userRecord.UID).Msg("Password reset email sent successfully")
+	log.Info().Str("email", req.Email).Str("firebase_uid", userRecord.UID).Msg("Password reset email sent successfully")
 }
