@@ -54,6 +54,7 @@ export default function Register() {
         body: JSON.stringify({
           email: trimmedEmail
         }),
+        credentials: 'include'
       });
 
       if (response.status === 200) {

@@ -1,7 +1,57 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import productsJson from "@/data/products.json";
 import { useCart } from "@/store/cart";
 import { useNavigate } from "react-router-dom";
+
+
+type ApiResponse<T> = { message?: string; data: T };
+
+type ApiProduct = {
+  id?: number;
+  product_id?: number;
+  name: string;
+  description?: string;
+  base_price?: number;
+  effective_price?: number;
+  price?: number;
+  image_url?: string;
+  primaryImageUrl?: string;
+  status?: string;               // 'NewFlower' | 'OldFlower' | 'LowStock'
+  flower_type?: string;
+  stock_quantity?: number;
+  slug?: string;
+  tags?: string[];
+};
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
+
+/* ------------------------- Small helpers/utilities ------------------------ */
+
+const slugify = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+function mapApiToShopUI(p: ApiProduct) {
+  const id = String(p.id ?? p.product_id ?? "");
+  const price = Number(p.effective_price ?? p.price ?? p.base_price ?? 0);
+
+  return {
+    id,
+    name: p.name,
+    description: p.description ?? "",
+    type: p.flower_type ?? "bouquet",
+    price,
+    image: p.image_url ?? p.primaryImageUrl ?? "/images/placeholder.png",
+    tags: Array.isArray(p.tags)
+      ? p.tags
+      : [p.flower_type, p.status].filter(Boolean) as string[],
+    compareAtPrice:
+      p.base_price && price && price < p.base_price ? Number(p.base_price) : undefined,
+    stock: p.stock_quantity ?? undefined,
+    slug: p.slug ?? (p.name ? slugify(p.name) : id),
+    care: "",                         // optional field your UI reads
+    featured: p.status === "NewFlower",
+  };
+}
 
 // --- Pattern Components ---
 function TagBadge({ children }: { children: React.ReactNode }) {
@@ -526,27 +576,51 @@ function Pagination({
   );
 }
 
-// --- Data fetching function (can be replaced with API call later) ---
+// --- Replace your current useProducts() with this one ---
 function useProducts() {
-  // This function simulates an API call and can be replaced with a real API call later
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<any[]>([]); // UI product[]
 
   useEffect(() => {
-    // Simulate API delay
-    const timer = setTimeout(() => {
-      try {
-        // Use the imported JSON data
-        setData(productsJson);
-        setLoading(false);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error'));
-        setLoading(false);
-      }
-    }, 300);
+    let alive = true;
 
-    return () => clearTimeout(timer);
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE}/products`, {
+          headers: { Accept: "application/json" },
+          credentials: 'include'
+        });
+
+        // Read once (avoids “body stream already read”)
+        const raw = await res.text();
+        if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
+
+        let parsed: ApiResponse<ApiProduct[]> | ApiProduct[];
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          throw new Error("Invalid JSON from /products");
+        }
+
+        const list: ApiProduct[] = Array.isArray(parsed)
+          ? parsed
+          : (parsed as ApiResponse<ApiProduct[]>).data ?? [];
+
+        const mapped = list.map(mapApiToShopUI);
+        if (alive) setData(mapped);
+      } catch (e: any) {
+        if (alive) setError(e instanceof Error ? e : new Error(String(e)));
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
   return { data, loading, error };
@@ -558,30 +632,26 @@ export default function Shop() {
   const navigate = useNavigate();
   const { data: products, loading, error } = useProducts();
 
-  // --- State ---
   const [search, setSearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [sortKey, setSortKey] = useState<"name-asc" | "price-asc" | "price-desc">("name-asc");
+  const [sortKey, setSortKey] =
+    useState<"name-asc" | "price-asc" | "price-desc">("name-asc");
   const [page, setPage] = useState(1);
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  // --- Extract all unique tags from products ---
   const ALL_TAGS = useMemo(() => {
     if (!products.length) return [];
     return [...new Set(products.flatMap((p) => p.tags || []))].sort();
   }, [products]);
 
   const PAGE_SIZE = 4;
-  const MAX_VISIBLE_TAGS = 6; // Show filter button when more than this many tags
+  const MAX_VISIBLE_TAGS = 6;
 
-  // --- Filtering, Sorting, Pagination ---
   const filtered = useMemo(() => {
     if (!products.length) return [];
-
     let list = products;
 
-    // Filter by search
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -594,26 +664,19 @@ export default function Shop() {
       );
     }
 
-    // Filter by selected tags
     if (selectedTags.length > 0) {
       list = list.filter((p) =>
         selectedTags.every((tag) => p.tags && p.tags.includes(tag))
       );
     }
 
-    // Filter by highlighted product
     if (highlightedProductId) {
       list = list.filter((p) => p.id === highlightedProductId);
     }
 
-    // Sort
-    if (sortKey === "name-asc") {
-      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sortKey === "price-asc") {
-      list = [...list].sort((a, b) => a.price - b.price);
-    } else if (sortKey === "price-desc") {
-      list = [...list].sort((a, b) => b.price - a.price);
-    }
+    if (sortKey === "name-asc") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    else if (sortKey === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
+    else list = [...list].sort((a, b) => b.price - a.price);
 
     return list;
   }, [products, search, selectedTags, sortKey, highlightedProductId]);
@@ -621,13 +684,11 @@ export default function Shop() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // --- Recommendation ---
   const recommended = useMemo(() => {
     if (filtered.length === 0) return null;
     return filtered[Math.floor(Math.random() * filtered.length)];
   }, [filtered]);
 
-  // --- Handlers ---
   function handleTagToggle(tag: string) {
     setHighlightedProductId(null);
     setPage(1);
@@ -652,14 +713,10 @@ export default function Shop() {
 
   function handleRecommendationClick() {
     if (!recommended) return;
-
-    // Option 1: Filter by the recommended product's tags
     if (recommended.tags && recommended.tags.length > 0) {
       setSelectedTags(recommended.tags);
       setHighlightedProductId(null);
-    } 
-    // Option 2: Highlight the recommended product
-    else {
+    } else {
       setHighlightedProductId(recommended.id);
     }
     setPage(1);
@@ -670,39 +727,31 @@ export default function Shop() {
   }
 
   function handleNavigateToProduct(product: any) {
-    // Navigate to product detail page using the product slug
     navigate(`/products/${product.slug}`);
   }
 
-  // Handle autocomplete product selection
   function handleProductSelect(product: any) {
     setHighlightedProductId(product.id);
     setPage(1);
-    // Scroll to the product if it's visible
     setTimeout(() => {
-      const productElement = document.getElementById(`product-${product.id}`);
-      if (productElement) {
-        productElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      const el = document.getElementById(`product-${product.id}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 100);
   }
 
-  // --- Render ---
   return (
     <main
       className="w-full min-h-screen"
-      style={{ 
+      style={{
         background: "#fefefe",
         fontFamily: "Inter, sans-serif",
         color: "#2d5016",
       }}
     >
-      {/* Main Content */}
       <div className="flex flex-col items-center w-full px-2 md:px-0">
-        {/* Title */}
         <h1
           className="mt-8 mb-2"
-          style={{ 
+          style={{
             color: "#2d5016",
             fontWeight: 700,
             fontSize: 36,
@@ -716,7 +765,7 @@ export default function Shop() {
         </h1>
         <p
           className="mb-8"
-          style={{ 
+          style={{
             color: "#666",
             fontWeight: 400,
             fontSize: 20,
@@ -726,16 +775,18 @@ export default function Shop() {
             maxWidth: "100%",
           }}
         >
-          Discover our beautiful selection of handpicked flowers, perfect for every occasion and moment that matters.
+          Discover our beautiful selection of handpicked flowers, perfect for
+          every occasion and moment that matters.
         </p>
 
         {/* Controls Card */}
         <section
           className="w-full max-w-5xl mb-8"
-          style={{ 
+          style={{
             background: "#fff",
             borderRadius: 16,
-            boxShadow: "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)",
+            boxShadow:
+              "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)",
             padding: 32,
             marginBottom: 32,
           }}
@@ -743,16 +794,17 @@ export default function Shop() {
           {loading ? (
             <div className="text-center py-4">Loading...</div>
           ) : error ? (
-            <div className="text-center py-4 text-red-500">Error loading products. Please try again.</div>
+            <div className="text-center py-4 text-red-500">
+              Error loading products. Please try again.
+            </div>
           ) : (
             <>
-              {/* Enhanced Search with Autocomplete and Filter Toggle */}
               <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
                 <div className="w-full md:w-1/2">
                   <SearchAutocomplete
                     value={search}
-                    onChange={(value) => {
-                      setSearch(value);
+                    onChange={(v) => {
+                      setSearch(v);
                       setHighlightedProductId(null);
                       setPage(1);
                     }}
@@ -762,12 +814,11 @@ export default function Shop() {
                   />
                 </div>
 
-                {/* Filter Toggle Button (shown when many tags) */}
                 {ALL_TAGS.length > MAX_VISIBLE_TAGS && (
                   <div className="flex items-center gap-2">
                     <button
                       className="rounded-[8px] px-4 py-2 flex items-center gap-2 hover:opacity-90 transition-opacity"
-                      style={{ 
+                      style={{
                         background: showFilters ? "#2d5016" : "#fff",
                         color: showFilters ? "#fff" : "#2d5016",
                         border: "1px solid #dddddd",
@@ -779,21 +830,14 @@ export default function Shop() {
                       onClick={toggleFilters}
                       type="button"
                     >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46 22,3"></polygon>
                       </svg>
                       Filters
                       {selectedTags.length > 0 && (
                         <span
                           className="rounded-full text-xs px-2 py-0.5"
-                          style={{ 
+                          style={{
                             background: showFilters ? "#fff" : "#2d5016",
                             color: showFilters ? "#2d5016" : "#fff",
                             marginLeft: 4,
@@ -805,7 +849,7 @@ export default function Shop() {
                     </button>
                     <button
                       className="rounded-[8px] px-4 py-2 hover:opacity-90 transition-opacity"
-                      style={{ 
+                      style={{
                         background: "#2d5016",
                         color: "#fff",
                         fontWeight: 500,
@@ -822,20 +866,15 @@ export default function Shop() {
                 )}
               </div>
 
-              {/* Filter Tags */}
               {(ALL_TAGS.length <= MAX_VISIBLE_TAGS || showFilters) && (
                 <div className="flex flex-wrap gap-2 mb-4">
                   {ALL_TAGS.map((tag) => (
                     <button
                       key={tag}
                       className="rounded-[8px] px-4 py-2 hover:opacity-90 transition-opacity"
-                      style={{ 
-                        background: selectedTags.includes(tag)
-                          ? "#2d5016"
-                          : "#fff",
-                        color: selectedTags.includes(tag)
-                          ? "#fff"
-                          : "#2d5016",
+                      style={{
+                        background: selectedTags.includes(tag) ? "#2d5016" : "#fff",
+                        color: selectedTags.includes(tag) ? "#fff" : "#2d5016",
                         border: "1px solid #dddddd",
                         fontWeight: 500,
                         fontSize: 16,
@@ -851,7 +890,7 @@ export default function Shop() {
                   {ALL_TAGS.length <= MAX_VISIBLE_TAGS && (
                     <button
                       className="rounded-[8px] px-4 py-2 hover:opacity-90 transition-opacity"
-                      style={{ 
+                      style={{
                         background: "#2d5016",
                         color: "#fff",
                         fontWeight: 500,
@@ -869,10 +908,9 @@ export default function Shop() {
                 </div>
               )}
 
-              {/* Sort */}
               <div className="flex items-center gap-4 mt-2">
                 <span
-                  style={{ 
+                  style={{
                     color: "#666",
                     fontWeight: 400,
                     fontSize: 14,
@@ -883,9 +921,9 @@ export default function Shop() {
                 </span>
                 <select
                   value={sortKey}
-                  onChange={handleSortChange}
+                  onChange={(e) => handleSortChange(e)}
                   className="rounded-[8px] px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#2d5016]"
-                  style={{ 
+                  style={{
                     background: "#d9d9d9",
                     fontSize: 16,
                     color: "#000",
@@ -900,7 +938,7 @@ export default function Shop() {
                 </select>
                 <span
                   className="ml-auto"
-                  style={{ 
+                  style={{
                     color: "#666",
                     fontWeight: 400,
                     fontSize: 14,
@@ -919,10 +957,11 @@ export default function Shop() {
           <section
             className="w-full max-w-5xl mb-8 cursor-pointer hover:transform hover:-translate-y-1 transition-all duration-200"
             onClick={handleRecommendationClick}
-            style={{ 
+            style={{
               background: "#f8fdf4",
               borderRadius: 16,
-              boxShadow: "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)",
+              boxShadow:
+                "0 2px 8px 0 rgba(0,0,0,0.04), 0 1.5px 4px 0 rgba(0,0,0,0.04), 0 1px 2px 0 rgba(0,0,0,0.04), 0 0.5px 1px 0 rgba(0,0,0,0.04), 0 0.25px 0.5px 0 rgba(0,0,0,0.04)",
               padding: 24,
               marginBottom: 32,
             }}
@@ -931,7 +970,7 @@ export default function Shop() {
               <img
                 src={recommended.image}
                 alt={recommended.name}
-                style={{ 
+                style={{
                   width: 120,
                   height: 80,
                   objectFit: "cover",
@@ -941,7 +980,7 @@ export default function Shop() {
               />
               <div>
                 <div
-                  style={{ 
+                  style={{
                     color: "#2d5016",
                     fontWeight: 700,
                     fontSize: 18,
@@ -951,7 +990,7 @@ export default function Shop() {
                   Recommended for you (click to filter)
                 </div>
                 <div
-                  style={{ 
+                  style={{
                     color: "#666",
                     fontWeight: 400,
                     fontSize: 16,
@@ -985,7 +1024,7 @@ export default function Shop() {
                 <FlowerCard
                   product={product}
                   isHighlighted={product.id === highlightedProductId}
-                  onAddToCart={() => (
+                  onAddToCart={() =>
                     add({
                       id: product.id,
                       name: product.name,
@@ -995,7 +1034,7 @@ export default function Shop() {
                       description: product.description,
                       tags: product.tags,
                     })
-                  )}
+                  }
                   onNavigateToDetail={() => handleNavigateToProduct(product)}
                 />
               </div>
@@ -1016,7 +1055,7 @@ export default function Shop() {
         {/* Footer */}
         <footer
           className="w-full mt-12"
-          style={{ 
+          style={{
             background: "#2d5016",
             minHeight: 92,
             display: "flex",
@@ -1025,7 +1064,7 @@ export default function Shop() {
           }}
         >
           <span
-            style={{ 
+            style={{
               color: "#fff",
               fontWeight: 400,
               fontSize: 18,

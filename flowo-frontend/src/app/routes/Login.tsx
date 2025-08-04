@@ -65,17 +65,17 @@ export default function Login() {
           'accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // IMPORTANT: Include cookies
         body: JSON.stringify({
           email: email.trim(),
           password: password.trim()
         }),
+        credentials: 'include'
       });
 
       if (response.status === 200) {
         // Handle successful login
         const data = await response.json();
-        
+
         // Store user information if provided
         if (data.user) {
           localStorage.setItem('flowo_user', JSON.stringify(data.user));
