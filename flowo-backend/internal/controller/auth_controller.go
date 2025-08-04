@@ -392,7 +392,7 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 		Success: true,
 		Message: "Login successful",
 		Session: SessionInfo{
-			SessionID: sessionCookie,
+			SessionID: "",
 			ExpiresAt: time.Now().Add(expiresIn).Unix(),
 			CreatedAt: time.Now().Unix(),
 		},
