@@ -22,8 +22,8 @@ func NewOrderService(orderRepo repository.OrderRepository, cartRepo repository.C
 	}
 }
 
-func (s *OrderService) GetUserOrders(FirebaseuserID string) ([]dto.OrderResponse, error) {
-	orders, err := s.OrderRepo.GetOrdersByUser(FirebaseuserID)
+func (s *OrderService) GetUserOrders(FirebaseUID string) ([]dto.OrderResponse, error) {
+	orders, err := s.OrderRepo.GetOrdersByUser(FirebaseUID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,13 +41,13 @@ func (s *OrderService) GetUserOrders(FirebaseuserID string) ([]dto.OrderResponse
 	return res, nil
 }
 
-func (s *OrderService) UpdateStatus(orderID int, req dto.UpdateOrderStatusRequest, FirebaseuserID string) error {
+func (s *OrderService) UpdateStatus(orderID int, req dto.UpdateOrderStatusRequest, FirebaseUID string) error {
 	order, err := s.OrderRepo.GetOrderByID(orderID)
 	if err != nil {
 		return err
 	}
 
-	if order.FirebaseUID != FirebaseuserID {
+	if order.FirebaseUID != FirebaseUID {
 		return errors.New("unauthorized: not your order")
 	}
 
@@ -59,8 +59,8 @@ func (s *OrderService) UpdateStatus(orderID int, req dto.UpdateOrderStatusReques
 	return s.OrderRepo.UpdateOrderStatus(orderID, req.Status, methodPtr)
 }
 
-func (s *OrderService) CreateOrder(FirebaseuserID string, req dto.CreateOrderRequest) (int, error) {
-	items, err := s.CartService.GetCartWithPrices(FirebaseuserID)
+func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderRequest) (int, error) {
+	items, err := s.CartService.GetCartWithPrices(FirebaseUID)
 	if err != nil || len(items) == 0 {
 		return 0, errors.New("cart is empty or error getting cart prices")
 	}
@@ -73,7 +73,7 @@ func (s *OrderService) CreateOrder(FirebaseuserID string, req dto.CreateOrderReq
 	finalTotal := subtotal + shipping
 
 	order := model.Order{
-		FirebaseUID:       FirebaseuserID,
+		FirebaseUID:       FirebaseUID,
 		OrderDate:         time.Now(),
 		Status:            "Processing",
 		ShippingAddressID: req.ShippingAddressID,
@@ -85,12 +85,12 @@ func (s *OrderService) CreateOrder(FirebaseuserID string, req dto.CreateOrderReq
 		ShippingMethod:    req.ShippingMethod,
 	}
 
-	orderID, err := s.OrderRepo.CreateOrderWithItemsAndStock(FirebaseuserID, order, items)
+	orderID, err := s.OrderRepo.CreateOrderWithItemsAndStock(FirebaseUID, order, items)
 	if err != nil {
 		return 0, err
 	}
 
-	cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseuserID)
+	cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseUID)
 	_ = s.CartRepo.ClearCart(cartID)
 
 	return orderID, nil
