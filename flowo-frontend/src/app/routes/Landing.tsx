@@ -3,12 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import Carousel from "@/components/ui/Carousel";
 import { useCart } from "@/store/cart";
-import { useProductsStore,type UIFlower } from "@/store/products";
+import { useProductsStore, type UIFlower } from "@/store/products";
 
 import FlowerCard from "@/components/landing/FlowerCard";
 import ContactItem from "@/components/landing/ContactItem";
 import FeatureItem from "@/components/landing/FeatureItem";
 import ContactForm from "@/components/landing/ContactForm";
+import { resolveProductImage } from "@/data/productImages";
 
 type ApiEnvelope<T> = { message?: string; data: T };
 type ApiProduct = {
@@ -19,8 +20,8 @@ type ApiProduct = {
   base_price?: number;
   effective_price?: number;
   price?: number;
-  image_url?: string;
-  primaryImageUrl?: string;
+  image_url?: string;        // may be missing
+  primaryImageUrl?: string;  // may be missing
   status?: string;
   flower_type?: string;
   slug?: string;
@@ -35,8 +36,17 @@ const mapApiToUI = (p: ApiProduct): UIFlower => {
   const id = String(p.id ?? p.product_id ?? "");
   const slug = p.slug ?? (p.name ? slugify(p.name) : id);
   const price = Number(p.effective_price ?? p.price ?? p.base_price ?? 0);
-  const image = p.image_url ?? p.primaryImageUrl ?? "/images/placeholder.png";
-  const tags = Array.isArray(p.tags) ? p.tags : [p.flower_type, p.status].filter(Boolean) as string[];
+
+  // choose API image if present, else resolve from local map by name/slug
+  const image =
+    p.image_url ??
+    p.primaryImageUrl ??
+    resolveProductImage(p.name, slug);
+
+  const tags = Array.isArray(p.tags)
+    ? p.tags
+    : ([p.flower_type, p.status].filter(Boolean) as string[]);
+
   return {
     id,
     slug,
