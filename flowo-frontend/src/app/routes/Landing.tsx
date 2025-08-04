@@ -1,36 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import Carousel from "@/components/ui/Carousel";
 import { useCart } from "@/store/cart";
+import { useProductsStore,type UIFlower } from "@/store/products";
 
-// Reusable components
 import FlowerCard from "@/components/landing/FlowerCard";
 import ContactItem from "@/components/landing/ContactItem";
 import FeatureItem from "@/components/landing/FeatureItem";
 import ContactForm from "@/components/landing/ContactForm";
 
-
-type UIFlower = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  tags: string[];
-};
-
-
-type ApiResponse<T> = { message?: string; data: T };
-
+type ApiEnvelope<T> = { message?: string; data: T };
 type ApiProduct = {
   id?: number;
   product_id?: number;
   name: string;
   description?: string;
   base_price?: number;
-  effective_price?: number;   // ⬅️ add this
+  effective_price?: number;
   price?: number;
   image_url?: string;
   primaryImageUrl?: string;
@@ -41,84 +28,81 @@ type ApiProduct = {
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
+const slugify = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+const mapApiToUI = (p: ApiProduct): UIFlower => {
+  const id = String(p.id ?? p.product_id ?? "");
+  const slug = p.slug ?? (p.name ? slugify(p.name) : id);
+  const price = Number(p.effective_price ?? p.price ?? p.base_price ?? 0);
+  const image = p.image_url ?? p.primaryImageUrl ?? "/images/placeholder.png";
+  const tags = Array.isArray(p.tags) ? p.tags : [p.flower_type, p.status].filter(Boolean) as string[];
+  return {
+    id,
+    slug,
+    name: p.name,
+    description: p.description ?? "",
+    price,
+    image,
+    tags,
+    flower_type: p.flower_type, // keep for detail/filters
+  };
+};
 
 export default function Landing() {
   const navigate = useNavigate();
   const add = useCart((s) => s.add);
 
-  const [flowers, setFlowers] = useState<UIFlower[]>([]);
-  const [loading, setLoading] = useState(true);
+  // products store (shared cache)
+  const products = useProductsStore((s) => s.list);
+  const loaded = useProductsStore((s) => s.loaded);
+  const setAll = useProductsStore((s) => s.setAll);
+
+  const [loading, setLoading] = useState(!loaded);
   const [err, setErr] = useState<string | null>(null);
 
- // replace your entire useEffect with this
-// replace your entire useEffect with this
   useEffect(() => {
     let alive = true;
+    if (loaded) {
+      setLoading(false);
+      return;
+    }
 
     (async () => {
       setLoading(true);
       setErr(null);
       try {
-        const url = `${API_BASE}/products`;
-        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        const res = await fetch(`${API_BASE}/products`, {
+          headers: { Accept: "application/json" },
+        });
 
-        // Read once, then parse – avoids "body stream already read"
-        const raw = await res.text();
+        const raw = await res.text(); // read once
         if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
 
-        let parsed: ApiResponse<ApiProduct[]> | ApiProduct[];
+        let parsed: ApiEnvelope<ApiProduct[]> | ApiProduct[];
         try {
           parsed = JSON.parse(raw);
         } catch {
           throw new Error("Invalid JSON from /products");
         }
 
-        // SUPPORT BOTH: array OR { data: array }
-        const list: ApiProduct[] = Array.isArray(parsed)
-          ? parsed
-          : (parsed as ApiResponse<ApiProduct[]>).data ?? [];
-
-        console.log("[products] count:", list.length);
+        const list: ApiProduct[] = Array.isArray(parsed) ? parsed : parsed.data ?? [];
+        const mapped = list.map(mapApiToUI);
         if (!alive) return;
 
-        const mapped: UIFlower[] = list.map((p) => {
-          const id = String(p.id ?? p.product_id ?? "");
-          const slug =
-            p.slug ??
-            (p.name
-              ? p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
-              : id);
-          // prefer effective_price, then price, then base_price
-          const price = Number(p.effective_price ?? p.price ?? p.base_price ?? 0);
-          const image = p.image_url ?? p.primaryImageUrl ?? "/images/placeholder.png";
-          const tags = Array.isArray(p.tags)
-            ? p.tags
-            : [p.flower_type, p.status].filter(Boolean) as string[];
-
-          return {
-            id,
-            slug,
-            name: p.name,
-            description: p.description ?? "",
-            price,
-            image,
-            tags,
-          };
-        });
-
-        setFlowers(mapped);
+        setAll(mapped);          // put into shared cache
+        setLoading(false);
       } catch (e: any) {
-        if (alive) setErr(e?.message || "Failed to load products");
-      } finally {
-        if (alive) setLoading(false);
+        if (!alive) return;
+        setErr(e?.message || "Failed to load products");
+        setLoading(false);
       }
     })();
 
     return () => {
       alive = false;
     };
-  }, []);
-
+  }, [loaded, setAll]);
 
   const handleAddToCart = (flower: UIFlower) => {
     add({
@@ -184,26 +168,25 @@ export default function Landing() {
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-64 rounded-2xl border border-slate-200 bg-slate-100 animate-pulse"
-                  />
+                  <div key={i} className="h-64 rounded-2xl border border-slate-200 bg-slate-100 animate-pulse" />
                 ))}
               </div>
             ) : err ? (
               <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-amber-800">
                 Failed to load products: {err}
               </div>
-            ) : flowers.length === 0 ? (
+            ) : products.length === 0 ? (
               <div className="text-center text-slate-500">No products available.</div>
             ) : (
               <Carousel itemsPerView={{ mobile: 1, tablet: 2, desktop: 3 }} autoPlay autoPlayInterval={4000}>
-                {flowers.map((flower) => (
+                {products.map((flower) => (
                   <FlowerCard
                     key={flower.id}
                     flower={flower}
                     onAddToCart={() => handleAddToCart(flower)}
-                    onViewDetails={() => navigate(`/products/${flower.slug}`)}
+                    onViewDetails={() =>
+                      navigate(`/products/${flower.slug}`, { state: { product: flower } })
+                    }
                   />
                 ))}
               </Carousel>
@@ -221,11 +204,7 @@ export default function Landing() {
           <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center mb-12 md:mb-16">
             <div>
               <div className="w-full h-64 sm:h-80 lg:h-96 xl:h-[500px] overflow-hidden rounded-2xl shadow-lg">
-                <img
-                  src="images/landingshop.png"
-                  alt="Bloom & Blossom flower shop"
-                  className="w-full h-full object-fill"
-                />
+                <img src="images/landingshop.png" alt="Bloom & Blossom flower shop" className="w-full h-full object-fill" />
               </div>
             </div>
             <div>

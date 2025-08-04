@@ -1,317 +1,250 @@
-import { useMemo, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import productsJson from "@/data/products.json";
-import type { Product } from "@/types/product";
+// src/app/routes/ProductDetail.tsx
+import { useEffect, useMemo, useState } from "react";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "@/store/cart";
+import { useProductsStore, type UIFlower } from "@/store/products";
 
-const products = productsJson as Product[];
+type ApiEnvelope<T> = { message?: string; data: T };
 
-// --- Pattern Components ---
-function Badge({ 
-  children, 
-  variant = "primary" 
-}: { 
-  children: React.ReactNode; 
-  variant?: "primary" | "secondary" | "discount";
-}) {
-  const styles = {
-    primary: {
-      background: "#e91e63",
-      color: "#ffffff",
-      borderRadius: "22369600px",
-      padding: "4px 12px",
-      fontSize: 12,
-      fontWeight: 500,
-      lineHeight: "16px",
-    },
-    secondary: {
-      background: "#e8f5d8",
-      color: "#2d5016",
-      borderRadius: "22369600px",
-      padding: "4px 12px",
-      fontSize: 12,
-      fontWeight: 400,
-      lineHeight: "16px",
-    },
-    discount: {
-      background: "#e91e63",
-      color: "#ffffff",
-      borderRadius: "4px",
-      padding: "4px 9px",
-      fontSize: 14,
-      fontWeight: 400,
-      lineHeight: "20px",
-    },
-  };
+type ApiDetailProduct = {
+  product_id?: number;
+  name?: string;
+  description?: string;
+  flower_type?: string;
+  base_price?: number;
+  effective_price?: number;
+  current_price?: number;
+  price?: number;
+  status?: string;
+  stock_quantity?: number;
+  created_at?: string;
+  updated_at?: string;
+  average_rating?: number;
+  review_count?: number;
+  sales_rank?: number;
+  // Add other fields your API returns if needed (e.g., image urls)
+};
 
-  return (
-    <span style={styles[variant]}>
-      {children}
-    </span>
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
+
+// Utility: choose a detail record from the list that best matches a product
+function pickDetailForProduct(
+  list: ApiDetailProduct[],
+  base: UIFlower | undefined
+): ApiDetailProduct | undefined {
+  if (!list.length) return undefined;
+  if (!base) return list[0];
+
+  // try name match (case-insensitive)
+  const byName = list.find(
+    (d) => (d.name || "").toLowerCase() === base.name.toLowerCase()
   );
-}
+  if (byName) return byName;
 
-function TagBadge({ children, variant = "default" }: { children: React.ReactNode; variant?: "default" | "light" }) {
-  const styles = {
-    default: {
-      background: "#e8f5d8",
-      color: "#2d5016",
-    },
-    light: {
-      background: "#f8fdf4",
-      color: "#2d5016",
-    },
-  };
-
-  return (
-    <span
-      style={{
-        ...styles[variant],
-        borderRadius: "22369600px",
-        padding: "4px 12px",
-        fontSize: 14,
-        fontWeight: 400,
-        lineHeight: "20px",
-        display: "inline-flex",
-        alignItems: "center",
-        marginRight: 8,
-        marginBottom: 4,
-      }}
-    >
-      {children}
-    </span>
+  // try flower type match
+  const byType = list.find(
+    (d) =>
+      (d.flower_type || "").toLowerCase() ===
+      (base.flower_type || "").toLowerCase()
   );
-}
+  if (byType) return byType;
 
-function SpecificationItem({ 
-  label, 
-  value 
-}: { 
-  label: string; 
-  value: string;
-}) {
-  return (
-    <div>
-      <div
-        style={{ 
-          color: "#666666",
-          fontSize: 14,
-          fontWeight: 400,
-          lineHeight: "20px",
-          marginBottom: 4,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{ 
-          color: "#2d5016",
-          fontSize: 16,
-          fontWeight: 600,
-          lineHeight: "24px",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function RatingBar({ 
-  stars, 
-  count, 
-  total 
-}: { 
-  stars: string; 
-  count: number; 
-  total: number;
-}) {
-  const percentage = total > 0 ? (count / total) * 100 : 0;
-
-  return (
-    <div
-      style={{ 
-        display: "grid",
-        gridTemplateColumns: "28px 1fr 20px",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 8,
-      }}
-    >
-      <div
-        style={{ 
-          color: "#666666",
-          fontSize: 14,
-          fontWeight: 400,
-          lineHeight: "20px",
-        }}
-      >
-        {stars}★
-      </div>
-      <div
-        style={{ 
-          height: 8,
-          borderRadius: "22369600px",
-          background: "#f0f0f0",
-          position: "relative",
-        }}
-      >
-        <div
-          style={{ 
-            height: 8,
-            borderRadius: "22369600px",
-            background: "#ffd700",
-            width: `${percentage}%`,
-          }}
-        />
-      </div>
-      <div
-        style={{ 
-          color: "#666666",
-          fontSize: 14,
-          fontWeight: 400,
-          lineHeight: "20px",
-          textAlign: "right",
-        }}
-      >
-        {count}
-      </div>
-    </div>
-  );
-}
-
-function QuantitySelector({ 
-  value, 
-  onChange 
-}: { 
-  value: number; 
-  onChange: (value: number) => void;
-}) {
-  return (
-    <div
-      style={{ 
-        display: "flex",
-        alignItems: "center",
-        border: "1px solid #dddddd",
-        borderRadius: 8,
-        width: 106,
-        height: 41,
-      }}
-    >
-      <button
-        style={{ 
-          width: 35,
-          height: 39,
-          border: "none",
-          background: "transparent",
-          color: "#2d5016",
-          fontSize: 16,
-          fontWeight: 400,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        onClick={() => onChange(Math.max(1, value - 1))}
-      >
-        -
-      </button>
-      <input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(Math.max(1, parseInt(e.target.value) || 1))}
-        style={{ 
-          width: 36,
-          height: 39,
-          border: "none",
-          borderLeft: "1px solid #dddddd",
-          borderRight: "1px solid #dddddd",
-          textAlign: "center",
-          color: "#2d5016",
-          fontSize: 16,
-          fontWeight: 600,
-          background: "transparent",
-          outline: "none",
-        }}
-      />
-      <button
-        style={{ 
-          width: 35,
-          height: 39,
-          border: "none",
-          background: "transparent",
-          color: "#2d5016",
-          fontSize: 16,
-          fontWeight: 400,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        onClick={() => onChange(value + 1)}
-      >
-        +
-      </button>
-    </div>
-  );
+  return list[0];
 }
 
 export default function ProductDetail() {
-  const { slug } = useParams();
+  const { slug = "" } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const location = useLocation() as { state?: { product?: UIFlower } };
   const add = useCart((s) => s.add);
+
+  // Zustand store access
+  const loaded = useProductsStore((s) => s.loaded);
+  const list = useProductsStore((s) => s.list);
+  const setAll = useProductsStore((s) => s.setAll);
+  const findBySlug = useProductsStore((s) => s.findBySlug);
+
+  // If navigated from Landing, this can be present
+  const productFromState = location.state?.product;
+
+  // Fast candidate from state OR store
+  const productFromStore = findBySlug(slug);
+  const baseProduct = productFromState || productFromStore;
+
+  const [ui, setUi] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    flowerType: string;
+    price: number;
+    stock?: number;
+    rating?: number;
+    reviews?: number;
+    image: string;
+    tags: string[];
+  } | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
-  const [tab, setTab] = useState<"reviews" | "care">("reviews");
 
-  const product = useMemo(
-    () => products.find((p) => p.slug === slug),
-    [slug]
-  );
+  useEffect(() => {
+    let alive = true;
 
-  if (!product) {
+    (async () => {
+      setLoading(true);
+      setErr(null);
+
+      try {
+        // Ensure we have the base product (with flower_type) even on hard-refresh
+        let base: UIFlower | undefined = baseProduct;
+
+        if (!base) {
+          console.log("[ProductDetail] store empty or product not found, fetching /products…");
+          const res = await fetch(`${API_BASE}/products`, {
+            headers: { Accept: "application/json" },
+          });
+          const raw = await res.text();
+          if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
+
+          let parsed: ApiEnvelope<any[]> | any[];
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            throw new Error("Invalid JSON from /products");
+          }
+
+          const arr: any[] = Array.isArray(parsed) ? parsed : parsed.data ?? [];
+
+          // Map minimal fields to reuse your UIFlower structure
+          const mapped: UIFlower[] = arr.map((p) => ({
+            id: String(p.id ?? p.product_id ?? ""),
+            slug:
+              p.slug ??
+              (p.name
+                ? p.name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "-")
+                    .replace(/(^-|-$)/g, "")
+                : String(p.id ?? p.product_id ?? "")),
+            name: p.name,
+            description: p.description ?? "",
+            price: Number(p.effective_price ?? p.price ?? p.base_price ?? 0),
+            image: p.image_url ?? p.primaryImageUrl ?? "/images/placeholder.png",
+            tags: Array.isArray(p.tags)
+              ? p.tags
+              : [p.flower_type, p.status].filter(Boolean) as string[],
+            flower_type: p.flower_type,
+          }));
+
+          // Put into the cache for future pages
+          setAll(mapped);
+
+          base = mapped.find((x) => x.slug === slug);
+          if (!base) {
+            throw new Error("Product not found.");
+          }
+        }
+
+        // We must have a proper flower type
+        const flowerType = (base.flower_type || "").trim();
+        if (!flowerType) {
+          throw new Error("Missing flower type for this product.");
+        }
+
+        // Fetch detail by flower type — use EXACT string from store, url-encoded
+        const detailUrl = `${API_BASE}/product/flower-type/${encodeURIComponent(
+          flowerType
+        )}`;
+        console.log("[ProductDetail] GET", detailUrl);
+
+        const dRes = await fetch(detailUrl, {
+          headers: { Accept: "application/json" },
+        });
+        const dRaw = await dRes.text();
+        if (!dRes.ok) throw new Error(dRaw || `HTTP ${dRes.status}`);
+
+        let dParsed: ApiEnvelope<ApiDetailProduct[]> | ApiDetailProduct[];
+        try {
+          dParsed = JSON.parse(dRaw);
+        } catch (e) {
+          console.error("[ProductDetail] JSON parse error (detail):", e);
+          throw new Error("Invalid JSON from detail endpoint");
+        }
+
+        const detailList: ApiDetailProduct[] = Array.isArray(dParsed)
+          ? dParsed
+          : dParsed.data ?? [];
+
+        if (!detailList.length) {
+          throw new Error("No product found for this flower type.");
+        }
+
+        const best = pickDetailForProduct(detailList, base) || detailList[0];
+
+        // Calculate price preference: current -> effective -> price -> base
+        const price = Number(
+          best.current_price ??
+            best.effective_price ??
+            best.price ??
+            best.base_price ??
+            base.price ??
+            0
+        );
+
+        const uiObj = {
+          id: String(
+            best.product_id ?? base.id ?? ""
+          ),
+          name: best.name || base.name,
+          description: best.description || base.description,
+          flowerType,
+          price: Number.isFinite(price) ? price : 0,
+          stock: best.stock_quantity,
+          rating: best.average_rating,
+          reviews: best.review_count,
+          image: base.image, // replace with detailed image if your API provides it
+          tags: [flowerType, best.status || ""].filter(Boolean) as string[],
+        };
+
+        if (!alive) return;
+        setUi(uiObj);
+        setLoading(false);
+      } catch (e: any) {
+        console.error("[ProductDetail] error:", e);
+        if (!alive) return;
+        setErr(e?.message || "Failed to load product");
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [slug, baseProduct, setAll]);
+
+  const oldPrice = useMemo(() => (ui ? Number((ui.price * 1.25).toFixed(2)) : 0), [ui]);
+  const hasCompare = ui ? oldPrice > ui.price : false;
+  const discountPct = hasCompare ? Math.round(((oldPrice - (ui?.price || 0)) / oldPrice) * 100) : 0;
+
+  if (loading) {
     return (
-      <div
-        style={{ 
-          width: "100%",
-          minHeight: "100vh",
-          background: "#fefefe",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: "Inter, sans-serif",
-        }}
-      >
-        <div
-          style={{ 
-            background: "#ffffff",
-            borderRadius: 16,
-            padding: 32,
-            textAlign: "center",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-          }}
-        >
-          <div
-            style={{ 
-              color: "#2d5016",
-              fontSize: 18,
-              fontWeight: 600,
-              marginBottom: 16,
-            }}
-          >
-            Product not found
-          </div>
+      <div className="min-h-screen grid place-items-center bg-white">
+        <div className="text-slate-600">Loading product…</div>
+      </div>
+    );
+  }
+
+  if (err || !ui) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-white p-4">
+        <div className="max-w-md w-full rounded-md border border-amber-300 bg-amber-50 p-4 text-amber-800">
+          <div className="font-semibold mb-1">Failed to load product</div>
+          <div className="text-sm mb-3">{err || "Unknown error"}</div>
           <button
             onClick={() => navigate(-1)}
-            style={{ 
-              background: "#2d5016",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: 8,
-              padding: "12px 24px",
-              fontSize: 16,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
+            className="rounded bg-green-700 text-white px-4 py-2 text-sm"
           >
             ← Go Back
           </button>
@@ -320,501 +253,176 @@ export default function ProductDetail() {
     );
   }
 
-  const oldPrice = product.compareAtPrice ?? Number((product.price * 1.25).toFixed(2));
-  const hasCompare = oldPrice > product.price;
-  const discountPct = hasCompare
-    ? Math.round(((oldPrice - product.price) / oldPrice) * 100)
-    : 0;
-
-  const stockText = product.stock != null ? `${product.stock} bouquets` : "12 bouquets";
-  const typeText = product.type ?? "Peonies";
-  const conditionText = product.condition ?? "Fresh & New";
-  const careText = product.care ?? "Cool water daily";
-
-  const rating = product.rating?.average ?? 4.7;
-  const counts = product.rating?.counts ?? { "5": 2, "4": 1, "3": 0 };
-  const totalReviews = Object.values(counts).reduce((a, b) => a + (b || 0), 0);
-
   return (
-    <div
-      style={{ 
-        width: "100%",
-        minHeight: "100vh",
-        background: "#fefefe",
-        fontFamily: "Inter, sans-serif",
-        position: "relative",
-      }}
-    >
-      {/* Header */}
-      <header
-        style={{ 
-          width: "100%",
-          height: 64,
-          background: "#ffffff",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 32px",
-          position: "sticky",
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <div
-          style={{ 
-            color: "#2d5016",
-            fontSize: 24,
-            fontWeight: 700,
-            lineHeight: "32px",
-          }}
-        >
+    <div className="w-full min-h-screen bg-[#fefefe]">
+      {/* Header mini */}
+      <header className="sticky top-0 z-10 h-16 bg-white shadow flex items-center justify-between px-6">
+        <Link to="/" className="text-2xl font-extrabold text-green-800">
           Flowo
-        </div>
-        <div style={{ display: "flex", gap: 24 }}>
-          <img
-            src="https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/7e3b4122-fd3b-4b68-adc9-665adccd54aa"
-            alt=""
-            width={24}
-            height={24}
-            style={{ opacity: 0.7 }}
-          />
-          <img
-            src="https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/9b863371-ecae-4267-98a7-4b592a292c58"
-            alt=""
-            width={24}
-            height={24}
-            style={{ opacity: 0.7 }}
-          />
+        </Link>
+        <div className="flex gap-4 opacity-70">
+          <div className="w-5 h-5 bg-slate-200 rounded" />
+          <div className="w-5 h-5 bg-slate-200 rounded" />
         </div>
       </header>
 
-      {/* Main Content */}
-      <div style={{ padding: "32px", maxWidth: 1273, margin: "0 auto" }}>
-        {/* Back to Collection */}
-        <Link
-          to="/"
-          style={{ 
-            display: "inline-flex",
-            alignItems: "center",
-            color: "#2d5016",
-            fontSize: 14,
-            fontWeight: 400,
-            lineHeight: "20px",
-            textDecoration: "none",
-            marginBottom: 32,
-          }}
-        >
+      {/* Main */}
+      <div className="max-w-6xl mx-auto p-6">
+        <Link to="/" className="text-sm text-green-800 hover:underline">
           ← Back to Collection
         </Link>
 
-        {/* Product Layout */}
-        <div
-          style={{ 
-            display: "grid",
-            gridTemplateColumns: "596px 1fr",
-            gap: 81,
-            marginBottom: 64,
-          }}
-        >
-          {/* Product Image */}
-          <div style={{ position: "relative" }}>
+        <div className="grid md:grid-cols-2 gap-10 mt-8">
+          {/* Image */}
+          <div className="relative">
             <img
-              src={product.image}
-              alt={product.name}
-              style={{ 
-                width: 596,
-                height: 384,
-                objectFit: "cover",
-                borderRadius: 16,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              }}
+              src={ui.image}
+              alt={ui.name}
+              className="w-full h-96 object-cover rounded-2xl shadow"
             />
-            {/* Badges */}
-            <div
-              style={{ 
-                position: "absolute",
-                top: 16,
-                left: 16,
-                display: "flex",
-                gap: 8,
-              }}
-            >
-              {product.featured && <Badge variant="primary">Bestseller</Badge>}
-              <Badge variant="secondary">New Arrival</Badge>
+            <div className="absolute left-3 top-3 flex gap-2">
+              <span className="bg-pink-600 text-white rounded-full px-3 py-0.5 text-xs font-medium">
+                Bestseller
+              </span>
+              <span className="bg-[#e8f5d8] text-[#2d5016] rounded-full px-3 py-0.5 text-xs">
+                New Arrival
+              </span>
             </div>
           </div>
 
-          {/* Product Info */}
+          {/* Info */}
           <div>
-            {/* Product Name */}
-            <h1
-              style={{ 
-                color: "#2d5016",
-                fontSize: 30,
-                fontWeight: 700,
-                lineHeight: "36px",
-                margin: "0 0 16px 0",
-              }}
-            >
-              {product.name}
-            </h1>
+            <h1 className="text-3xl font-bold text-[#2d5016]">{ui.name}</h1>
+            <p className="mt-3 text-slate-600">{ui.description}</p>
 
-            {/* Description */}
-            <p
-              style={{ 
-                color: "#666666",
-                fontSize: 18,
-                fontWeight: 400,
-                lineHeight: "29px",
-                margin: "0 0 24px 0",
-                maxWidth: 595,
-              }}
-            >
-              {product.description}
-            </p>
-
-            {/* Tags */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
-              {product.tags.map((tag, index) => (
-                <TagBadge key={tag} variant={index === 1 ? "light" : "default"}>
-                  {tag}
-                </TagBadge>
+            {/* tags */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {ui.tags.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full bg-[#e8f5d8] text-[#2d5016] px-3 py-1 text-sm"
+                >
+                  {t}
+                </span>
               ))}
             </div>
 
-            {/* Specifications */}
-            <div
-              style={{ 
-                background: "#ffffff",
-                borderRadius: 16,
-                padding: 24,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 24,
-                marginBottom: 32,
-              }}
-            >
-              <SpecificationItem label="Flower Type" value={typeText} />
-              <SpecificationItem label="Condition" value={conditionText} />
-              <SpecificationItem label="Stock Available" value={stockText} />
-              <SpecificationItem label="Care Instructions" value={careText} />
+            {/* specs */}
+            <div className="mt-6 grid grid-cols-2 gap-4 rounded-2xl bg-white p-4 shadow">
+              <div>
+                <div className="text-slate-500 text-xs">Flower Type</div>
+                <div className="text-[#2d5016] font-semibold">{ui.flowerType}</div>
+              </div>
+              <div>
+                <div className="text-slate-500 text-xs">Stock Available</div>
+                <div className="text-[#2d5016] font-semibold">
+                  {ui.stock != null ? ui.stock : "In stock"}
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-500 text-xs">Rating</div>
+                <div className="text-[#2d5016] font-semibold">
+                  {ui.rating != null ? ui.rating.toFixed(1) : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-500 text-xs">Reviews</div>
+                <div className="text-[#2d5016] font-semibold">{ui.reviews ?? 0}</div>
+              </div>
             </div>
 
-            {/* Pricing */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-                <span
-                  style={{ 
-                    color: "#2d5016",
-                    fontSize: 36,
-                    fontWeight: 700,
-                    lineHeight: "40px",
-                  }}
-                >
-                  ${product.price.toFixed(2)}
-                </span>
+            {/* price */}
+            <div className="mt-6">
+              <div className="flex items-center gap-3">
+                <div className="text-3xl font-bold text-[#2d5016]">${ui.price.toFixed(2)}</div>
                 {hasCompare && (
                   <>
-                    <span
-                      style={{ 
-                        color: "#999999",
-                        fontSize: 18,
-                        fontWeight: 400,
-                        lineHeight: "28px",
-                        textDecoration: "line-through",
-                      }}
-                    >
-                      ${oldPrice.toFixed(2)}
+                    <div className="text-slate-400 line-through">${oldPrice.toFixed(2)}</div>
+                    <span className="bg-pink-600 text-white rounded px-2 py-0.5 text-sm">
+                      {discountPct}% OFF
                     </span>
-                    <Badge variant="discount">{discountPct}% OFF</Badge>
                   </>
                 )}
               </div>
-              <div
-                style={{ 
-                  color: "#666666",
-                  fontSize: 14,
-                  fontWeight: 400,
-                  lineHeight: "20px",
-                  marginBottom: 24,
-                }}
-              >
+              <div className="text-slate-500 text-sm mt-1">
                 Price includes delivery within 24 hours
               </div>
             </div>
 
-            {/* Quantity and Actions */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 48 }}>
-              <span
-                style={{ 
-                  color: "#2d5016",
-                  fontSize: 16,
-                  fontWeight: 600,
-                  lineHeight: "24px",
-                }}
-              >
-                Quantity:
-              </span>
-              <QuantitySelector value={qty} onChange={setQty} />
-            </div>
+            {/* qty + actions */}
+            <div className="mt-6 flex items-center gap-4">
+              <div className="flex items-center border border-slate-300 rounded">
+                <button
+                  className="w-9 h-10"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                >
+                  –
+                </button>
+                <input
+                  className="w-12 h-10 border-x border-slate-300 text-center"
+                  type="number"
+                  value={qty}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    setQty(Number.isFinite(n) && n > 0 ? n : 1);
+                  }}
+                />
+                <button className="w-9 h-10" onClick={() => setQty((q) => q + 1)}>
+                  +
+                </button>
+              </div>
 
-            <div style={{ display: "flex", gap: 16 }}>
               <button
-                style={{ 
-                  background: "#e91e63",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "12px 24px",
-                  fontSize: 18,
-                  fontWeight: 500,
-                  lineHeight: "28px",
-                  cursor: "pointer",
-                  width: 413,
-                  height: 52,
-                }}
-                onClick={() => 
-                  add({ 
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
+                className="rounded bg-pink-600 text-white px-6 py-2 font-medium"
+                onClick={() =>
+                  add({
+                    id: ui.id,
+                    name: ui.name,
+                    price: ui.price,
                     qty,
-                    image: product.image,
-                    description: product.description,
-                    tags: product.tags,
+                    image: ui.image,
+                    description: ui.description,
+                    tags: ui.tags,
                   })
                 }
               >
                 Add to Cart
               </button>
-              <button
-                style={{ 
-                  background: "transparent",
-                  color: "#2d5016",
-                  border: "1px solid #2d5016",
-                  borderRadius: 8,
-                  padding: "12px 24px",
-                  fontSize: 16,
-                  fontWeight: 500,
-                  lineHeight: "24px",
-                  cursor: "pointer",
-                  width: 167,
-                  height: 52,
-                }}
-              >
+
+              <button className="rounded border border-[#2d5016] text-[#2d5016] px-4 py-2">
                 Add to Wishlist
               </button>
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ marginBottom: 32 }}>
-          <div
-            style={{ 
-              borderBottom: "1px solid #dddddd",
-              display: "flex",
-              gap: 32,
-              marginBottom: 24,
-            }}
-          >
-            <button
-              style={{ 
-                background: "transparent",
-                border: "none",
-                borderBottom: tab === "reviews" ? "2px solid #2d5016" : "none",
-                color: tab === "reviews" ? "#2d5016" : "#666666",
-                fontSize: 16,
-                fontWeight: 500,
-                lineHeight: "24px",
-                padding: "0 0 16px 0",
-                cursor: "pointer",
-              }}
-              onClick={() => setTab("reviews")}
-            >
-              Customer Reviews ({totalReviews})
+        {/* Simple tabs (placeholder) */}
+        <div className="mt-10">
+          <div className="border-b border-slate-200 flex gap-8">
+            <button className="py-2 border-b-2 border-[#2d5016] text-[#2d5016] font-medium">
+              Customer Reviews ({ui.reviews ?? 0})
             </button>
-            <button
-              style={{ 
-                background: "transparent",
-                border: "none",
-                borderBottom: tab === "care" ? "2px solid #2d5016" : "none",
-                color: tab === "care" ? "#2d5016" : "#666666",
-                fontSize: 16,
-                fontWeight: 500,
-                lineHeight: "24px",
-                padding: "0 0 16px 0",
-                cursor: "pointer",
-              }}
-              onClick={() => setTab("care")}
-            >
-              Care Instructions
-            </button>
+            <button className="py-2 text-slate-600">Care Instructions</button>
           </div>
 
-          {/* Tab Content */}
-          {tab === "reviews" ? (
-            <div
-              style={{ 
-                background: "#ffffff",
-                borderRadius: 16,
-                padding: 24,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                marginBottom: 32,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "end", gap: 16, marginBottom: 24 }}>
-                <div
-                  style={{ 
-                    color: "#2d5016",
-                    fontSize: 30,
-                    fontWeight: 700,
-                    lineHeight: "36px",
-                  }}
-                >
-                  {rating.toFixed(1)}
-                </div>
-                <div
-                  style={{ 
-                    color: "#000000",
-                    fontSize: 16,
-                    fontWeight: 400,
-                    lineHeight: "24px",
-                  }}
-                >
-                  ★
-                </div>
-                <div
-                  style={{ 
-                    color: "#666666",
-                    fontSize: 14,
-                    fontWeight: 400,
-                    lineHeight: "20px",
-                  }}
-                >
-                  Based on {totalReviews} reviews
-                </div>
-              </div>
-
-              <div>
-                <RatingBar stars="5" count={counts["5"] || 0} total={totalReviews} />
-                <RatingBar stars="4" count={counts["4"] || 0} total={totalReviews} />
-                <RatingBar stars="3" count={counts["3"] || 0} total={totalReviews} />
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{ 
-                background: "#ffffff",
-                borderRadius: 16,
-                padding: 24,
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                marginBottom: 32,
-              }}
-            >
-              <ul
-                style={{ 
-                  listStyle: "disc",
-                  paddingLeft: 20,
-                  margin: 0,
-                  color: "#666666",
-                  fontSize: 16,
-                  lineHeight: "24px",
-                }}
-              >
-                <li style={{ marginBottom: 8 }}>{careText}</li>
-                <li style={{ marginBottom: 8 }}>Keep away from direct sunlight and heat sources.</li>
-                <li>Trim stems at an angle every two days.</li>
-              </ul>
-            </div>
-          )}
-
-          {/* Review Item */}
-          <div
-            style={{ 
-              background: "#ffffff",
-              borderRadius: 16,
-              padding: 24,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              marginBottom: 32,
-            }}
-          >
-            <div
-              style={{ 
-                color: "#000000",
-                fontSize: 16,
-                fontWeight: 400,
-                lineHeight: "24px",
-              }}
-            >
-              ★
-            </div>
+          <div className="mt-4 rounded-2xl bg-white p-4 shadow">
+            <div className="text-slate-600 text-sm">No reviews yet.</div>
           </div>
         </div>
 
-        {/* Help Section */}
-        <div
-          style={{ 
-            background: "#6bb937ff",
-            borderRadius: 16,
-            padding: 48,
-            textAlign: "center",
-            marginBottom: 32,
-          }}
-        >
-          <h2
-            style={{ 
-              color: "#000000ff",
-              fontSize: 24,
-              fontWeight: 700,
-              lineHeight: "32px",
-              margin: "0 0 16px 0",
-            }}
-          >
-            Need Help Choosing?
-          </h2>
-          <p
-            style={{ 
-              color: "#000000",
-              fontSize: 16,
-              fontWeight: 400,
-              lineHeight: "24px",
-              margin: "0 0 24px 0",
-            }}
-          >
+        {/* Help */}
+        <div className="mt-10 rounded-2xl bg-[#6bb937] p-8 text-center">
+          <h2 className="text-black text-xl font-bold mb-2">Need Help Choosing?</h2>
+          <p className="text-black mb-4">
             Our flower experts are here to help you find the perfect arrangement
           </p>
-          <button
-            style={{ 
-              background: "#ffffff",
-              color: "#6bb937ff",
-              border: "none",
-              borderRadius: 8,
-              padding: "12px 22px",
-              fontSize: 16,
-              fontWeight: 500,
-              lineHeight: "24px",
-              cursor: "pointer",
-              width: 201,
-              height: 48,
-            }}
-          >
+          <button className="rounded bg-white text-[#6bb937] px-5 py-3">
             Contact Our Experts
           </button>
         </div>
 
         {/* Footer */}
-        <div
-          style={{ 
-            textAlign: "center",
-            color: "#666666",
-            fontSize: 14,
-            fontWeight: 400,
-            lineHeight: "20px",
-          }}
-        >
+        <div className="text-center text-slate-500 text-sm mt-10">
           © 2025 Flowo. All rights reserved.
         </div>
       </div>

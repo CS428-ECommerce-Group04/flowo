@@ -1,23 +1,32 @@
-export type RatingCounts = Partial<Record<"5" | "4" | "3" | "2" | "1", number>>;
+export type ApiEnvelope<T> = { message?: string; data: T };
 
-export type Product = {
-  id: string;
-  slug: string;
+export type ApiProduct = {
+  id?: number;
+  product_id?: number;
   name: string;
-  price: number;
-  image: string;
-  description: string;
-  tags: string[];
-  featured?: boolean;
+  description?: string;
+  flower_type?: string;
+  base_price?: number;
+  current_price?: number;       // shown in your screenshot
+  status?: string;              // e.g. "NewFlower"
+  stock_quantity?: number;
+  average_rating?: number;
+  review_count?: number;
+  image_url?: string;
+  primaryImageUrl?: string;
+};
 
-  // Optional detail fields (use any you need)
-  compareAtPrice?: number;   // old price for strikethrough + discount
-  stock?: number;            // e.g., 12
-  type?: string;             // e.g., "Peonies"
-  condition?: string;        // e.g., "Fresh & New"
-  care?: string;             // e.g., "Cool water daily"
-  rating?: {
-    average?: number;        // e.g., 4.7
-    counts?: RatingCounts;   // e.g., {"5": 2, "4": 1, "3": 0}
-  };
+export type UIProduct = {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  price: number;
+  compareAtPrice?: number;
+  image: string;
+  tags: string[];
+  stock?: number;
+  featured?: boolean;
+  rating?: { average: number; counts: Record<string, number> };
+  slug: string;
 };
