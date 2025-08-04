@@ -3,16 +3,18 @@ package dto
 type AddToCartRequest struct {
 	ProductID int `json:"product_id" binding:"required"`
 	Quantity  int `json:"quantity" binding:"required,min=1"`
-	UserID    int `json:"user_id" binding:"required"`
+	UserID    int `json:"-"` // sent through controller middleware, not by user
 }
+
 type UpdateCartItemRequest struct {
-	UserID    int `json:"user_id" binding:"required"`
 	ProductID int `json:"product_id" binding:"required"`
 	Quantity  int `json:"quantity" binding:"required,min=1"`
+	UserID    int `json:"-"`
 }
+
 type RemoveCartItemRequest struct {
-	UserID    int `json:"user_id" binding:"required"`
 	ProductID int `json:"product_id" binding:"required"`
+	UserID    int `json:"-"`
 }
 type CartItemResponse struct {
 	ProductID   int     `json:"product_id"`

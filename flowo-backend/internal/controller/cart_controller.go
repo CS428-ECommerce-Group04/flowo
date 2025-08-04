@@ -2,19 +2,20 @@ package controller
 
 import (
 	"flowo-backend/internal/dto"
+	"flowo-backend/internal/middleware"
 	"flowo-backend/internal/service"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
 type CartController struct {
-	Service *service.CartService
+	Service     *service.CartService
+	UserService service.UserService
 }
 
-func NewCartController(s *service.CartService) *CartController {
-	return &CartController{Service: s}
+func NewCartController(s *service.CartService, us service.UserService) *CartController {
+	return &CartController{Service: s, UserService: us}
 }
 
 func (ctrl *CartController) RegisterRoutes(rg *gin.RouterGroup) {
@@ -22,7 +23,7 @@ func (ctrl *CartController) RegisterRoutes(rg *gin.RouterGroup) {
 	cart.POST("/add", ctrl.AddToCart)
 	cart.PUT("/update", ctrl.UpdateCartItem)
 	cart.DELETE("/remove", ctrl.RemoveCartItem)
-	cart.GET("/:userID", ctrl.GetCartItems)
+	cart.GET("/", ctrl.GetCartItems)
 }
 
 // AddToCart godoc
@@ -31,17 +32,33 @@ func (ctrl *CartController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Tags cart
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body dto.AddToCartRequest true "Add to cart request"
 // @Success 200 {object} model.Response
 // @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
 // @Failure 500 {object} model.Response
 // @Router /api/v1/cart/add [post]
 func (ctrl *CartController) AddToCart(c *gin.Context) {
+	firebaseUID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	user, err := ctrl.UserService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
+
 	var req dto.AddToCartRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	req.UserID = user.UserID
 
 	if err := ctrl.Service.AddToCart(req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add to cart"})
@@ -57,17 +74,33 @@ func (ctrl *CartController) AddToCart(c *gin.Context) {
 // @Tags cart
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body dto.UpdateCartItemRequest true "Update cart item request"
 // @Success 200 {object} model.Response
 // @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
 // @Failure 500 {object} model.Response
 // @Router /api/v1/cart/update [put]
 func (ctrl *CartController) UpdateCartItem(c *gin.Context) {
+	firebaseUID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	user, err := ctrl.UserService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
+
 	var req dto.UpdateCartItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	req.UserID = user.UserID
 
 	if err := ctrl.Service.UpdateCartItem(req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update cart item"})
@@ -83,17 +116,33 @@ func (ctrl *CartController) UpdateCartItem(c *gin.Context) {
 // @Tags cart
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param request body dto.RemoveCartItemRequest true "Remove cart item request"
 // @Success 200 {object} model.Response
 // @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
 // @Failure 500 {object} model.Response
 // @Router /api/v1/cart/remove [delete]
 func (ctrl *CartController) RemoveCartItem(c *gin.Context) {
+	firebaseUID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	user, err := ctrl.UserService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
+
 	var req dto.RemoveCartItemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	req.UserID = user.UserID
 
 	if err := ctrl.Service.RemoveCartItem(req.UserID, req.ProductID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not remove item"})
@@ -105,25 +154,30 @@ func (ctrl *CartController) RemoveCartItem(c *gin.Context) {
 
 // GetCartItems godoc
 // @Summary Get cart items for user
-// @Description Retrieve all items in the cart for a given user
+// @Description Retrieve all items in the cart for the authenticated user
 // @Tags cart
 // @Produce json
 // @Security BearerAuth
-// @Param userID path int true "User ID"
 // @Success 200 {array} dto.CartItemResponse
-// @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
 // @Failure 500 {object} model.Response
-// @Router /api/v1/cart/{userID} [get]
+// @Router /api/v1/cart [get]
 func (ctrl *CartController) GetCartItems(c *gin.Context) {
-	userID, err := strconv.Atoi(c.Param("userID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+	firebaseUID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	items, err := ctrl.Service.GetCartWithPrices(userID)
+	user, err := ctrl.UserService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
+
+	items, err := ctrl.Service.GetCartWithPrices(user.UserID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get cart items with prices"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get cart items"})
 		return
 	}
 
