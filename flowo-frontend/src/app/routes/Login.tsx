@@ -65,6 +65,7 @@ export default function Login() {
           'accept': 'application/json',
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // IMPORTANT: Include cookies
         body: JSON.stringify({
           email: email.trim(),
           password: password.trim()
@@ -75,30 +76,6 @@ export default function Login() {
         // Handle successful login
         const data = await response.json();
         
-        // Extract and store session token from response.session.session_id
-        let sessionToken = null;
-        if (data.session && data.session.session_id) {
-          sessionToken = data.session.session_id;
-        } else if (data.token) {
-          // Fallback to token field if session structure is different
-          sessionToken = data.token;
-        } else if (data.session_id) {
-          // Another possible structure
-          sessionToken = data.session_id;
-        }
-
-        if (sessionToken) {
-          // Store the session token securely using AuthTokenManager
-          localStorage.setItem('flowo_auth_token', sessionToken);
-          
-          // Also store any additional session data if needed
-          if (data.session) {
-            localStorage.setItem('flowo_session_data', JSON.stringify(data.session));
-          }
-        } else {
-          console.warn('No session token found in login response');
-        }
-
         // Store user information if provided
         if (data.user) {
           localStorage.setItem('flowo_user', JSON.stringify(data.user));

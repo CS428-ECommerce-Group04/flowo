@@ -177,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // 'Session-ID': token,
           // 'X-Session-Token': token,
         },
+        credentials: 'include', // IMPORTANT: Include cookies for session management
       });
 
       if (response.status === 200) {
@@ -276,6 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'accept': 'application/json',
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // IMPORTANT: Include cookies for session management
         body: JSON.stringify({ 
           email: sanitizedEmail,
           password: password.trim()
@@ -463,6 +465,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'accept': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
+        credentials: 'include', // IMPORTANT: Include cookies for session management
       });
 
       if (response.status === 200) {
