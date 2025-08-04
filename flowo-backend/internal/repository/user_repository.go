@@ -2,10 +2,8 @@ package repository
 
 import (
 	"database/sql"
-	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
 	"fmt"
-	"strings"
 )
 
 type UserRepository interface {

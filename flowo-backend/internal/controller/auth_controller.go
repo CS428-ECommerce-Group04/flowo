@@ -499,9 +499,9 @@ func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
 // @Router /api/v1/auth/logout [post]
 func (ac *AuthController) LogoutHandler(c *gin.Context) {
 	// Get user information from context (set by auth middleware)
-	userID, exists := c.Get("user_id")
+	firebaseUID, exists := c.Get("firebase_uid")
 	if exists {
-		log.Info().Str("user_id", userID.(string)).Msg("User initiated logout")
+		log.Info().Str("firebase_uid", firebaseUID.(string)).Msg("User initiated logout")
 	}
 
 	// Clear the session cookie
@@ -658,5 +658,5 @@ func (ac *AuthController) ForgotPasswordHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
-	log.Info().Str("email", req.Email).Str("user_id", userRecord.UID).Msg("Password reset email sent successfully")
+	log.Info().Str("email", req.Email).Str("firebase_uid", userRecord.UID).Msg("Password reset email sent successfully")
 }

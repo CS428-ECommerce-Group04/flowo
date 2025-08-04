@@ -5,7 +5,6 @@ import (
 	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
 	"flowo-backend/internal/repository"
-	"strconv"
 	"time"
 )
 
@@ -23,8 +22,8 @@ func NewOrderService(orderRepo repository.OrderRepository, cartRepo repository.C
 	}
 }
 
-func (s *OrderService) GetUserOrders(userID int) ([]dto.OrderResponse, error) {
-	orders, err := s.OrderRepo.GetOrdersByUser(userID)
+func (s *OrderService) GetUserOrders(FirebaseuserID string) ([]dto.OrderResponse, error) {
+	orders, err := s.OrderRepo.GetOrdersByUser(FirebaseuserID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,17 +41,13 @@ func (s *OrderService) GetUserOrders(userID int) ([]dto.OrderResponse, error) {
 	return res, nil
 }
 
-func (s *OrderService) UpdateStatus(orderID int, req dto.UpdateOrderStatusRequest, userID string) error {
+func (s *OrderService) UpdateStatus(orderID int, req dto.UpdateOrderStatusRequest, FirebaseuserID string) error {
 	order, err := s.OrderRepo.GetOrderByID(orderID)
 	if err != nil {
 		return err
 	}
 
-	userIDInt, err := strconv.Atoi(userID)
-	if err != nil {
-		return errors.New("invalid user ID format")
-	}
-	if order.UserID != userIDInt {
+	if order.FirebaseUID != FirebaseuserID {
 		return errors.New("unauthorized: not your order")
 	}
 
@@ -64,8 +59,8 @@ func (s *OrderService) UpdateStatus(orderID int, req dto.UpdateOrderStatusReques
 	return s.OrderRepo.UpdateOrderStatus(orderID, req.Status, methodPtr)
 }
 
-func (s *OrderService) CreateOrder(userID int, req dto.CreateOrderRequest) (int, error) {
-	items, err := s.CartService.GetCartWithPrices(userID)
+func (s *OrderService) CreateOrder(FirebaseuserID string, req dto.CreateOrderRequest) (int, error) {
+	items, err := s.CartService.GetCartWithPrices(FirebaseuserID)
 	if err != nil || len(items) == 0 {
 		return 0, errors.New("cart is empty or error getting cart prices")
 	}
@@ -78,7 +73,7 @@ func (s *OrderService) CreateOrder(userID int, req dto.CreateOrderRequest) (int,
 	finalTotal := subtotal + shipping
 
 	order := model.Order{
-		UserID:            userID,
+		FirebaseUID:       FirebaseuserID,
 		OrderDate:         time.Now(),
 		Status:            "Processing",
 		ShippingAddressID: req.ShippingAddressID,
@@ -90,12 +85,12 @@ func (s *OrderService) CreateOrder(userID int, req dto.CreateOrderRequest) (int,
 		ShippingMethod:    req.ShippingMethod,
 	}
 
-	orderID, err := s.OrderRepo.CreateOrderWithItemsAndStock(userID, order, items)
+	orderID, err := s.OrderRepo.CreateOrderWithItemsAndStock(FirebaseuserID, order, items)
 	if err != nil {
 		return 0, err
 	}
 
-	cartID, _ := s.CartRepo.GetCartIDByUser(userID)
+	cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseuserID)
 	_ = s.CartRepo.ClearCart(cartID)
 
 	return orderID, nil
@@ -111,6 +106,6 @@ func getBillingAddressID(billing *int, shipping int) int {
 func (s *OrderService) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error) {
 	return s.OrderRepo.GetOrderDetailByID(orderID)
 }
-func (s *OrderService) GetOrderOwnerID(orderID int) (int, error) {
+func (s *OrderService) GetOrderOwnerID(orderID int) (string, error) {
 	return s.OrderRepo.GetOrderOwnerID(orderID)
 }
