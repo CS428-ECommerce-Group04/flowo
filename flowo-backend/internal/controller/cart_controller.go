@@ -40,7 +40,7 @@ func (ctrl *CartController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/cart/add [post]
 func (ctrl *CartController) AddToCart(c *gin.Context) {
-	firebaseUID, ok := middleware.GetUserID(c)
+	firebaseUID, ok := middleware.GetFirebaseUserID(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -57,8 +57,7 @@ func (ctrl *CartController) AddToCart(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	req.UserID = user.UserID
+	req.FirebaseUID = firebaseUID
 
 	if err := ctrl.Service.AddToCart(req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add to cart"})
@@ -82,7 +81,7 @@ func (ctrl *CartController) AddToCart(c *gin.Context) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/cart/update [put]
 func (ctrl *CartController) UpdateCartItem(c *gin.Context) {
-	firebaseUID, ok := middleware.GetUserID(c)
+	firebaseUID, ok := middleware.GetFirebaseUserID(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -99,8 +98,7 @@ func (ctrl *CartController) UpdateCartItem(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	req.UserID = user.UserID
+	req.FirebaseUID = firebaseUID
 
 	if err := ctrl.Service.UpdateCartItem(req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update cart item"})
@@ -124,7 +122,7 @@ func (ctrl *CartController) UpdateCartItem(c *gin.Context) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/cart/remove [delete]
 func (ctrl *CartController) RemoveCartItem(c *gin.Context) {
-	firebaseUID, ok := middleware.GetUserID(c)
+	firebaseUID, ok := middleware.GetFirebaseUserID(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -142,9 +140,9 @@ func (ctrl *CartController) RemoveCartItem(c *gin.Context) {
 		return
 	}
 
-	req.UserID = user.UserID
+	req.FirebaseUID = firebaseUID
 
-	if err := ctrl.Service.RemoveCartItem(req.UserID, req.ProductID); err != nil {
+	if err := ctrl.Service.RemoveCartItem(req.FirebaseUID, req.ProductID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not remove item"})
 		return
 	}
@@ -163,7 +161,7 @@ func (ctrl *CartController) RemoveCartItem(c *gin.Context) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/cart [get]
 func (ctrl *CartController) GetCartItems(c *gin.Context) {
-	firebaseUID, ok := middleware.GetUserID(c)
+	firebaseUID, ok := middleware.GetFirebaseUserID(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -175,7 +173,7 @@ func (ctrl *CartController) GetCartItems(c *gin.Context) {
 		return
 	}
 
-	items, err := ctrl.Service.GetCartWithPrices(user.UserID)
+	items, err := ctrl.Service.GetCartWithPrices(user.FirebaseUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not get cart items"})
 		return

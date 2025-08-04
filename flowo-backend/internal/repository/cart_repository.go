@@ -7,12 +7,12 @@ import (
 )
 
 type CartRepository interface {
-	GetOrCreateCart(userID int) (int, error)
+	GetOrCreateCart(firebaseUID string) (int, error)
 	AddOrUpdateCartItem(cartID int, productID int, quantity int) error
 	UpdateCartItemQuantity(cartID int, productID int, quantity int) error
 	RemoveCartItem(cartID int, productID int) error
 	GetCartItems(cartID int) ([]model.CartItem, error)
-	GetCartIDByUser(userID int) (int, error)
+	GetCartIDByUser(firebaseUID string) (int, error)
 	ClearCart(cartID int) error
 }
 
@@ -24,11 +24,11 @@ func NewCartRepository(db *sql.DB) CartRepository {
 	return &cartRepository{DB: db}
 }
 
-func (r *cartRepository) GetOrCreateCart(userID int) (int, error) {
+func (r *cartRepository) GetOrCreateCart(firebaseUID string) (int, error) {
 	var cartID int
-	err := r.DB.QueryRow("SELECT cart_id FROM Cart WHERE user_id = ?", userID).Scan(&cartID)
+	err := r.DB.QueryRow("SELECT cart_id FROM Cart WHERE firebase_uid = ?", firebaseUID).Scan(&cartID)
 	if err == sql.ErrNoRows {
-		res, err := r.DB.Exec("INSERT INTO Cart (user_id) VALUES (?)", userID)
+		res, err := r.DB.Exec("INSERT INTO Cart (firebase_uid) VALUES (?)", firebaseUID)
 		if err != nil {
 			return 0, err
 		}
@@ -261,9 +261,9 @@ func (r *cartRepository) GetCartItems(cartID int) ([]model.CartItem, error) {
 	return items, nil
 }
 
-func (r *cartRepository) GetCartIDByUser(userID int) (int, error) {
+func (r *cartRepository) GetCartIDByUser(firebaseUID string) (int, error) {
 	var cartID int
-	err := r.DB.QueryRow("SELECT cart_id FROM Cart WHERE user_id = ?", userID).Scan(&cartID)
+	err := r.DB.QueryRow("SELECT cart_id FROM Cart WHERE firebase_uid = ?", firebaseUID).Scan(&cartID)
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}

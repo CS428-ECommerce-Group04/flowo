@@ -42,7 +42,7 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/orders [post]
 func (ctrl *OrderController) CreateOrder(c *gin.Context) {
-	firebaseUID, exists := middleware.GetUserID(c)
+	firebaseUID, exists := middleware.GetFirebaseUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -60,7 +60,7 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	orderID, err := ctrl.orderService.CreateOrder(user.UserID, req)
+	orderID, err := ctrl.orderService.CreateOrder(user.FirebaseUID, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create order"})
 		return
@@ -81,7 +81,7 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/orders [get]
 func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
-	firebaseUID, exists := middleware.GetUserID(c)
+	firebaseUID, exists := middleware.GetFirebaseUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -93,7 +93,7 @@ func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
 		return
 	}
 
-	orders, err := ctrl.orderService.GetUserOrders(user.UserID)
+	orders, err := ctrl.orderService.GetUserOrders(user.FirebaseUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch orders"})
 		return
@@ -129,7 +129,7 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	firebaseUID, exists := middleware.GetUserID(c)
+	firebaseUID, exists := middleware.GetFirebaseUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -141,7 +141,7 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 	// check admin role
-	if err := ctrl.orderService.UpdateStatus(orderID, req, strconv.Itoa(user.UserID)); err != nil {
+	if err := ctrl.orderService.UpdateStatus(orderID, req, user.FirebaseUID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"})
 		return
 	}
@@ -169,7 +169,7 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 		return
 	}
 
-	firebaseUID, exists := middleware.GetUserID(c)
+	firebaseUID, exists := middleware.GetFirebaseUserID(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -187,7 +187,7 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 		return
 	}
 
-	if ownerID != user.UserID {
+	if ownerID != user.FirebaseUID {
 		role, _ := c.Get("role")
 		if role != "admin" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
