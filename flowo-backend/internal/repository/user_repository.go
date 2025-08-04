@@ -2,15 +2,16 @@ package repository
 
 import (
 	"database/sql"
+	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
 	"fmt"
+	"strings"
 )
 
 type UserRepository interface {
 	CreateUser(user *model.User) error
 	GetUserByFirebaseUID(firebaseUID string) (*model.User, error)
 	GetUserByEmail(email string) (*model.User, error)
-	GetUserByID(userID int) (*model.User, error)
 	UpdateUser(user *model.User) error
 	CheckUserExists(firebaseUID string) (bool, error)
 }
@@ -30,7 +31,7 @@ func (r *userRepository) CreateUser(user *model.User) error {
 		VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
-	result, err := r.db.Exec(query,
+	_, err := r.db.Exec(query,
 		user.FirebaseUID,
 		user.Username,
 		user.Email,
@@ -43,13 +44,6 @@ func (r *userRepository) CreateUser(user *model.User) error {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// Get the generated user ID
-	userID, err := result.LastInsertId()
-	if err != nil {
-		return fmt.Errorf("failed to get user ID: %w", err)
-	}
-
-	user.UserID = int(userID)
 	return nil
 }
 
@@ -57,13 +51,12 @@ func (r *userRepository) CreateUser(user *model.User) error {
 func (r *userRepository) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
 	user := &model.User{}
 	query := `
-		SELECT user_id, firebase_uid, username, email, full_name, gender, role, created_at, updated_at 
+		SELECT firebase_uid, username, email, full_name, gender, role, created_at, updated_at 
 		FROM User 
 		WHERE firebase_uid = ?
 	`
 
 	err := r.db.QueryRow(query, firebaseUID).Scan(
-		&user.UserID,
 		&user.FirebaseUID,
 		&user.Username,
 		&user.Email,
@@ -89,13 +82,12 @@ func (r *userRepository) GetUserByFirebaseUID(firebaseUID string) (*model.User, 
 func (r *userRepository) GetUserByEmail(email string) (*model.User, error) {
 	user := &model.User{}
 	query := `
-		SELECT user_id, firebase_uid, username, email, full_name, gender, role, created_at, updated_at 
+		SELECT firebase_uid, username, email, full_name, gender, role, created_at, updated_at 
 		FROM User 
 		WHERE email = ?
 	`
 
 	err := r.db.QueryRow(query, email).Scan(
-		&user.UserID,
 		&user.FirebaseUID,
 		&user.Username,
 		&user.Email,
@@ -117,44 +109,12 @@ func (r *userRepository) GetUserByEmail(email string) (*model.User, error) {
 	return user, nil
 }
 
-// GetUserByID retrieves a user by their local user ID
-func (r *userRepository) GetUserByID(userID int) (*model.User, error) {
-	user := &model.User{}
-	query := `
-		SELECT user_id, firebase_uid, username, email, full_name, gender, role, created_at, updated_at 
-		FROM User 
-		WHERE user_id = ?
-	`
-
-	err := r.db.QueryRow(query, userID).Scan(
-		&user.UserID,
-		&user.FirebaseUID,
-		&user.Username,
-		&user.Email,
-		&user.FullName,
-		&user.Gender,
-		&user.Role,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, nil // User not found
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user by ID: %w", err)
-	}
-
-	return user, nil
-}
-
 // UpdateUser updates user information in the database
 func (r *userRepository) UpdateUser(user *model.User) error {
 	query := `
 		UPDATE User 
 		SET username = ?, email = ?, full_name = ?, gender = ?, role = ?, updated_at = NOW() 
-		WHERE user_id = ?
+		WHERE firebase_uid = ?
 	`
 
 	_, err := r.db.Exec(query,
@@ -163,7 +123,7 @@ func (r *userRepository) UpdateUser(user *model.User) error {
 		user.FullName,
 		user.Gender,
 		user.Role,
-		user.UserID,
+		user.FirebaseUID,
 	)
 
 	if err != nil {

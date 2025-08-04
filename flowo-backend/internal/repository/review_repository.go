@@ -22,14 +22,14 @@ func NewReviewRepository(db *sql.DB) ReviewRepository {
 }
 
 func (r *reviewRepository) CreateReview(review *model.Review) error {
-	query := `INSERT INTO Review (product_id, user_id, rating, comment, review_date)
+	query := `INSERT INTO Review (product_id, firebase_uid, rating, comment, review_date)
 	          VALUES (?, ?, ?, ?, NOW())`
-	_, err := r.db.Exec(query, review.ProductID, review.UserID, review.Rating, review.Comment)
+	_, err := r.db.Exec(query, review.ProductID, review.FirebaseUID, review.Rating, review.Comment)
 	return err
 }
 
 func (r *reviewRepository) GetAllReviews() ([]model.Review, error) {
-	query := `SELECT review_id, product_id, user_id, rating, comment, review_date FROM Review`
+	query := `SELECT review_id, product_id, firebase_uid, rating, comment, review_date FROM Review`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func (r *reviewRepository) GetAllReviews() ([]model.Review, error) {
 	var reviews []model.Review
 	for rows.Next() {
 		var review model.Review
-		if err := rows.Scan(&review.ReviewID, &review.ProductID, &review.UserID, &review.Rating, &review.Comment, &review.ReviewDate); err != nil {
+		if err := rows.Scan(&review.ReviewID, &review.ProductID, &review.FirebaseUID, &review.Rating, &review.Comment, &review.ReviewDate); err != nil {
 			return nil, err
 		}
 		reviews = append(reviews, review)
@@ -48,7 +48,7 @@ func (r *reviewRepository) GetAllReviews() ([]model.Review, error) {
 }
 
 func (r *reviewRepository) GetReviewsByProductID(productID int) ([]model.Review, error) {
-	query := `SELECT review_id, product_id, user_id, rating, comment, review_date FROM Review WHERE product_id = ?`
+	query := `SELECT review_id, product_id, firebase_uid, rating, comment, review_date FROM Review WHERE product_id = ?`
 	rows, err := r.db.Query(query, productID)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (r *reviewRepository) GetReviewsByProductID(productID int) ([]model.Review,
 	var reviews []model.Review
 	for rows.Next() {
 		var review model.Review
-		if err := rows.Scan(&review.ReviewID, &review.ProductID, &review.UserID, &review.Rating, &review.Comment, &review.ReviewDate); err != nil {
+		if err := rows.Scan(&review.ReviewID, &review.ProductID, &review.FirebaseUID, &review.Rating, &review.Comment, &review.ReviewDate); err != nil {
 			return nil, err
 		}
 		reviews = append(reviews, review)
