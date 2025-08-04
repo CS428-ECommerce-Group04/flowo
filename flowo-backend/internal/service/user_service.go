@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"flowo-backend/internal/dto"
 	"flowo-backend/internal/model"
 	"flowo-backend/internal/repository"
 	"fmt"
@@ -15,6 +16,7 @@ type UserService interface {
 	GetUserByEmail(email string) (*model.User, error)
 	GetCompleteUserInfo(firebaseUID string) (*CompleteUserInfo, error)
 	UpdateUserFromFirebase(firebaseUID string) (*model.User, error)
+	UpdateUserProfile(firebaseUID string, updateData *dto.UpdateProfileRequest) (*model.User, error)
 }
 
 type userService struct {
@@ -141,6 +143,38 @@ func (s *userService) UpdateUserFromFirebase(firebaseUID string) (*model.User, e
 	err = s.userRepo.UpdateUser(localUser)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return localUser, nil
+}
+
+// UpdateUserProfile updates user profile information in the local database
+func (s *userService) UpdateUserProfile(firebaseUID string, updateData *dto.UpdateProfileRequest) (*model.User, error) {
+	// Get current local user
+	localUser, err := s.userRepo.GetUserByFirebaseUID(firebaseUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get local user: %w", err)
+	}
+
+	if localUser == nil {
+		return nil, fmt.Errorf("user not found in local database")
+	}
+
+	// Update fields if provided
+	if updateData.Username != nil {
+		localUser.Username = updateData.Username
+	}
+	if updateData.FullName != nil {
+		localUser.FullName = updateData.FullName
+	}
+	if updateData.Gender != nil {
+		localUser.Gender = *updateData.Gender
+	}
+
+	// Save updated user
+	err = s.userRepo.UpdateUser(localUser)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update user profile: %w", err)
 	}
 
 	return localUser, nil
