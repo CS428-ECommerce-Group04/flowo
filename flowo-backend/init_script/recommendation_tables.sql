@@ -173,8 +173,9 @@ LEFT JOIN (
 GROUP BY fp.product_id, fp.name, fp.base_price;
 
 -- Create stored procedure for updating trending products (optional)
+DROP PROCEDURE IF EXISTS UpdateTrendingProducts;
 DELIMITER //
-CREATE OR REPLACE PROCEDURE UpdateTrendingProducts(IN period_type VARCHAR(20))
+CREATE PROCEDURE UpdateTrendingProducts(IN period_type VARCHAR(20))
 BEGIN
     DECLARE days_back INT DEFAULT 7;
     

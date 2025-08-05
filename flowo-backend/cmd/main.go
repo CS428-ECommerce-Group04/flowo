@@ -73,6 +73,7 @@ func main() {
 			repository.NewPricingRuleRepository,
 			repository.NewUserRepository,
 			repository.NewOrderRepository,
+			repository.NewPaymentRepository,
 
 			service.NewService,
 			service.NewReviewService,
