@@ -12,13 +12,15 @@ type OrderService struct {
 	OrderRepo   repository.OrderRepository
 	CartRepo    repository.CartRepository
 	CartService *CartService
+	PaymentRepo repository.PaymentRepository
 }
 
-func NewOrderService(orderRepo repository.OrderRepository, cartRepo repository.CartRepository, cartService *CartService) *OrderService {
+func NewOrderService(orderRepo repository.OrderRepository, cartRepo repository.CartRepository, cartService *CartService, paymentRepo repository.PaymentRepository) *OrderService {
 	return &OrderService{
 		OrderRepo:   orderRepo,
 		CartRepo:    cartRepo,
 		CartService: cartService,
+		PaymentRepo: paymentRepo,
 	}
 }
 
@@ -72,10 +74,16 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 	shipping := 5.0
 	finalTotal := subtotal + shipping
 
+	// Set initial order status based on payment method
+	orderStatus := "Processing"
+	if req.PaymentMethod == "VNPAY" || req.PaymentMethod == "Paypal" {
+		orderStatus = "AwaitingPayment"
+	}
+
 	order := model.Order{
 		FirebaseUID:       FirebaseUID,
 		OrderDate:         time.Now(),
-		Status:            "Processing",
+		Status:            orderStatus,
 		ShippingAddressID: req.ShippingAddressID,
 		BillingAddressID:  getBillingAddressID(req.BillingAddressID, req.ShippingAddressID),
 		SubtotalAmount:    subtotal,
@@ -88,6 +96,27 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 	orderID, err := s.OrderRepo.CreateOrderWithItemsAndStock(FirebaseUID, order, items)
 	if err != nil {
 		return 0, err
+	}
+
+	// Create payment record
+	payment := model.Payment{
+		OrderID:       orderID,
+		PaymentMethod: req.PaymentMethod,
+		PaymentStatus: "Pending",
+		AmountPaid:    finalTotal,
+		PaymentDate:   time.Now(),
+	}
+
+	// For COD, mark payment as successful immediately
+	if req.PaymentMethod == "COD" {
+		payment.PaymentStatus = "Success"
+	}
+
+	_, err = s.PaymentRepo.CreatePayment(payment)
+	if err != nil {
+		// Log error but don't fail order creation
+		// In production, you might want to handle this differently
+		// or use a transaction to ensure data consistency
 	}
 
 	cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseUID)

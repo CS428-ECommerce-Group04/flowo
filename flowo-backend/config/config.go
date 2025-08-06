@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Firebase FirebaseConfig
-	Domain   string
+	Server       ServerConfig
+	Database     DatabaseConfig
+	Firebase     FirebaseConfig
+	VNPay        VNPayConfig
+	Domain       string
 	IsProduction bool
 }
 
@@ -28,6 +29,13 @@ type DatabaseConfig struct {
 type FirebaseConfig struct {
 	CredentialsPath string
 	APIKey          string
+}
+
+type VNPayConfig struct {
+	TmnCode    string
+	HashSecret string
+	URL        string
+	ReturnURL  string
 }
 
 func NewConfig() (*Config, error) {
@@ -53,12 +61,30 @@ func NewConfig() (*Config, error) {
 	config.Database.Name = viper.GetString("DATABASE_NAME")
 	config.Firebase.CredentialsPath = viper.GetString("FIREBASE_CREDENTIALS_PATH")
 	config.Firebase.APIKey = viper.GetString("FIREBASE_API_KEY")
+	config.VNPay.TmnCode = viper.GetString("VNPAY_TMN_CODE")
+	config.VNPay.HashSecret = viper.GetString("VNPAY_HASH_SECRET")
+	config.VNPay.URL = viper.GetString("VNPAY_URL")
+	config.VNPay.ReturnURL = viper.GetString("VNPAY_RETURN_URL")
 	config.Domain = viper.GetString("DOMAIN")
 	config.IsProduction = viper.GetBool("IS_PRODUCTION")
 
 	// Set default Firebase credentials path if not specified
 	if config.Firebase.CredentialsPath == "" {
 		config.Firebase.CredentialsPath = "private_key.json"
+	}
+
+	// Set default VNPay configuration for development
+	if config.VNPay.TmnCode == "" {
+		config.VNPay.TmnCode = "DEMO"
+	}
+	if config.VNPay.HashSecret == "" {
+		config.VNPay.HashSecret = "DEMOHASHSECRET"
+	}
+	if config.VNPay.URL == "" {
+		config.VNPay.URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+	}
+	if config.VNPay.ReturnURL == "" {
+		config.VNPay.ReturnURL = "http://localhost:5173/payment/result"
 	}
 
 	log.Info().Interface("config", config).Msg("Config loaded")

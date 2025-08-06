@@ -73,6 +73,7 @@ func main() {
 			repository.NewPricingRuleRepository,
 			repository.NewUserRepository,
 			repository.NewOrderRepository,
+			repository.NewPaymentRepository,
 
 			service.NewService,
 			service.NewReviewService,
@@ -80,6 +81,7 @@ func main() {
 			service.NewPricingService,
 			service.NewUserService,
 			service.NewOrderService,
+			service.NewPaymentService,
 
 			controller.NewPricingController,
 			controller.NewController,
@@ -88,6 +90,7 @@ func main() {
 			controller.NewAuthController,
 			controller.NewOrderController,
 			controller.NewUserController,
+			controller.NewPaymentController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -154,6 +157,7 @@ func RegisterRoutes(
 	orderCtrl *controller.OrderController,
 	authCtrl *controller.AuthController,
 	userCtrl *controller.UserController,
+	paymentCtrl *controller.PaymentController,
 	authMiddleware *middleware.AuthMiddleware,
 ) {
 
@@ -165,10 +169,16 @@ func RegisterRoutes(
 	pricingCtrl.RegisterRoutes(v1)
 	userCtrl.RegisterRoutes(v1, authMiddleware)
 
+	// Payment callback endpoints (public access needed for VNPay webhook)
+	paymentCtrl.RegisterRoutes(v1)
+
 	v1.Use(authMiddleware.RequireAuth())
 
 	cartCtrl.RegisterRoutes(v1)
 	orderCtrl.RegisterRoutes(v1)
+
+	// Protected payment routes
+	paymentCtrl.RegisterProtectedRoutes(v1)
 
 	logger.Init()
 
