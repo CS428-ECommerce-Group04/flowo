@@ -42,6 +42,8 @@ const MenuItem = ({ icon, label, href, isActive, onClick }: MenuItemProps) => {
 export default function Sidebar({ isOpen, onClose, isLoggedIn = false, user }: SidebarProps) {
   const location = useLocation();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { logout } = useAuth();
 
   const menuItems = [
@@ -82,9 +84,26 @@ export default function Sidebar({ isOpen, onClose, isLoggedIn = false, user }: S
     }
   ];
 
-  const handleLogout = () => {
-    logout();
-    onClose();
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setLogoutError('');
+
+    try {
+      const result = await logout();
+
+      if (result.success) {
+        // Close sidebar and show success feedback
+        onClose();
+        // You could add a toast notification here for success feedback
+      } else {
+        setLogoutError(result.error || 'Logout failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      setLogoutError('An unexpected error occurred during logout.');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -145,11 +164,19 @@ export default function Sidebar({ isOpen, onClose, isLoggedIn = false, user }: S
                   {/* User Dropdown Menu */}
                   {showUserDropdown && (
                     <div className="mt-4 space-y-2">
+                      {/* Error Message */}
+                      {logoutError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm text-red-600">{logoutError}</p>
+                        </div>
+                      )}
+
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                        disabled={isLoggingOut}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Sign Out
+                        {isLoggingOut ? 'Signing Out...' : 'Sign Out'}
                       </button>
                     </div>
                   )}
@@ -178,7 +205,7 @@ export default function Sidebar({ isOpen, onClose, isLoggedIn = false, user }: S
                   </div>
                   <h3 className="text-xl font-semibold text-gray-800 mb-3">Welcome to Flowo</h3>
                   <p className="text-base text-gray-600 mb-8 leading-relaxed">
-                    Please log in to access your dashboard and manage your account.
+                    Please log in with your Gmail address to access your dashboard and manage your account.
                   </p>
                   <div className="space-y-4">
                     <Button

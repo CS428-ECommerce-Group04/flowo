@@ -5,8 +5,7 @@ import "time"
 // User represents a user in the local database with minimal information
 // Most user data is stored in Firebase and retrieved as needed
 type User struct {
-	UserID      int       `json:"user_id" db:"user_id"`
-	FirebaseUID string    `json:"firebase_uid" db:"firebase_uid"` // Link to Firebase user
+	FirebaseUID string    `json:"firebase_uid" db:"firebase_uid"` // Primary key - Link to Firebase user
 	Email       string    `json:"email" db:"email"`               // Cached for quick lookups
 	Username    *string   `json:"username" db:"username"`         // Optional local username
 	FullName    *string   `json:"full_name" db:"full_name"`       // Optional display name

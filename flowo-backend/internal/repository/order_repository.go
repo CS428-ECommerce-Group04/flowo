@@ -8,12 +8,12 @@ import (
 )
 
 type OrderRepository interface {
-	GetOrdersByUser(userID int) ([]model.Order, error)
+	GetOrdersByUser(firebaseUID string) ([]model.Order, error)
 	UpdateOrderStatus(orderID int, status string, shippingMethod *string) error
 	GetOrderByID(orderID int) (*model.Order, error)
 
-	CreateOrderWithItemsAndStock(userID int, order model.Order, items []dto.CartItemResponse) (int, error)
-	GetOrderOwnerID(orderID int) (int, error)
+	CreateOrderWithItemsAndStock(firebaseUID string, order model.Order, items []dto.CartItemResponse) (int, error)
+	GetOrderOwnerID(orderID int) (string, error)
 	GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error)
 }
 
@@ -25,10 +25,10 @@ func NewOrderRepository(db *sql.DB) OrderRepository {
 	return &orderRepository{DB: db}
 }
 
-func (r *orderRepository) GetOrdersByUser(userID int) ([]model.Order, error) {
+func (r *orderRepository) GetOrdersByUser(firebaseUID string) ([]model.Order, error) {
 	rows, err := r.DB.Query(
-		"SELECT order_id, user_id, status, order_date, final_total_amount, shipping_method FROM `Order` WHERE user_id = ? ORDER BY order_date DESC",
-		userID,
+		"SELECT order_id, firebase_uid, status, order_date, final_total_amount, shipping_method FROM `Order` WHERE firebase_uid = ? ORDER BY order_date DESC",
+		firebaseUID,
 	)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (r *orderRepository) GetOrdersByUser(userID int) ([]model.Order, error) {
 	var orders []model.Order
 	for rows.Next() {
 		var o model.Order
-		if err := rows.Scan(&o.OrderID, &o.UserID, &o.Status, &o.OrderDate, &o.FinalTotalAmount, &o.ShippingMethod); err != nil {
+		if err := rows.Scan(&o.OrderID, &o.FirebaseUID, &o.Status, &o.OrderDate, &o.FinalTotalAmount, &o.ShippingMethod); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)
@@ -61,11 +61,11 @@ func (r *orderRepository) UpdateOrderStatus(orderID int, status string, shipping
 }
 
 func (r *orderRepository) GetOrderByID(orderID int) (*model.Order, error) {
-	query := "SELECT order_id, user_id, status, order_date, final_total_amount, shipping_method FROM `Order` WHERE order_id = ? LIMIT 1"
+	query := "SELECT order_id, firebase_uid, status, order_date, final_total_amount, shipping_method FROM `Order` WHERE order_id = ? LIMIT 1"
 	row := r.DB.QueryRow(query, orderID)
 
 	var o model.Order
-	if err := row.Scan(&o.OrderID, &o.UserID, &o.Status, &o.OrderDate, &o.FinalTotalAmount, &o.ShippingMethod); err != nil {
+	if err := row.Scan(&o.OrderID, &o.FirebaseUID, &o.Status, &o.OrderDate, &o.FinalTotalAmount, &o.ShippingMethod); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
@@ -75,7 +75,7 @@ func (r *orderRepository) GetOrderByID(orderID int) (*model.Order, error) {
 	return &o, nil
 }
 
-func (r *orderRepository) CreateOrderWithItemsAndStock(userID int, order model.Order, items []dto.CartItemResponse) (int, error) {
+func (r *orderRepository) CreateOrderWithItemsAndStock(firebaseUID string, order model.Order, items []dto.CartItemResponse) (int, error) {
 	tx, err := r.DB.Begin()
 	if err != nil {
 		return 0, err
@@ -120,8 +120,8 @@ func (r *orderRepository) reduceStock(tx *sql.Tx, productID, quantity int) error
 }
 
 func (r *orderRepository) insertOrder(tx *sql.Tx, order model.Order) (int, error) {
-	res, err := tx.Exec("INSERT INTO `Order` (user_id, order_date, status, shipping_address_id, billing_address_id, subtotal_amount, discount_amount, shipping_cost, final_total_amount, notes, shipping_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		order.UserID, order.OrderDate, order.Status,
+	res, err := tx.Exec("INSERT INTO `Order` (firebase_uid, order_date, status, shipping_address_id, billing_address_id, subtotal_amount, discount_amount, shipping_cost, final_total_amount, notes, shipping_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		order.FirebaseUID, order.OrderDate, order.Status,
 		order.ShippingAddressID, order.BillingAddressID,
 		order.SubtotalAmount, order.DiscountAmount,
 		order.ShippingCost, order.FinalTotalAmount,
@@ -147,16 +147,16 @@ func (r *orderRepository) insertOrderItems(tx *sql.Tx, orderID int, items []dto.
 	return nil
 }
 
-func (r *orderRepository) GetOrderOwnerID(orderID int) (int, error) {
-	var userID int
-	err := r.DB.QueryRow("SELECT user_id FROM `Order` WHERE order_id = ?", orderID).Scan(&userID)
+func (r *orderRepository) GetOrderOwnerID(orderID int) (string, error) {
+	var firebaseUID string
+	err := r.DB.QueryRow("SELECT firebase_uid FROM `Order` WHERE order_id = ?", orderID).Scan(&firebaseUID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, fmt.Errorf("order not found")
+			return "", fmt.Errorf("order not found")
 		}
-		return 0, err
+		return "", err
 	}
-	return userID, nil
+	return firebaseUID, nil
 }
 
 func (r *orderRepository) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error) {

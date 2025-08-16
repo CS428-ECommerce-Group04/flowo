@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS todos (
 
 -- Table: User
 CREATE TABLE User (
-    user_id INT PRIMARY KEY AUTO_INCREMENT,
-    firebase_uid VARCHAR(255) UNIQUE NOT NULL COMMENT 'Firebase User UID for linking with Firebase Auth',
+    firebase_uid VARCHAR(255) PRIMARY KEY COMMENT 'Firebase User UID for linking with Firebase Auth',
     username VARCHAR(255) UNIQUE COMMENT 'Optional local username',
     email VARCHAR(255) UNIQUE NOT NULL COMMENT 'User email address (cached from Firebase)',
     full_name VARCHAR(255) COMMENT 'User display name (cached from Firebase)',
@@ -21,14 +20,13 @@ CREATE TABLE User (
     role ENUM('RegisteredBuyer', 'Admin') NOT NULL DEFAULT 'RegisteredBuyer' COMMENT "('RegisteredBuyer', 'Admin')",
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_firebase_uid (firebase_uid),
     INDEX idx_email (email)
 );
 
 -- Table: Address
 CREATE TABLE Address (
     address_id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
+    firebase_uid VARCHAR(255),
     recipient_name VARCHAR(255),
     phone_number VARCHAR(50),
     street_address VARCHAR(255),
@@ -36,7 +34,7 @@ CREATE TABLE Address (
     postal_code VARCHAR(20),
     country VARCHAR(100),
     is_default_shipping BOOLEAN COMMENT 'Default shipping for user',
-    FOREIGN KEY (user_id) REFERENCES User(user_id)
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid)
 );
 
 -- Table: FlowerType
@@ -89,12 +87,12 @@ CREATE TABLE ProductOccasion (
 CREATE TABLE Review (
     review_id INT PRIMARY KEY AUTO_INCREMENT,
     product_id INT,
-    user_id INT,
+    firebase_uid VARCHAR(255),
     rating INT COMMENT 'Integer rating, e.g., 1-5',
     comment TEXT COMMENT "User's review text",
     review_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES FlowerProduct(product_id),
-    FOREIGN KEY (user_id) REFERENCES User(user_id)
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid)
 );
 
 -- Table: SpecialDay
@@ -129,11 +127,11 @@ CREATE TABLE PricingRule (
 -- Table: Cart
 CREATE TABLE Cart (
     cart_id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
+    firebase_uid VARCHAR(255),
     session_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES User(user_id)
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid)
 );
 
 -- Table: CartItem
@@ -150,7 +148,7 @@ CREATE TABLE CartItem (
 -- Table: Order
 CREATE TABLE `Order` (
     order_id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
+    firebase_uid VARCHAR(255),
     customer_email VARCHAR(255),
     customer_name VARCHAR(255),
     shipping_address_id INT,
@@ -163,7 +161,7 @@ CREATE TABLE `Order` (
     final_total_amount DECIMAL(10, 2),
     shipping_method VARCHAR(100),
     notes TEXT,
-    FOREIGN KEY (user_id) REFERENCES User(user_id),
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid),
     FOREIGN KEY (shipping_address_id) REFERENCES Address(address_id),
     FOREIGN KEY (billing_address_id) REFERENCES Address(address_id)
 );
@@ -195,10 +193,10 @@ CREATE TABLE Payment (
 -- Table: LoyaltyProgram
 CREATE TABLE LoyaltyProgram (
     loyalty_id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT UNIQUE,
+    firebase_uid VARCHAR(255) UNIQUE,
     points_balance INT,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES User(user_id)
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid)
 );
 
 -- Table: LoyaltyTransaction
@@ -216,11 +214,11 @@ CREATE TABLE LoyaltyTransaction (
 -- Table: UserProductInteraction
 CREATE TABLE UserProductInteraction (
     interaction_id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
+    firebase_uid VARCHAR(255),
     session_id VARCHAR(255),
     product_id INT,
     interaction_type VARCHAR(50) COMMENT "('view', 'add_to_cart', 'wishlist_add')",
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES User(user_id),
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid),
     FOREIGN KEY (product_id) REFERENCES FlowerProduct(product_id)
 );

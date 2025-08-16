@@ -87,6 +87,7 @@ func main() {
 			controller.NewCartController,
 			controller.NewAuthController,
 			controller.NewOrderController,
+			controller.NewUserController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -152,6 +153,7 @@ func RegisterRoutes(
 	pricingCtrl *controller.PricingController,
 	orderCtrl *controller.OrderController,
 	authCtrl *controller.AuthController,
+	userCtrl *controller.UserController,
 	authMiddleware *middleware.AuthMiddleware,
 ) {
 
@@ -161,6 +163,7 @@ func RegisterRoutes(
 	authCtrl.RegisterRoutes(v1, authMiddleware)
 	reviewCtrl.RegisterRoutes(v1)
 	pricingCtrl.RegisterRoutes(v1)
+	userCtrl.RegisterRoutes(v1, authMiddleware)
 
 	v1.Use(authMiddleware.RequireAuth())
 

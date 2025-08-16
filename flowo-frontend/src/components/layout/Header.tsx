@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "@/store/cart";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,27 @@ export default function Header() {
   const items = useCart((s) => s.items);
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, isLoading } = useAuth();
+
+  const { user, isLoading, checkAuth } = useAuth();
+  const isAuthenticated = !isLoading && !!user?.email;
+
+  // derive display name: local-part of email (before '@'), fallback to firstName
+  const displayName = useMemo(() => {
+    if (user?.email) return user.email.split("@")[0];
+    return user?.firstName || "";
+  }, [user]);
+
+  useEffect(() => {
+    if (!user && !isLoading) checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (user?.email) checkAuth();
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user, checkAuth]);
 
   return (
     <>
@@ -16,8 +36,8 @@ export default function Header() {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20 lg:h-24">
             {/* Logo */}
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-green-700 hover:text-green-800 transition-colors duration-200"
             >
               Flowo
@@ -25,22 +45,13 @@ export default function Header() {
 
             {/* Navigation */}
             <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
-              <Link 
-                to="/" 
-                className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
-              >
+              <Link to="/" className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700">
                 Home
               </Link>
-              <Link 
-                to="/shop" 
-                className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
-              >
+              <Link to="/shop" className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700">
                 Shop
               </Link>
-              <Link 
-                to="/learn-more" 
-                className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
-              >
+              <Link to="/learn-more" className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700">
                 Learn More
               </Link>
             </nav>
@@ -48,12 +59,10 @@ export default function Header() {
             {/* Right side actions */}
             <div className="flex items-center space-x-3 lg:space-x-4">
               {/* Cart */}
-              <Link 
-                to="/cart" 
-                className="relative p-2 text-slate-700 hover:text-green-700 transition-colors duration-200"
-              >
+              <Link to="/cart" className="relative p-2 text-slate-700 hover:text-green-700 transition-colors duration-200">
                 <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6"/>
                 </svg>
                 {totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
@@ -62,38 +71,40 @@ export default function Header() {
                 )}
               </Link>
 
-              {/* User Authentication */}
-              {!isLoading && (
-                <div>
-                  {user ? (
-                    <div className="hidden md:flex items-center space-x-3">
-                      <span className="text-sm text-slate-600">
-                        Welcome, {user.firstName}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="hidden md:flex items-center space-x-3">
-                      <Link 
-                        to="/login" 
-                        className="text-sm font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
-                      >
-                        Sign In
-                      </Link>
-                      <Link 
-                        to="/register" 
-                        className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors duration-200"
-                      >
-                        Sign Up
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Auth */}
+              <div className="hidden md:flex items-center space-x-3">
+                {isLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-slate-200 rounded w-20" />
+                  </div>
+                ) : isAuthenticated ? (
+                  // show ONLY the name (local-part of email)
+                  <span className="text-sm font-medium text-slate-700">{displayName}</span>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="text-sm font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors duration-200"
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
+              </div>
 
-              {/* Menu Button */}
+              {/* Menu Button (Sidebar) */}
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="p-2 text-slate-700 hover:text-green-700 transition-colors duration-200"
+                aria-label="Open menu"
+                aria-expanded={sidebarOpen}
+                aria-controls="site-sidebar"
               >
                 <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -104,15 +115,16 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Sidebar */}
-      <Sidebar 
-        isOpen={sidebarOpen} 
+      {/* Sidebar (unchanged) */}
+      <Sidebar
+        isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        isLoggedIn={!!user}
-        user={user ? {
-          name: `${user.firstName} ${user.lastName}`,
-          email: user.email
-        } : undefined}
+        isLoggedIn={isAuthenticated}
+        user={
+          isAuthenticated
+            ? { name: displayName, email: user!.email }
+            : undefined
+        }
       />
     </>
   );
