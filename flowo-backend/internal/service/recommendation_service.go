@@ -18,7 +18,7 @@ type RecommendationService interface {
 	GetTrendingProducts(ctx context.Context, period string, limit int) (*dto.RecommendationResponseDTO, error)
 	GetOccasionBasedRecommendations(ctx context.Context, occasion string, limit int) (*dto.RecommendationResponseDTO, error)
 	GetPriceBasedRecommendations(ctx context.Context, minPrice, maxPrice float64, limit int) (*dto.RecommendationResponseDTO, error)
-	UpdateUserPreferences(ctx context.Context, userID int) error
+	UpdateUserPreferences(ctx context.Context, firebaseUID string) error
 	CalculateProductSimilarities(ctx context.Context, productID uint) error
 	UpdateTrendingProducts(ctx context.Context) error
 }
@@ -42,18 +42,18 @@ func NewRecommendationService(
 
 // GetPersonalizedRecommendations provides personalized recommendations using hybrid approach
 func (s *recommendationService) GetPersonalizedRecommendations(ctx context.Context, req *dto.RecommendationRequestDTO) (*dto.RecommendationResponseDTO, error) {
-	if req.UserID == nil {
+	if req.FirebaseUID == nil {
 		return s.getAnonymousRecommendations(ctx, req)
 	}
 
-	userID := *req.UserID
+	firebaseUID := *req.FirebaseUID
 	limit := req.Limit
 	if limit <= 0 {
 		limit = s.config.DefaultLimit
 	}
 
 	// Get user interactions and preferences
-	interactions, err := s.recommendationRepo.GetUserInteractions(userID)
+	interactions, err := s.recommendationRepo.GetUserInteractions(firebaseUID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,13 +67,13 @@ func (s *recommendationService) GetPersonalizedRecommendations(ctx context.Conte
 	recommendations := make(map[uint]*dto.RecommendedProductDTO)
 
 	// 1. Collaborative Filtering
-	collaborativeRecs, err := s.getCollaborativeRecommendations(userID, limit*2)
+	collaborativeRecs, err := s.getCollaborativeRecommendations(firebaseUID, limit*2)
 	if err == nil {
 		s.mergeRecommendations(recommendations, collaborativeRecs, s.config.CollaborativeWeight, "collaborative")
 	}
 
 	// 2. Content-Based Filtering
-	contentRecs, err := s.getContentBasedRecommendations(userID, limit*2)
+	contentRecs, err := s.getContentBasedRecommendations(firebaseUID, limit*2)
 	if err == nil {
 		s.mergeRecommendations(recommendations, contentRecs, s.config.ContentWeight, "content_based")
 	}
@@ -328,23 +328,23 @@ func (s *recommendationService) getAnonymousRecommendations(ctx context.Context,
 	return s.GetTrendingProducts(ctx, "weekly", req.Limit)
 }
 
-func (s *recommendationService) getCollaborativeRecommendations(userID int, limit int) ([]*dto.RecommendedProductDTO, error) {
+func (s *recommendationService) getCollaborativeRecommendations(firebaseUID string, limit int) ([]*dto.RecommendedProductDTO, error) {
 	// Find similar users
-	similarUsers, err := s.recommendationRepo.GetSimilarUsers(userID, 10)
+	similarUsers, err := s.recommendationRepo.GetSimilarUsers(firebaseUID, 10)
 	if err != nil || len(similarUsers) == 0 {
 		return nil, errors.New("no similar users found")
 	}
 
 	// Get products purchased by similar users
 	productScores := make(map[uint]float64)
-	userPurchases, _ := s.recommendationRepo.GetUserPurchaseHistory(userID)
+	userPurchases, _ := s.recommendationRepo.GetUserPurchaseHistory(firebaseUID)
 	purchasedProducts := make(map[uint]bool)
 	for _, product := range userPurchases {
 		purchasedProducts[product.ProductID] = true
 	}
 
-	for _, similarUserID := range similarUsers {
-		purchases, err := s.recommendationRepo.GetUserPurchaseHistory(similarUserID)
+	for _, similarFirebaseUserID := range similarUsers {
+		purchases, err := s.recommendationRepo.GetUserPurchaseHistory(similarFirebaseUserID)
 		if err != nil {
 			continue
 		}
@@ -385,12 +385,12 @@ func (s *recommendationService) getCollaborativeRecommendations(userID int, limi
 	return recommendations, nil
 }
 
-func (s *recommendationService) getContentBasedRecommendations(userID int, limit int) ([]*dto.RecommendedProductDTO, error) {
+func (s *recommendationService) getContentBasedRecommendations(firebaseUID string, limit int) ([]*dto.RecommendedProductDTO, error) {
 	// Get user preferences
-	userPrefs, err := s.recommendationRepo.GetUserPreferences(userID)
+	userPrefs, err := s.recommendationRepo.GetUserPreferences(firebaseUID)
 	if err != nil || userPrefs == nil {
 		// Fallback to purchase history
-		return s.getContentBasedFromHistory(userID, limit)
+		return s.getContentBasedFromHistory(firebaseUID, limit)
 	}
 
 	// Parse preferences
@@ -409,7 +409,7 @@ func (s *recommendationService) getContentBasedRecommendations(userID int, limit
 	// Recommend based on preferred flower types
 	if len(flowerPrefs) == 0 {
 		// Fallback to purchase history if no flower preferences
-		return s.getContentBasedFromHistory(userID, limit)
+		return s.getContentBasedFromHistory(firebaseUID, limit)
 	}
 
 	for flowerType, pref := range flowerPrefs {
@@ -434,8 +434,8 @@ func (s *recommendationService) getContentBasedRecommendations(userID int, limit
 	return recommendations, nil
 }
 
-func (s *recommendationService) getContentBasedFromHistory(userID int, limit int) ([]*dto.RecommendedProductDTO, error) {
-	purchaseHistory, err := s.recommendationRepo.GetUserPurchaseHistory(userID)
+func (s *recommendationService) getContentBasedFromHistory(firebaseUID string, limit int) ([]*dto.RecommendedProductDTO, error) {
+	purchaseHistory, err := s.recommendationRepo.GetUserPurchaseHistory(firebaseUID)
 	if err != nil || len(purchaseHistory) == 0 {
 		return nil, errors.New("no purchase history found")
 	}
@@ -601,9 +601,9 @@ func (s *recommendationService) sortAndLimitRecommendations(
 }
 
 // UpdateUserPreferences analyzes user behavior and updates preferences
-func (s *recommendationService) UpdateUserPreferences(ctx context.Context, userID int) error {
+func (s *recommendationService) UpdateUserPreferences(ctx context.Context, firebaseUID string) error {
 	// Get user interactions
-	interactions, err := s.recommendationRepo.GetUserInteractions(userID)
+	interactions, err := s.recommendationRepo.GetUserInteractions(firebaseUID)
 	if err != nil {
 		return err
 	}
@@ -674,8 +674,8 @@ func (s *recommendationService) UpdateUserPreferences(ctx context.Context, userI
 
 	// Save preferences
 	userPref := &model.UserPreference{
-		UserID:              userID,
-		FlowerPreferences:   string(flowerPrefsJSON),
+		FirebaseUID:       firebaseUID,
+		FlowerPreferences: string(flowerPrefsJSON),
 		OccasionPreferences: string(occasionPrefsJSON),
 		PriceMin:            minPrice,
 		PriceMax:            maxPrice,

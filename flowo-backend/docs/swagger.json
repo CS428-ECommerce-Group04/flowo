@@ -1132,7 +1132,7 @@
             "required": [
                 "product_id",
                 "quantity",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "product_id": {
@@ -1142,7 +1142,7 @@
                     "type": "integer",
                     "minimum": 1
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }
@@ -1233,7 +1233,7 @@
             "type": "object",
             "required": [
                 "rating",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "comment": {
@@ -1244,7 +1244,7 @@
                     "maximum": 5,
                     "minimum": 1
                 },
-                "user_id": {
+                "firebase_uid": {
                     "description": "ProductID int    `json:\"product_id\" binding:\"required\"`",
                     "type": "integer"
                 }
@@ -1303,13 +1303,13 @@
             "type": "object",
             "required": [
                 "product_id",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "product_id": {
                     "type": "integer"
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }
@@ -1332,7 +1332,7 @@
                 "review_id": {
                     "type": "integer"
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }
@@ -1371,7 +1371,7 @@
             "required": [
                 "product_id",
                 "quantity",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "product_id": {
@@ -1381,7 +1381,7 @@
                     "type": "integer",
                     "minimum": 1
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }

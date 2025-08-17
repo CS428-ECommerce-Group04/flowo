@@ -2,15 +2,15 @@ package dto
 
 // RecommendationRequestDTO represents the API request for recommendations
 type RecommendationRequestDTO struct {
-	// User ID for personalized recommendations (optional)
-	UserID *int `json:"user_id,omitempty" form:"user_id"`
+	// Firebase User ID for personalized recommendations (optional)
+	FirebaseUID *string `json:"firebase_uid,omitempty" form:"firebase_uid"`
 	// Session ID for anonymous users
 	SessionID string `json:"session_id,omitempty" form:"session_id"`
 	// Type of recommendation
 	RecommendationType string `json:"recommendation_type" form:"recommendation_type" binding:"required" example:"personalized" enums:"personalized,similar,trending,occasion_based,price_based"`
 	// Reference product ID for similar product recommendations
 	ProductID *uint `json:"product_id,omitempty" form:"product_id"`
-	// Occasion filter for occasion-based recommendations  
+	// Occasion filter for occasion-based recommendations
 	Occasion string `json:"occasion,omitempty" form:"occasion"`
 	// Price range for price-based recommendations
 	PriceMin *float64 `json:"price_min,omitempty" form:"price_min"`
@@ -47,11 +47,11 @@ type RecommendedProductDTO struct {
 
 // UserPreferenceDTO represents user preferences for API responses
 type UserPreferenceDTO struct {
-	UserID              int                `json:"user_id"`
-	PreferredFlowers    map[string]float64 `json:"preferred_flowers"`
-	PreferredOccasions  map[string]float64 `json:"preferred_occasions"`
-	PriceRange          PriceRangeDTO      `json:"price_range"`
-	LastUpdated         string             `json:"last_updated"`
+	FirebaseUID        string             `json:"firebase_uid"`
+	PreferredFlowers   map[string]float64 `json:"preferred_flowers"`
+	PreferredOccasions map[string]float64 `json:"preferred_occasions"`
+	PriceRange         PriceRangeDTO      `json:"price_range"`
+	LastUpdated        string             `json:"last_updated"`
 }
 
 // PriceRangeDTO represents user's price preferences
@@ -72,7 +72,7 @@ type TrendingProductDTO struct {
 
 // RecommendationFeedbackDTO represents user feedback on recommendations
 type RecommendationFeedbackDTO struct {
-	UserID             int    `json:"user_id" binding:"required"`
+	FirebaseUID        string `json:"firebase_uid" binding:"required"`
 	ProductID          uint   `json:"product_id" binding:"required"`
 	RecommendationType string `json:"recommendation_type" binding:"required"`
 	Action             string `json:"action" binding:"required" enums:"clicked,purchased,dismissed,liked"`

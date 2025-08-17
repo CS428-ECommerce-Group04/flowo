@@ -1134,7 +1134,7 @@ const docTemplate = `{
             "required": [
                 "product_id",
                 "quantity",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "product_id": {
@@ -1144,7 +1144,7 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 1
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }
@@ -1235,7 +1235,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "rating",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "comment": {
@@ -1246,7 +1246,7 @@ const docTemplate = `{
                     "maximum": 5,
                     "minimum": 1
                 },
-                "user_id": {
+                "firebase_uid": {
                     "description": "ProductID int    ` + "`" + `json:\"product_id\" binding:\"required\"` + "`" + `",
                     "type": "integer"
                 }
@@ -1305,13 +1305,13 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "product_id",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "product_id": {
                     "type": "integer"
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }
@@ -1334,7 +1334,7 @@ const docTemplate = `{
                 "review_id": {
                     "type": "integer"
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }
@@ -1373,7 +1373,7 @@ const docTemplate = `{
             "required": [
                 "product_id",
                 "quantity",
-                "user_id"
+                "firebase_uid"
             ],
             "properties": {
                 "product_id": {
@@ -1383,7 +1383,7 @@ const docTemplate = `{
                     "type": "integer",
                     "minimum": 1
                 },
-                "user_id": {
+                "firebase_uid": {
                     "type": "integer"
                 }
             }
