@@ -14,10 +14,10 @@ type UpdateOrderStatusRequest struct {
 }
 
 type CreateOrderRequest struct {
-	ShippingAddressID int    `json:"shipping_address_id" binding:"required"`
-	BillingAddressID  *int   `json:"billing_address_id,omitempty"` // optional
-	ShippingMethod    string `json:"shipping_method" binding:"required"`
-	Notes             string `json:"notes"`
+	//ShippingAddressID int  `json:"shipping_address_id" binding:"required"`
+	BillingAddressID *int   `json:"billing_address_id,omitempty"` // optional
+	ShippingMethod   string `json:"shipping_method" binding:"required"`
+	Notes            string `json:"notes"`
 }
 
 type OrderItemRequest struct {

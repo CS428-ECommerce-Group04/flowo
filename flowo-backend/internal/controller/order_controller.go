@@ -12,12 +12,13 @@ import (
 )
 
 type OrderController struct {
-	orderService *service.OrderService
-	userService  service.UserService
+	orderService   *service.OrderService
+	userService    service.UserService
+	addressService service.AddressService
 }
 
-func NewOrderController(os *service.OrderService, us service.UserService) *OrderController {
-	return &OrderController{orderService: os, userService: us}
+func NewOrderController(os *service.OrderService, us service.UserService, as service.AddressService) *OrderController {
+	return &OrderController{orderService: os, userService: us, addressService: as}
 }
 
 func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
@@ -66,7 +67,11 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "order created", "order_id": orderID})
+	c.JSON(http.StatusCreated, gin.H{
+		"message":  "order created",
+		"order_id": orderID,
+	})
+
 }
 
 // GetUserOrders godoc
