@@ -27,7 +27,7 @@ func NewRecommendationController(recommendationService service.RecommendationSer
 // @Tags recommendations
 // @Accept json
 // @Produce json
-// @Param user_id query int false "User ID for personalized recommendations"
+// @Param firebase_uid query int false "User ID for personalized recommendations"
 // @Param session_id query string false "Session ID for anonymous users"
 // @Param recommendation_type query string true "Type of recommendation" Enums(personalized,similar,trending,occasion_based,price_based)
 // @Param product_id query int false "Product ID for similar product recommendations"
@@ -271,16 +271,15 @@ func (rc *RecommendationController) GetOccasionRecommendations(c *gin.Context) {
 // @Tags recommendations
 // @Accept json
 // @Produce json
-// @Param user_id path int true "User ID"
+// @Param firebase_uid path int true "Firebase User ID"
 // @Param limit query int false "Number of recommendations to return" default(10)
 // @Success 200 {object} dto.RecommendationResponseDTO
 // @Failure 400 {object} model.Response
 // @Failure 500 {object} model.Response
-// @Router /api/recommendations/users/{user_id} [get]
+// @Router /api/recommendations/users/{firebase_uid} [get]
 func (rc *RecommendationController) GetPersonalizedRecommendations(c *gin.Context) {
-	userIDStr := c.Param("user_id")
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
+	firebaseUID := c.Param("firebase_uid")
+	if firebaseUID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid user ID",
 		})
@@ -298,7 +297,7 @@ func (rc *RecommendationController) GetPersonalizedRecommendations(c *gin.Contex
 
 	ctx := context.Background()
 	req := &dto.RecommendationRequestDTO{
-		UserID:             &userID,
+		FirebaseUID:       &firebaseUID,
 		RecommendationType: "personalized",
 		Limit:              limit,
 	}
@@ -321,23 +320,22 @@ func (rc *RecommendationController) GetPersonalizedRecommendations(c *gin.Contex
 // @Tags recommendations
 // @Accept json
 // @Produce json
-// @Param user_id path int true "User ID"
+// @Param firebase_uid path int true "Firebase User ID"
 // @Success 200 {object} model.Response
 // @Failure 400 {object} model.Response
 // @Failure 500 {object} model.Response
-// @Router /api/recommendations/users/{user_id}/preferences [put]
+// @Router /api/recommendations/users/{firebase_uid}/preferences [put]
 func (rc *RecommendationController) UpdateUserPreferences(c *gin.Context) {
-	userIDStr := c.Param("user_id")
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
+	firebaseUID := c.Param("firebase_uid")
+	if firebaseUID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid user ID",
+			"error": "Invalid Firebase User ID",
 		})
 		return
 	}
 
 	ctx := context.Background()
-	err = rc.recommendationService.UpdateUserPreferences(ctx, userID)
+	err := rc.recommendationService.UpdateUserPreferences(ctx, firebaseUID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to update user preferences",
@@ -443,10 +441,10 @@ func RegisterRecommendationRoutes(router *gin.Engine, recommendationController *
 			recommendations.GET("/similar/:product_id", recommendationController.GetSimilarProducts)
 			recommendations.GET("/trending", recommendationController.GetTrendingProducts)
 			recommendations.GET("/occasion/:occasion", recommendationController.GetOccasionRecommendations)
-			recommendations.GET("/users/:user_id", recommendationController.GetPersonalizedRecommendations)
+			recommendations.GET("/users/:firebase_uid", recommendationController.GetPersonalizedRecommendations)
 			
 			// User preference management
-			recommendations.PUT("/users/:user_id/preferences", recommendationController.UpdateUserPreferences)
+			recommendations.PUT("/users/:firebase_uid/preferences", recommendationController.UpdateUserPreferences)
 			
 			// Feedback and analytics
 			recommendations.POST("/feedback", recommendationController.RecordRecommendationFeedback)

@@ -12,8 +12,8 @@ export type CreateOrderResp = {
 
 const BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
 
-export async function createOrder(userId: number, body: CreateOrderBody) {
-  const url = `${BASE}/orders?user_id=${encodeURIComponent(String(userId))}`;
+export async function createOrder(firebaseUID: string, body: CreateOrderBody) {
+  const url = `${BASE}/orders?firebase_uid=${encodeURIComponent(firebaseUID)}`;
 
   const res = await fetch(url, {
     method: "POST",
