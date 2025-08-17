@@ -44,7 +44,7 @@ export default function Checkout() {
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
 
   // TODO: replace with real user + address IDs from your profile
-  const USER_ID = 1;
+  const firebaseUID = ""; // Get this from auth context
   const SHIPPING_ADDRESS_ID = 1;
   const BILLING_ADDRESS_ID = 2;
 
@@ -61,7 +61,7 @@ export default function Checkout() {
 
     setBusy(true);
     try {
-      const resp = await createOrder(USER_ID, {
+      const resp = await createOrder(firebaseUID, {
         billing_address_id: BILLING_ADDRESS_ID,
         shipping_address_id: SHIPPING_ADDRESS_ID,
         shipping_method: "Standard",

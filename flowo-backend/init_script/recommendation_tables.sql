@@ -4,14 +4,14 @@
 -- Table: UserPreference
 -- Stores learned user preferences for personalized recommendations
 CREATE TABLE IF NOT EXISTS UserPreference (
-    user_id INT PRIMARY KEY,
+    firebase_uid VARCHAR(255) PRIMARY KEY,
     flower_preferences JSON COMMENT 'JSON object storing flower type preferences with scores',
     occasion_preferences JSON COMMENT 'JSON object storing occasion preferences with scores',
     price_min DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'User preferred minimum price',
     price_max DECIMAL(10, 2) DEFAULT 999.99 COMMENT 'User preferred maximum price',
     average_spent DECIMAL(10, 2) DEFAULT 0.00 COMMENT 'User average spending per order',
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid) ON DELETE CASCADE,
     INDEX idx_user_preferences_updated (last_updated)
 );
 
@@ -55,15 +55,15 @@ CREATE TABLE IF NOT EXISTS TrendingProduct (
 -- Tracks user interactions with recommendations for learning and analytics
 CREATE TABLE IF NOT EXISTS RecommendationFeedback (
     feedback_id INT PRIMARY KEY AUTO_INCREMENT,
-    user_id INT,
+    firebase_uid VARCHAR(255),
     product_id INT,
     recommendation_type VARCHAR(50) NOT NULL COMMENT 'Type of recommendation that led to this action',
     action VARCHAR(50) NOT NULL COMMENT 'User action: clicked, purchased, dismissed, liked',
     session_id VARCHAR(255) COMMENT 'Session ID for anonymous users',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES FlowerProduct(product_id) ON DELETE CASCADE,
-    INDEX idx_feedback_user (user_id),
+    INDEX idx_feedback_user (firebase_uid),
     INDEX idx_feedback_product (product_id),
     INDEX idx_feedback_type (recommendation_type),
     INDEX idx_feedback_action (action),
@@ -75,12 +75,12 @@ CREATE TABLE IF NOT EXISTS RecommendationFeedback (
 -- Optional: Cache frequently requested recommendations for performance
 CREATE TABLE IF NOT EXISTS RecommendationCache (
     cache_key VARCHAR(255) PRIMARY KEY,
-    user_id INT,
+    firebase_uid VARCHAR(255),
     recommendation_type VARCHAR(50),
     recommendations JSON COMMENT 'Cached recommendation results as JSON',
     expires_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_cache_user (user_id),
+    INDEX idx_cache_user (firebase_uid),
     INDEX idx_cache_type (recommendation_type),
     INDEX idx_cache_expires (expires_at),
     INDEX idx_cache_created (created_at)
@@ -89,42 +89,42 @@ CREATE TABLE IF NOT EXISTS RecommendationCache (
 -- Add indexes to existing tables for better recommendation performance
 
 -- Index on UserProductInteraction for faster user behavior analysis
-CREATE INDEX IF NOT EXISTS idx_user_interaction_user_type 
-ON UserProductInteraction(user_id, interaction_type);
+CREATE INDEX idx_user_interaction_user_type 
+ON UserProductInteraction(firebase_uid, interaction_type);
 
-CREATE INDEX IF NOT EXISTS idx_user_interaction_product_type 
+CREATE INDEX idx_user_interaction_product_type 
 ON UserProductInteraction(product_id, interaction_type);
 
-CREATE INDEX IF NOT EXISTS idx_user_interaction_timestamp 
+CREATE INDEX idx_user_interaction_timestamp 
 ON UserProductInteraction(timestamp DESC);
 
 -- Index on Review for recommendation scoring
-CREATE INDEX IF NOT EXISTS idx_review_product_rating 
+CREATE INDEX idx_review_product_rating 
 ON Review(product_id, rating);
 
-CREATE INDEX IF NOT EXISTS idx_review_user_rating 
-ON Review(user_id, rating);
+CREATE INDEX idx_review_user_rating 
+ON Review(firebase_uid, rating);
 
 -- Index on Order and OrderItem for purchase history analysis
-CREATE INDEX IF NOT EXISTS idx_order_user_status_date 
-ON `Order`(user_id, status, order_date DESC);
+CREATE INDEX idx_order_user_status_date 
+ON `Order`(firebase_uid, status, order_date DESC);
 
-CREATE INDEX IF NOT EXISTS idx_order_item_product 
+CREATE INDEX idx_order_item_product 
 ON OrderItem(product_id, quantity);
 
 -- Index on FlowerProduct for content-based filtering
-CREATE INDEX IF NOT EXISTS idx_product_flower_type_price 
+CREATE INDEX idx_product_flower_type_price 
 ON FlowerProduct(flower_type_id, base_price);
 
-CREATE INDEX IF NOT EXISTS idx_product_status_stock 
+CREATE INDEX idx_product_status_stock 
 ON FlowerProduct(status, stock_quantity);
 
 -- Insert some sample data for testing (optional)
 
 -- Sample flower type preferences for testing
-INSERT IGNORE INTO UserPreference (user_id, flower_preferences, occasion_preferences, price_min, price_max, average_spent) VALUES
-(1, '{"Rose": 0.9, "Lily": 0.7, "Tulip": 0.5}', '{"Valentine''s Day": 0.9, "Birthday": 0.6}', 20.00, 100.00, 45.50),
-(2, '{"Orchid": 0.8, "Sunflower": 0.6}', '{"Anniversary": 0.8, "Mother''s Day": 0.7}', 15.00, 80.00, 35.00);
+INSERT IGNORE INTO UserPreference (firebase_uid, flower_preferences, occasion_preferences, price_min, price_max, average_spent) VALUES
+('user1', '{"Rose": 0.9, "Lily": 0.7, "Tulip": 0.5}', '{"Valentine''s Day": 0.9, "Birthday": 0.6}', 20.00, 100.00, 45.50),
+('user2', '{"Orchid": 0.8, "Sunflower": 0.6}', '{"Anniversary": 0.8, "Mother''s Day": 0.7}', 15.00, 80.00, 35.00);
 
 -- Sample trending products (this would typically be generated by background jobs)
 INSERT IGNORE INTO TrendingProduct (product_id, trend_score, view_count, purchase_count, period) VALUES
@@ -135,13 +135,13 @@ INSERT IGNORE INTO TrendingProduct (product_id, trend_score, view_count, purchas
 (2, 0.84, 45, 7, 'daily');
 
 -- Performance optimization: Create composite indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_trending_period_score 
+CREATE INDEX idx_trending_period_score 
 ON TrendingProduct(period, trend_score DESC);
 
-CREATE INDEX IF NOT EXISTS idx_similarity_product1_score 
+CREATE INDEX idx_similarity_product1_score 
 ON ProductSimilarity(product_id_1, similarity_score DESC);
 
-CREATE INDEX IF NOT EXISTS idx_similarity_product2_score 
+CREATE INDEX idx_similarity_product2_score 
 ON ProductSimilarity(product_id_2, similarity_score DESC);
 
 -- Add constraints for data integrity
@@ -158,7 +158,7 @@ SELECT
     COALESCE(AVG(r.rating), 0) as avg_rating,
     COUNT(r.review_id) as review_count,
     COALESCE(SUM(oi.quantity), 0) as total_sold,
-    COUNT(DISTINCT o.user_id) as unique_buyers,
+    COUNT(DISTINCT o.firebase_uid) as unique_buyers,
     COALESCE(SUM(upi.interaction_count), 0) as total_views
 FROM FlowerProduct fp
 LEFT JOIN Review r ON fp.product_id = r.product_id
@@ -173,8 +173,9 @@ LEFT JOIN (
 GROUP BY fp.product_id, fp.name, fp.base_price;
 
 -- Create stored procedure for updating trending products (optional)
+DROP PROCEDURE IF EXISTS UpdateTrendingProducts;
 DELIMITER //
-CREATE OR REPLACE PROCEDURE UpdateTrendingProducts(IN period_type VARCHAR(20))
+CREATE PROCEDURE UpdateTrendingProducts(IN period_type VARCHAR(20))
 BEGIN
     DECLARE days_back INT DEFAULT 7;
     
@@ -229,14 +230,14 @@ DELIMITER ;
 -- Note: This requires the event scheduler to be enabled
 SET GLOBAL event_scheduler = ON;
 
-CREATE EVENT IF NOT EXISTS UpdateDailyTrending
+CREATE EVENT UpdateDailyTrending
 ON SCHEDULE EVERY 1 HOUR
 DO CALL UpdateTrendingProducts('daily');
 
-CREATE EVENT IF NOT EXISTS UpdateWeeklyTrending
+CREATE EVENT UpdateWeeklyTrending
 ON SCHEDULE EVERY 6 HOUR
 DO CALL UpdateTrendingProducts('weekly');
 
-CREATE EVENT IF NOT EXISTS UpdateMonthlyTrending
+CREATE EVENT UpdateMonthlyTrending
 ON SCHEDULE EVERY 1 DAY
 DO CALL UpdateTrendingProducts('monthly');

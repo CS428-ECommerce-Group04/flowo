@@ -4,15 +4,15 @@ import "time"
 
 // RecommendationRequest represents a request for product recommendations
 type RecommendationRequest struct {
-	// User ID for personalized recommendations (optional)
-	UserID *int `json:"user_id,omitempty"`
+	// Firebase User ID for personalized recommendations (optional)
+	FirebaseUID *string `json:"firebase_uid,omitempty"`
 	// Session ID for anonymous users
 	SessionID string `json:"session_id,omitempty"`
 	// Type of recommendation
 	RecommendationType string `json:"recommendation_type" example:"personalized" enums:"personalized,similar,trending,occasion_based,price_based"`
 	// Reference product ID for similar product recommendations
 	ProductID *uint `json:"product_id,omitempty"`
-	// Occasion filter for occasion-based recommendations  
+	// Occasion filter for occasion-based recommendations
 	Occasion string `json:"occasion,omitempty"`
 	// Price range for price-based recommendations
 	PriceMin *float64 `json:"price_min,omitempty"`
@@ -47,21 +47,21 @@ type RecommendedProduct struct {
 
 // UserPreference represents learned user preferences
 type UserPreference struct {
-	UserID            int                `json:"user_id" db:"user_id"`
-	FlowerPreferences string             `json:"flower_preferences" db:"flower_preferences"` // JSON string
-	OccasionPreferences string           `json:"occasion_preferences" db:"occasion_preferences"` // JSON string
-	PriceMin          float64            `json:"price_min" db:"price_min"`
-	PriceMax          float64            `json:"price_max" db:"price_max"`
-	AverageSpent      float64            `json:"average_spent" db:"average_spent"`
-	LastUpdated       time.Time          `json:"last_updated" db:"last_updated"`
+	FirebaseUID         string    `json:"firebase_uid" db:"firebase_uid"`
+	FlowerPreferences   string    `json:"flower_preferences" db:"flower_preferences"`     // JSON string
+	OccasionPreferences string    `json:"occasion_preferences" db:"occasion_preferences"` // JSON string
+	PriceMin            float64   `json:"price_min" db:"price_min"`
+	PriceMax            float64   `json:"price_max" db:"price_max"`
+	AverageSpent        float64   `json:"average_spent" db:"average_spent"`
+	LastUpdated         time.Time `json:"last_updated" db:"last_updated"`
 }
 
 // ProductSimilarity represents similarity between products
 type ProductSimilarity struct {
-	ProductID1      uint    `json:"product_id_1" db:"product_id_1"`
-	ProductID2      uint    `json:"product_id_2" db:"product_id_2"`
-	SimilarityScore float64 `json:"similarity_score" db:"similarity_score"`
-	SimilarityType  string  `json:"similarity_type" db:"similarity_type"` // content, collaborative, hybrid
+	ProductID1      uint      `json:"product_id_1" db:"product_id_1"`
+	ProductID2      uint      `json:"product_id_2" db:"product_id_2"`
+	SimilarityScore float64   `json:"similarity_score" db:"similarity_score"`
+	SimilarityType  string    `json:"similarity_type" db:"similarity_type"` // content, collaborative, hybrid
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
 }
 
@@ -77,14 +77,14 @@ type TrendingProduct struct {
 
 // UserInteractionSummary represents aggregated user interactions
 type UserInteractionSummary struct {
-	UserID        int     `json:"user_id"`
-	ProductID     uint    `json:"product_id"`
-	ViewCount     int     `json:"view_count"`
-	CartAdds      int     `json:"cart_adds"`
-	WishlistAdds  int     `json:"wishlist_adds"`
-	PurchaseCount int     `json:"purchase_count"`
-	TotalRating   int     `json:"total_rating"`
-	ReviewCount   int     `json:"review_count"`
+	FirebaseUID      string  `json:"firebase_uid"`
+	ProductID        uint    `json:"product_id"`
+	ViewCount        int     `json:"view_count"`
+	CartAdds         int     `json:"cart_adds"`
+	WishlistAdds     int     `json:"wishlist_adds"`
+	PurchaseCount    int     `json:"purchase_count"`
+	TotalRating      int     `json:"total_rating"`
+	ReviewCount      int     `json:"review_count"`
 	InteractionScore float64 `json:"interaction_score"`
 }
 
@@ -95,15 +95,15 @@ type RecommendationConfig struct {
 	ContentWeight       float64 `json:"content_weight"`
 	PopularityWeight    float64 `json:"popularity_weight"`
 	TrendingWeight      float64 `json:"trending_weight"`
-	
+
 	// Minimum similarity threshold
-	MinSimilarity     float64 `json:"min_similarity"`
+	MinSimilarity float64 `json:"min_similarity"`
 	// Default number of recommendations
-	DefaultLimit      int     `json:"default_limit"`
+	DefaultLimit int `json:"default_limit"`
 	// Cache duration in minutes
-	CacheDuration     int     `json:"cache_duration"`
+	CacheDuration int `json:"cache_duration"`
 	// Minimum interactions for collaborative filtering
-	MinInteractions   int     `json:"min_interactions"`
+	MinInteractions int `json:"min_interactions"`
 }
 
 // DefaultRecommendationConfig returns default configuration
