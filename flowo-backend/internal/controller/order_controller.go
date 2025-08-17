@@ -189,7 +189,7 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 
 	if ownerID != user.FirebaseUID {
 		role, _ := c.Get("role")
-		if role != "admin" {
+		if role != "Admin" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
 			return
 		}

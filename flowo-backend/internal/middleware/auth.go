@@ -138,14 +138,3 @@ func GetFirebaseUserID(c *gin.Context) (string, bool) {
 	uid, ok := firebaseUID.(string)
 	return uid, ok
 }
-
-// GetUserEmail gets the user email from the context
-func GetUserEmail(c *gin.Context) (string, bool) {
-	userEmail, exists := c.Get("user_email")
-	if !exists {
-		return "", false
-	}
-
-	email, ok := userEmail.(string)
-	return email, ok
-}
