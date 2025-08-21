@@ -84,7 +84,7 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 
 	billingID := getBillingAddressID(req.BillingAddressID, defaultAddr.AddressID)
 
-	// tạo order
+	// create order
 	order := model.Order{
 		FirebaseUID:       FirebaseUID,
 		OrderDate:         time.Now(),
