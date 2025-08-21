@@ -65,7 +65,6 @@ func main() {
 			NewGinEngine,
 			NewFirebaseAuth,
 			NewAuthMiddleware,
-			payos.InitPayOS,
 
 			cache.ProvideRedisCache,
 
@@ -99,7 +98,7 @@ func main() {
 		),
 		fx.Invoke(RegisterRoutes),
 	)
-
+	
 	app.Run()
 }
 
@@ -167,6 +166,7 @@ func RegisterRoutes(
 	paymentCtrl *controller.PaymentController,
 ) {
 
+	payos.InitPayOS(cfg)
 	controller.RegisterRoutes(router)
 
 	v1 := router.Group("/api/v1")

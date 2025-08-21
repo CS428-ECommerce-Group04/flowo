@@ -6,7 +6,6 @@ import (
 	"flowo-backend/config"
 )
 
-func InitPayOS(cfg *config.Config) error {
+func InitPayOS(cfg *config.Config) {
 	payos.Key(cfg.PayOS.ClientID, cfg.PayOS.APIKey, cfg.PayOS.ChecksumKey)
-	return nil
 }
