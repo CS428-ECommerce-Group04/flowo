@@ -7,9 +7,9 @@ export default defineConfig({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: {
     host: true,
-    port: 5176,
+    port: 5173,
     strictPort: true,
     watch: { usePolling: true },
-    hmr: { clientPort: 5176 },
+    hmr: { clientPort: 5173 },
   },
 });
