@@ -12,20 +12,26 @@ import (
 )
 
 type OrderController struct {
-	orderService *service.OrderService
-	userService  service.UserService
+	orderService   *service.OrderService
+	userService    service.UserService
+	addressService service.AddressService
 }
 
-func NewOrderController(os *service.OrderService, us service.UserService) *OrderController {
-	return &OrderController{orderService: os, userService: us}
+func NewOrderController(os *service.OrderService, us service.UserService, as service.AddressService) *OrderController {
+	return &OrderController{orderService: os, userService: us, addressService: as}
 }
 
 func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 	order := rg.Group("/orders")
 	order.POST("/", ctrl.CreateOrder)
 	order.GET("/", ctrl.GetUserOrders)
-	order.PUT("/:orderID/status", ctrl.UpdateOrderStatus)
 	order.GET("/:orderID", ctrl.GetOrderDetailByID)
+
+	// Admin routes
+	admin := rg.Group("/admin/orders")
+	admin.GET("/", ctrl.AdminGetOrders)
+	admin.GET("/:orderID", ctrl.GetAdminOrderDetailByID)
+	admin.PUT("/:orderID/status", ctrl.UpdateOrderStatus)
 }
 
 // CreateOrder godoc
@@ -66,7 +72,11 @@ func (ctrl *OrderController) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "order created", "order_id": orderID})
+	c.JSON(http.StatusCreated, gin.H{
+		"message":  "order created",
+		"order_id": orderID,
+	})
+
 }
 
 // GetUserOrders godoc
@@ -103,9 +113,9 @@ func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
 }
 
 // UpdateOrderStatus godoc
-// @Summary Update order status by ID
-// @Description Update the status of a specific order by order ID (admin only or via ownership check)
-// @Tags orders
+// @Summary Update order status by ID (Admin only)
+// @Description Allows admin to update the status of a specific order by order ID
+// @Tags admin-orders
 // @Accept json
 // @Produce json
 // @Security BearerAuth
@@ -114,8 +124,9 @@ func (ctrl *OrderController) GetUserOrders(c *gin.Context) {
 // @Success 200 {object} model.Response
 // @Failure 400 {object} model.Response
 // @Failure 401 {object} model.Response
+// @Failure 403 {object} model.Response
 // @Failure 500 {object} model.Response
-// @Router /api/v1/orders/{orderID}/status [put]
+// @Router /api/v1/admin/orders/{orderID}/status [put]
 func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 	orderID, err := strconv.Atoi(c.Param("orderID"))
 	if err != nil {
@@ -137,10 +148,16 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 
 	user, err := ctrl.userService.GetUserByFirebaseUID(firebaseUID)
 	if err != nil || user == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 		return
 	}
-	// check admin role
+
+	role, _ := c.Get("role")
+	if role != "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: admin only"})
+		return
+	}
+
 	if err := ctrl.orderService.UpdateStatus(orderID, req, user.FirebaseUID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"})
 		return
@@ -188,14 +205,86 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 	}
 
 	if ownerID != user.FirebaseUID {
-		role, _ := c.Get("role")
-		if role != "Admin" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
-			return
-		}
+		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
+		return
 	}
 
 	order, err := ctrl.orderService.GetOrderDetailByID(orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch order detail"})
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
+// AdminGetOrders godoc
+// @Summary Get all orders (admin only)
+// @Description Retrieve all orders with optional filters (status, user, date range)
+// @Tags admin-orders
+// @Produce json
+// @Security BearerAuth
+// @Param status query string false "Filter by status"
+// @Param user query string false "Filter by FirebaseUID"
+// @Param start_date query string false "Start date (YYYY-MM-DD)"
+// @Param end_date query string false "End date (YYYY-MM-DD)"
+// @Param page query int false "Page number"
+// @Param limit query int false "Limit per page"
+// @Success 200 {array} dto.AdminOrderResponse
+// @Failure 401 {object} model.Response
+// @Failure 403 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/admin/orders [get]
+func (ctrl *OrderController) AdminGetOrders(c *gin.Context) {
+	role, _ := c.Get("role")
+	if role != "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
+		return
+	}
+
+	status := c.Query("status")
+	userID := c.Query("user")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	orders, err := ctrl.orderService.AdminGetOrders(status, userID, startDate, endDate, page, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch orders"})
+		return
+	}
+
+	c.JSON(http.StatusOK, orders)
+}
+
+// GetAdminOrderDetailByID godoc
+// @Summary Get order details (admin)
+// @Description Retrieve full details of a specific order including customer info
+// @Tags admin-orders
+// @Produce json
+// @Security BearerAuth
+// @Param orderID path int true "Order ID"
+// @Success 200 {object} dto.AdminOrderDetailResponse
+// @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
+// @Failure 403 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/admin/orders/{orderID} [get]
+func (ctrl *OrderController) GetAdminOrderDetailByID(c *gin.Context) {
+	orderID, err := strconv.Atoi(c.Param("orderID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order_id"})
+		return
+	}
+
+	role, exists := c.Get("role")
+	if !exists || role != "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
+		return
+	}
+
+	order, err := ctrl.orderService.GetAdminOrderDetailByID(orderID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch order detail"})
 		return

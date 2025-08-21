@@ -327,7 +327,7 @@ INSERT INTO OrderItem (order_id, product_id, quantity, price_per_unit_at_purchas
 INSERT INTO Payment (order_id, payment_method, payment_status, transaction_id, amount_paid, payment_date) VALUES
 (@order_anna, 'Card', 'Success', 'txn_anna_001', 25.49, NOW());
 
--- Peter (Completed)
+-- Peter (Pending)
 SET @addr_peter := (SELECT address_id FROM Address WHERE firebase_uid=@uid_peter AND is_default_shipping=TRUE LIMIT 1);
 INSERT INTO `Order` (
   firebase_uid, customer_email, customer_name, shipping_address_id, billing_address_id,
@@ -335,7 +335,7 @@ INSERT INTO `Order` (
   final_total_amount, shipping_method, notes
 ) VALUES
 (@uid_peter, 'peter@example.com', 'Peter Owens', @addr_peter, @addr_peter,
- NOW(), 'Completed', 44.98, 5.00, 6.00, 45.98, 'Express', 'Office hours');
+ NOW(), 'Pending', 44.98, 5.00, 6.00, 45.98, 'Express', 'Office hours');
 SET @order_peter := LAST_INSERT_ID();
 INSERT INTO OrderItem (order_id, product_id, quantity, price_per_unit_at_purchase, item_subtotal) VALUES
 (@order_peter, @p_hydra, 1, 34.99, 34.99),
@@ -343,7 +343,7 @@ INSERT INTO OrderItem (order_id, product_id, quantity, price_per_unit_at_purchas
 INSERT INTO Payment (order_id, payment_method, payment_status, transaction_id, amount_paid, payment_date) VALUES
 (@order_peter, 'Card', 'Success', 'txn_peter_001', 45.98, NOW());
 
--- Sara (Completed)
+-- Sara (Pending)
 SET @addr_sara := (SELECT address_id FROM Address WHERE firebase_uid=@uid_sara AND is_default_shipping=TRUE LIMIT 1);
 INSERT INTO `Order` (
   firebase_uid, customer_email, customer_name, shipping_address_id, billing_address_id,
@@ -351,7 +351,7 @@ INSERT INTO `Order` (
   final_total_amount, shipping_method, notes
 ) VALUES
 (@uid_sara, 'sara@example.com', 'Sara Lee', @addr_sara, @addr_sara,
- NOW(), 'Completed', 27.99, 0.00, 4.00, 31.99, 'Standard', 'Leave at door');
+ NOW(), 'Pending', 27.99, 0.00, 4.00, 31.99, 'Standard', 'Leave at door');
 SET @order_sara := LAST_INSERT_ID();
 INSERT INTO OrderItem (order_id, product_id, quantity, price_per_unit_at_purchase, item_subtotal) VALUES
 (@order_sara, @p_iris, 1, 27.99, 27.99);
@@ -422,3 +422,6 @@ INSERT INTO UserProductInteraction (firebase_uid, session_id, product_id, intera
 (@uid_peter,  'sess_peter_001', @p_hydra, 'view',         NOW()),
 (@uid_anna,   'sess_anna_001',  @p_baby,  'wishlist_add', NOW()),
 (@uid_sara,   'sess_sara_001',  @p_iris,  'add_to_cart',  NOW());
+
+
+

@@ -12,13 +12,15 @@ type OrderService struct {
 	OrderRepo   repository.OrderRepository
 	CartRepo    repository.CartRepository
 	CartService *CartService
+	AddressRepo repository.AddressRepository
 }
 
-func NewOrderService(orderRepo repository.OrderRepository, cartRepo repository.CartRepository, cartService *CartService) *OrderService {
+func NewOrderService(orderRepo repository.OrderRepository, cartRepo repository.CartRepository, cartService *CartService, addressRepo repository.AddressRepository) *OrderService {
 	return &OrderService{
 		OrderRepo:   orderRepo,
 		CartRepo:    cartRepo,
 		CartService: cartService,
+		AddressRepo: addressRepo,
 	}
 }
 
@@ -65,6 +67,14 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 		return 0, errors.New("cart is empty or error getting cart prices")
 	}
 
+	defaultAddr, err := s.AddressRepo.GetDefault(FirebaseUID)
+	if err != nil {
+		return 0, err
+	}
+	if defaultAddr == nil {
+		return 0, errors.New("no default shipping address found")
+	}
+
 	var subtotal float64
 	for _, item := range items {
 		subtotal += item.TotalPrice
@@ -72,12 +82,15 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 	shipping := 5.0
 	finalTotal := subtotal + shipping
 
+	billingID := getBillingAddressID(req.BillingAddressID, defaultAddr.AddressID)
+
+	// create order
 	order := model.Order{
 		FirebaseUID:       FirebaseUID,
 		OrderDate:         time.Now(),
 		Status:            "Processing",
-		ShippingAddressID: req.ShippingAddressID,
-		BillingAddressID:  getBillingAddressID(req.BillingAddressID, req.ShippingAddressID),
+		ShippingAddressID: defaultAddr.AddressID,
+		BillingAddressID:  billingID,
 		SubtotalAmount:    subtotal,
 		ShippingCost:      shipping,
 		FinalTotalAmount:  finalTotal,
@@ -90,8 +103,10 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 		return 0, err
 	}
 
-	cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseUID)
-	_ = s.CartRepo.ClearCart(cartID)
+	// remove clear cart
+	// if cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseUID); cartID != 0 {
+	// 	_ = s.CartRepo.ClearCart(cartID)
+	// }
 
 	return orderID, nil
 }
@@ -106,6 +121,22 @@ func getBillingAddressID(billing *int, shipping int) int {
 func (s *OrderService) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error) {
 	return s.OrderRepo.GetOrderDetailByID(orderID)
 }
+
 func (s *OrderService) GetOrderOwnerID(orderID int) (string, error) {
 	return s.OrderRepo.GetOrderOwnerID(orderID)
+}
+
+func (s *OrderService) AdminGetOrders(status, userID, startDate, endDate string, page, limit int) ([]dto.AdminOrderResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+	return s.OrderRepo.AdminGetOrders(status, userID, startDate, endDate, limit, offset)
+}
+
+func (s *OrderService) GetAdminOrderDetailByID(orderID int) (*dto.AdminOrderDetailResponse, error) {
+	return s.OrderRepo.GetAdminOrderDetailByID(orderID)
 }
