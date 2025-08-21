@@ -69,8 +69,34 @@ services:
       - app-network
     restart: unless-stopped
 
+  agno:
+    build:
+      context: ./flowo-agno-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVICE_PORT=8082
+      - BACKEND_API_URL=http://backend:8081/api/v1
+      - BACKEND_API_EXTERNAL_URL=http://localhost:8081/api/v1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - DEBUG_MODE=false
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+    volumes:
+      - agno_data:/app/tmp
+
 volumes:
-  mysql_data: 
+  mysql_data:
+  agno_data: 
 
 networks:
   app-network:
