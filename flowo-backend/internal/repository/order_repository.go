@@ -16,6 +16,7 @@ type OrderRepository interface {
 	GetOrderOwnerID(orderID int) (string, error)
 	GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error)
 	AdminGetOrders(status, userID, startDate, endDate string, limit, offset int) ([]dto.AdminOrderResponse, error)
+	GetAdminOrderDetailByID(orderID int) (*dto.AdminOrderDetailResponse, error)
 }
 
 type orderRepository struct {
@@ -211,4 +212,44 @@ func (r *orderRepository) AdminGetOrders(status, userID, startDate, endDate stri
 		orders = append(orders, o)
 	}
 	return orders, nil
+}
+
+func (r *orderRepository) GetAdminOrderDetailByID(orderID int) (*dto.AdminOrderDetailResponse, error) {
+	var order dto.AdminOrderDetailResponse
+	err := r.DB.QueryRow(" SELECT o.order_id, o.status, o.order_date, o.final_total_amount, o.shipping_method, o.customer_name, o.customer_email FROM `Order` o WHERE o.order_id = ?", orderID).
+		Scan(
+			&order.OrderID,
+			&order.Status,
+			&order.OrderDate,
+			&order.TotalAmount,
+			&order.ShippingMethod,
+			&order.CustomerName,
+			&order.CustomerEmail,
+		)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.DB.Query(`
+		SELECT product_id, quantity, price_per_unit_at_purchase, item_subtotal
+		FROM OrderItem
+		WHERE order_id = ?
+	`, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []dto.OrderItemDetail
+	for rows.Next() {
+		var item dto.OrderItemDetail
+		err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price, &item.Subtotal)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	order.Items = items
+
+	return &order, nil
 }

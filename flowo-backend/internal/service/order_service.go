@@ -103,9 +103,10 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 		return 0, err
 	}
 
-	if cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseUID); cartID != 0 {
-		_ = s.CartRepo.ClearCart(cartID)
-	}
+	// remove clear cart
+	// if cartID, _ := s.CartRepo.GetCartIDByUser(FirebaseUID); cartID != 0 {
+	// 	_ = s.CartRepo.ClearCart(cartID)
+	// }
 
 	return orderID, nil
 }
@@ -120,6 +121,7 @@ func getBillingAddressID(billing *int, shipping int) int {
 func (s *OrderService) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error) {
 	return s.OrderRepo.GetOrderDetailByID(orderID)
 }
+
 func (s *OrderService) GetOrderOwnerID(orderID int) (string, error) {
 	return s.OrderRepo.GetOrderOwnerID(orderID)
 }
@@ -133,4 +135,8 @@ func (s *OrderService) AdminGetOrders(status, userID, startDate, endDate string,
 	}
 	offset := (page - 1) * limit
 	return s.OrderRepo.AdminGetOrders(status, userID, startDate, endDate, limit, offset)
+}
+
+func (s *OrderService) GetAdminOrderDetailByID(orderID int) (*dto.AdminOrderDetailResponse, error) {
+	return s.OrderRepo.GetAdminOrderDetailByID(orderID)
 }

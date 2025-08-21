@@ -50,3 +50,16 @@ type AdminOrderResponse struct {
 	Status      string    `json:"status"`
 	OrderDate   time.Time `json:"order_date"`
 }
+
+type AdminOrderDetailResponse struct {
+	OrderID        int       `json:"order_id"`
+	Status         string    `json:"status"`
+	OrderDate      time.Time `json:"order_date"`
+	TotalAmount    float64   `json:"total_amount"`
+	ShippingMethod string    `json:"shipping_method"`
+
+	CustomerName  string `json:"customer_name"`
+	CustomerEmail string `json:"customer_email"`
+
+	Items []OrderItemDetail `json:"items"`
+}
