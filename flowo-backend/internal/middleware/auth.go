@@ -92,42 +92,6 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	}
 }
 
-// RequireSessionAuth middleware that requires valid session cookie authentication
-func (m *AuthMiddleware) RequireSessionAuth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Get session cookie
-		sessionCookie, err := c.Cookie("session_id")
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "Session cookie required",
-			})
-			c.Abort()
-			return
-		}
-
-		// Verify session cookie
-		token, err := m.firebaseAuth.VerifySessionCookie(context.Background(), sessionCookie)
-		if err != nil {
-			// Clear invalid cookie
-			c.SetCookie("session_id", "", -1, "/", "", false, true)
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "Invalid or expired session",
-			})
-			c.Abort()
-			return
-		}
-
-		// Store user information in the context
-		c.Set("firebase_uid", token.UID)
-		c.Set("user_email", token.Claims["email"])
-		c.Set("firebase_token", token)
-
-		c.Next()
-	}
-}
-
 // GetFirebaseUserID gets the Firebase user ID from the context
 func GetFirebaseUserID(c *gin.Context) (string, bool) {
 	firebaseUID, exists := c.Get("firebase_uid")

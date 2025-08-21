@@ -478,8 +478,6 @@ func (ac *AuthController) CheckAuthHandler(c *gin.Context) {
 		userResponse["firebase_uid"] = localUser.FirebaseUID
 		userResponse["role"] = localUser.Role
 	}
-	c.Set("firebase_uid", decoded.UID)
-	c.Set("role", localUser.Role)
 
 	c.JSON(http.StatusOK, gin.H{
 		"authenticated": true,

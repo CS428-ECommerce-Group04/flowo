@@ -6,11 +6,12 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Firebase FirebaseConfig
-	Domain   string
+	Server       ServerConfig
+	Database     DatabaseConfig
+	Firebase     FirebaseConfig
+	Domain       string
 	IsProduction bool
+	PayOS        PayOSConfig
 }
 
 type ServerConfig struct {
@@ -28,6 +29,13 @@ type DatabaseConfig struct {
 type FirebaseConfig struct {
 	CredentialsPath string
 	APIKey          string
+}
+
+type PayOSConfig struct {
+	ClientID    string
+	APIKey      string
+	ChecksumKey string
+	Domain      string
 }
 
 func NewConfig() (*Config, error) {
@@ -55,6 +63,12 @@ func NewConfig() (*Config, error) {
 	config.Firebase.APIKey = viper.GetString("FIREBASE_API_KEY")
 	config.Domain = viper.GetString("DOMAIN")
 	config.IsProduction = viper.GetBool("IS_PRODUCTION")
+
+	// PayOS
+	config.PayOS.ClientID = viper.GetString("PAYOS_CLIENT_ID")
+	config.PayOS.APIKey = viper.GetString("PAYOS_API_KEY")
+	config.PayOS.ChecksumKey = viper.GetString("PAYOS_CHECKSUM_KEY")
+	config.PayOS.Domain = viper.GetString("PAYOS_DOMAIN")
 
 	// Set default Firebase credentials path if not specified
 	if config.Firebase.CredentialsPath == "" {
