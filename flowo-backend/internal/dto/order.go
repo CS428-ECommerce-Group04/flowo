@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 type OrderResponse struct {
 	OrderID        int     `json:"order_id"`
 	Status         string  `json:"status"`
@@ -39,4 +41,12 @@ type OrderItemDetail struct {
 	Quantity  int     `json:"quantity"`
 	Price     float64 `json:"price"`
 	Subtotal  float64 `json:"subtotal"`
+}
+
+type AdminOrderResponse struct {
+	OrderID     int       `json:"order_id"`
+	UserID      string    `json:"user_id"`
+	TotalAmount float64   `json:"total_amount"`
+	Status      string    `json:"status"`
+	OrderDate   time.Time `json:"order_date"`
 }

@@ -123,3 +123,14 @@ func (s *OrderService) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse
 func (s *OrderService) GetOrderOwnerID(orderID int) (string, error) {
 	return s.OrderRepo.GetOrderOwnerID(orderID)
 }
+
+func (s *OrderService) AdminGetOrders(status, userID, startDate, endDate string, page, limit int) ([]dto.AdminOrderResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+	return s.OrderRepo.AdminGetOrders(status, userID, startDate, endDate, limit, offset)
+}

@@ -15,6 +15,7 @@ type OrderRepository interface {
 	CreateOrderWithItemsAndStock(firebaseUID string, order model.Order, items []dto.CartItemResponse) (int, error)
 	GetOrderOwnerID(orderID int) (string, error)
 	GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error)
+	AdminGetOrders(status, userID, startDate, endDate string, limit, offset int) ([]dto.AdminOrderResponse, error)
 }
 
 type orderRepository struct {
@@ -190,4 +191,24 @@ func (r *orderRepository) GetOrderDetailByID(orderID int) (*dto.OrderDetailRespo
 
 	order.Items = items
 	return &order, nil
+}
+
+func (r *orderRepository) AdminGetOrders(status, userID, startDate, endDate string, limit, offset int) ([]dto.AdminOrderResponse, error) {
+	query := "SELECT order_id, firebase_uid, final_total_amount, status, order_date FROM `Order` WHERE (status = ? OR ? = '') AND (firebase_uid = ? OR ? = '') AND (order_date >= ? OR ? = '') AND (order_date <= ? OR ? = '') ORDER BY order_date DESC LIMIT ? OFFSET ?"
+
+	rows, err := r.DB.Query(query, status, status, userID, userID, startDate, startDate, endDate, endDate, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []dto.AdminOrderResponse
+	for rows.Next() {
+		var o dto.AdminOrderResponse
+		if err := rows.Scan(&o.OrderID, &o.UserID, &o.TotalAmount, &o.Status, &o.OrderDate); err != nil {
+			return nil, err
+		}
+		orders = append(orders, o)
+	}
+	return orders, nil
 }

@@ -27,6 +27,10 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 	order.GET("/", ctrl.GetUserOrders)
 	order.PUT("/:orderID/status", ctrl.UpdateOrderStatus)
 	order.GET("/:orderID", ctrl.GetOrderDetailByID)
+
+	// Admin routes
+	admin := rg.Group("/admin/orders")
+	admin.GET("/", ctrl.AdminGetOrders)
 }
 
 // CreateOrder godoc
@@ -207,4 +211,44 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, order)
+}
+
+// AdminGetOrders godoc
+// @Summary Get all orders (admin only)
+// @Description Retrieve all orders with optional filters (status, user, date range)
+// @Tags admin-orders
+// @Produce json
+// @Security BearerAuth
+// @Param status query string false "Filter by status"
+// @Param user query string false "Filter by FirebaseUID"
+// @Param start_date query string false "Start date (YYYY-MM-DD)"
+// @Param end_date query string false "End date (YYYY-MM-DD)"
+// @Param page query int false "Page number"
+// @Param limit query int false "Limit per page"
+// @Success 200 {array} dto.AdminOrderResponse
+// @Failure 401 {object} model.Response
+// @Failure 403 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/admin/orders [get]
+func (ctrl *OrderController) AdminGetOrders(c *gin.Context) {
+	role, _ := c.Get("role")
+	if role != "Admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
+		return
+	}
+
+	status := c.Query("status")
+	userID := c.Query("user")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	orders, err := ctrl.orderService.AdminGetOrders(status, userID, startDate, endDate, page, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch orders"})
+		return
+	}
+
+	c.JSON(http.StatusOK, orders)
 }
