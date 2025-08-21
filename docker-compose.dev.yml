@@ -87,9 +87,47 @@ services:
     networks:
       - app-network
 
+  agno-dev:
+    build:
+      context: ./flowo-agno-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVICE_PORT=8082
+      - BACKEND_API_URL=http://backend-dev:8081/api/v1
+      - BACKEND_API_EXTERNAL_URL=http://localhost:8081/api/v1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - DEBUG_MODE=true
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./flowo-agno-service:/app
+      - agno_venv:/app/.venv
+      - agno_data:/app/tmp
+    depends_on:
+      - backend-dev
+      - redis
+    networks:
+      - app-network
+    restart: unless-stopped
+    command: >
+      sh -c "
+        uv venv && 
+        . .venv/bin/activate &&
+        uv pip install -e . &&
+        python main.py
+      "
+
 volumes:
   mysql_data: 
   frontend_node_modules:
+  agno_venv:
+  agno_data:
 
 networks:
   app-network:
