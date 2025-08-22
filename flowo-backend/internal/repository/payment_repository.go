@@ -29,7 +29,10 @@ func (r *paymentRepository) CreatePayment(p *model.Payment) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	id64, _ := res.LastInsertId()
+	id64, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
 	return int(id64), nil
 }
 
