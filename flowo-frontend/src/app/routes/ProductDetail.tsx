@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "@/store/cart";
 import { useProductsStore, type UIFlower } from "@/store/products";
+import { resolveProductImage } from "@/data/productImages";
 
 type ApiEnvelope<T> = { message?: string; data: T };
 
@@ -22,6 +23,8 @@ type ApiDetailProduct = {
   average_rating?: number;
   review_count?: number;
   sales_rank?: number;
+  image_url?: string;
+  primaryImageUrl?: string;
   // Add other fields your API returns if needed (e.g., image urls)
 };
 
@@ -78,6 +81,8 @@ export default function ProductDetail() {
     description: string;
     flowerType: string;
     price: number;
+    effectivePrice?: number;
+    basePrice?: number;
     stock?: number;
     rating?: number;
     reviews?: number;
@@ -183,15 +188,25 @@ export default function ProductDetail() {
 
         const best = pickDetailForProduct(detailList, base) || detailList[0];
 
-        // Calculate price preference: current -> effective -> price -> base
-        const price = Number(
-          best.current_price ??
-            best.effective_price ??
-            best.price ??
-            best.base_price ??
+        // Extract pricing information
+        const effectivePrice = best.effective_price ? Number(best.effective_price) : null;
+        const basePrice = best.base_price ? Number(best.base_price) : null;
+        const currentPrice = best.current_price ? Number(best.current_price) : null;
+        const fallbackPrice = best.price ? Number(best.price) : null;
+
+        // Calculate display price preference: current -> effective -> price -> base
+        const displayPrice = Number(
+          currentPrice ??
+            effectivePrice ??
+            fallbackPrice ??
+            basePrice ??
             base.price ??
             0
         );
+
+        // Use consistent image resolution logic from shop view
+        const imageFromApi = best.image_url ?? best.primaryImageUrl ?? base.image;
+        const resolvedImage = resolveProductImage(best.name || base.name, slug);
 
         const uiObj = {
           id: String(
@@ -200,11 +215,13 @@ export default function ProductDetail() {
           name: best.name || base.name,
           description: best.description || base.description,
           flowerType,
-          price: Number.isFinite(price) ? price : 0,
+          price: Number.isFinite(displayPrice) ? displayPrice : 0,
+          effectivePrice: effectivePrice || undefined,
+          basePrice: basePrice || undefined,
           stock: best.stock_quantity,
           rating: best.average_rating,
           reviews: best.review_count,
-          image: base.image, // replace with detailed image if your API provides it
+          image: resolvedImage,
           tags: [flowerType, best.status || ""].filter(Boolean) as string[],
         };
 
@@ -224,9 +241,31 @@ export default function ProductDetail() {
     };
   }, [slug, baseProduct, setAll]);
 
-  const oldPrice = useMemo(() => (ui ? Number((ui.price * 1.25).toFixed(2)) : 0), [ui]);
-  const hasCompare = ui ? oldPrice > ui.price : false;
-  const discountPct = hasCompare ? Math.round(((oldPrice - (ui?.price || 0)) / oldPrice) * 100) : 0;
+  // Updated pricing logic to match shop view requirements
+  const pricingInfo = useMemo(() => {
+    if (!ui) return { displayPrice: 0, strikethroughPrice: undefined, hasDiscount: false, discountPct: 0 };
+
+    const effectivePrice = ui.effectivePrice;
+    const basePrice = ui.basePrice;
+
+    if (effectivePrice !== undefined && basePrice !== undefined && effectivePrice !== basePrice) {
+      // Show effective price normally, base price crossed out
+      return {
+        displayPrice: effectivePrice,
+        strikethroughPrice: basePrice,
+        hasDiscount: true,
+        discountPct: Math.round(((basePrice - effectivePrice) / basePrice) * 100)
+      };
+    } else {
+      // Show just the base price (or effective price if base price not available)
+      return {
+        displayPrice: basePrice ?? effectivePrice ?? ui.price,
+        strikethroughPrice: undefined,
+        hasDiscount: false,
+        discountPct: 0
+      };
+    }
+  }, [ui]);
 
   if (loading) {
     return (
@@ -331,17 +370,21 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* price */}
+            {/* Updated price display */}
             <div className="mt-6">
               <div className="flex items-center gap-3">
-                <div className="text-3xl font-bold text-[#2d5016]">${ui.price.toFixed(2)}</div>
-                {hasCompare && (
-                  <>
-                    <div className="text-slate-400 line-through">${oldPrice.toFixed(2)}</div>
-                    <span className="bg-pink-600 text-white rounded px-2 py-0.5 text-sm">
-                      {discountPct}% OFF
-                    </span>
-                  </>
+                <div className="text-3xl font-bold text-[#2d5016]">
+                  ${pricingInfo.displayPrice.toFixed(2)}
+                </div>
+                {pricingInfo.strikethroughPrice && (
+                  <div className="text-slate-400 line-through">
+                    ${pricingInfo.strikethroughPrice.toFixed(2)}
+                  </div>
+                )}
+                {pricingInfo.hasDiscount && (
+                  <span className="bg-pink-600 text-white rounded px-2 py-0.5 text-sm">
+                    {pricingInfo.discountPct}% OFF
+                  </span>
                 )}
               </div>
               <div className="text-slate-500 text-sm mt-1">
@@ -374,17 +417,17 @@ export default function ProductDetail() {
 
               <button
                 className="rounded bg-pink-600 text-white px-6 py-2 font-medium"
-                onClick={() =>
+                onClick={() => {
                   add({
                     id: ui.id,
                     name: ui.name,
-                    price: ui.price,
+                    price: pricingInfo.displayPrice,
                     qty,
                     image: ui.image,
                     description: ui.description,
                     tags: ui.tags,
-                  })
-                }
+                  });
+                }}
               >
                 Add to Cart
               </button>
