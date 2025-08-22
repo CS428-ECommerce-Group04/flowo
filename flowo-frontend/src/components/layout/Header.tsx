@@ -38,20 +38,40 @@ export default function Header() {
             {/* Logo */}
             <Link
               to="/"
-              className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-green-700 hover:text-green-800 transition-colors duration-200"
+              className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-green-700 hover:text-green-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm"
+              aria-label="Flowo - Go to homepage"
             >
               Flowo
             </Link>
 
             {/* Navigation */}
-            <nav className="hidden md:flex items-center space-x-6 lg:space-x-8">
-              <Link to="/" className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700">
+            <nav className="hidden md:flex items-center space-x-6 lg:space-x-8" role="navigation" aria-label="Main navigation">
+              <Link 
+                to="/" 
+                className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm px-1 py-1"
+                aria-label="Go to home page"
+              >
                 Home
               </Link>
-              <Link to="/shop" className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700">
+              <Link 
+                to="/shop" 
+                className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm px-1 py-1"
+                aria-label="Browse our flower shop"
+              >
                 Shop
               </Link>
-              <Link to="/learn-more" className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700">
+              <Link 
+                to="/order-tracking" 
+                className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm px-1 py-1"
+                aria-label="Track your flower orders"
+              >
+                Order Tracking
+              </Link>
+              <Link 
+                to="/learn-more" 
+                className="text-sm lg:text-base font-medium text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm px-1 py-1"
+                aria-label="Learn more about our flowers and services"
+              >
                 Learn More
               </Link>
             </nav>
@@ -59,13 +79,20 @@ export default function Header() {
             {/* Right side actions */}
             <div className="flex items-center space-x-3 lg:space-x-4">
               {/* Cart */}
-              <Link to="/cart" className="relative p-2 text-slate-700 hover:text-green-700 transition-colors duration-200">
-                <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link 
+                to="/cart" 
+                className="relative p-2 text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm"
+                aria-label={`Shopping cart with ${totalItems} item${totalItems !== 1 ? 's' : ''}`}
+              >
+                <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6"/>
+                        d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5 6m0 0h9M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6" />
                 </svg>
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                  <span 
+                    className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium"
+                    aria-label={`${totalItems} items in cart`}
+                  >
                     {totalItems}
                   </span>
                 )}
@@ -74,39 +101,43 @@ export default function Header() {
               {/* Auth */}
               <div className="hidden md:flex items-center space-x-3">
                 {isLoading ? (
-                  <div className="animate-pulse">
+                  <div className="animate-pulse" aria-label="Loading user information">
                     <div className="h-4 bg-slate-200 rounded w-20" />
                   </div>
                 ) : isAuthenticated ? (
                   // show ONLY the name (local-part of email)
-                  <span className="text-sm font-medium text-slate-700">{displayName}</span>
+                  <span className="text-sm font-medium text-slate-700" aria-label={`Logged in as ${displayName}`}>
+                    {displayName}
+                  </span>
                 ) : (
-                  <>
+                  <div>
                     <Link
                       to="/login"
-                      className="text-sm font-medium text-slate-700 hover:text-green-700 transition-colors duration-200"
+                      className="text-sm font-medium text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm px-2 py-1"
+                      aria-label="Sign in to your account"
                     >
                       Sign In
                     </Link>
                     <Link
                       to="/register"
-                      className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors duration-200"
+                      className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2"
+                      aria-label="Create a new account"
                     >
                       Sign Up
                     </Link>
-                  </>
+                  </div>
                 )}
               </div>
 
               {/* Menu Button (Sidebar) */}
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 text-slate-700 hover:text-green-700 transition-colors duration-200"
-                aria-label="Open menu"
+                className="p-2 text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm"
+                aria-label="Open navigation menu"
                 aria-expanded={sidebarOpen}
                 aria-controls="site-sidebar"
               >
-                <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
