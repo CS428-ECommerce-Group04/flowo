@@ -56,7 +56,7 @@ export default function App() {
               <ChatWidget />
             </>
           } />
-        
+          {/* admin */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="products" element={<AdminProductsTable />} /> {/* NEW */}
@@ -72,7 +72,6 @@ export default function App() {
           {/* shorthand redirects */}
           <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
           <Route path="/settings"  element={<Navigate to="/admin/settings" replace />} />
-          
         </Routes>
       </AuthProvider>
     </BrowserRouter>
