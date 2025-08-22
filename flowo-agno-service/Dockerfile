@@ -13,16 +13,18 @@ RUN apt-get update && apt-get install -y \
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
 
-# Copy project files
-COPY pyproject.toml .
-COPY . .
+# Copy requirements first for better caching
+COPY requirements.txt .
 
 # Create virtual environment and install dependencies
-RUN uv venv && \
+RUN /root/.local/bin/uv venv && \
     . .venv/bin/activate && \
-    uv pip install -e .
+    /root/.local/bin/uv pip install -r requirements.txt
+
+# Copy project files
+COPY . .
 
 # Create tmp directory for database files
 RUN mkdir -p tmp

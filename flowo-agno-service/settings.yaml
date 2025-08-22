@@ -1,0 +1,73 @@
+# Flowo Agno Service Configuration
+
+# Agent Configuration
+agent:
+  name: "Flowo Assistant"
+  provider: "openai"  # Options: openai, anthropic, google, etc.
+  model_id: "gpt-4o-mini"  # Default model
+  temperature: 0.7
+  max_tokens: 2000
+  
+  # Provider-specific models
+  models:
+    openai:
+      default: "gpt-4o-mini"
+      advanced: "gpt-4o"
+      embedding: "text-embedding-3-small"
+    anthropic:
+      default: "claude-3-haiku-20240307"
+      advanced: "claude-3-5-sonnet-20241022"
+    google:
+      default: "gemini-1.5-flash"
+      advanced: "gemini-1.5-pro"
+
+# Memory Configuration
+memory:
+  enabled: true
+  provider: "sqlite"
+  database_file: "tmp/flowo.db"
+  table_name: "user_preferences"
+  delete_memories: false
+  clear_memories: false
+
+# Storage Configuration
+storage:
+  enabled: true
+  provider: "sqlite"
+  database_file: "tmp/flowo.db"
+  table_name: "agent_sessions"
+  num_history_runs: 5
+
+# Tools Configuration
+tools:
+  reasoning:
+    enabled: true
+    add_instructions: true
+  flower_search:
+    enabled: true
+    backend_url: "${BACKEND_API_URL}"
+  
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8082
+  cors:
+    enabled: true
+    origins: ["*"]
+  rate_limit:
+    enabled: false
+    requests_per_minute: 60
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  file: "logs/flowo-agent.log"
+
+# Features
+features:
+  streaming: true
+  markdown: true
+  debug_mode: false
+  enable_agentic_memory: true
+  add_history_to_messages: true
