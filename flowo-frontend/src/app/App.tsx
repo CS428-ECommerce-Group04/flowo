@@ -72,27 +72,6 @@ export default function App() {
           {/* shorthand redirects */}
           <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
           <Route path="/settings"  element={<Navigate to="/admin/settings" replace />} />
-
-          {/* public site */}
-          <Route
-            path="/*"
-            element={
-              <>
-                <Header />
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/learn-more" element={<LearnMore />} />
-                  <Route path="/products/:slug" element={<ProductDetail />} />
-                  <Route path="/track" element={<TrackOrder />} />
-                  <Route path="/orders/:id" element={<OrderTrackingDetail />} />
-                </Routes>
-                <ChatWidget />
-              </>
-            }
-          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
