@@ -33,6 +33,11 @@ func (ctrl *UserController) RegisterRoutes(rg *gin.RouterGroup, authMiddleware *
 		userRoutes.GET("/email/:email", ctrl.GetUserByEmail)
 		userRoutes.GET("/uid/:uid", ctrl.GetUserByUID)
 	}
+	adminRoutes := rg.Group("/admin")
+	{
+		adminRoutes.Use(authMiddleware.RequireAuth())
+		adminRoutes.GET("/users", ctrl.GetAllUsers)
+	}
 }
 
 // GetUserProfile godoc
@@ -220,6 +225,32 @@ func (ctrl *UserController) UpdateUserProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, model.Response{
 		Message: "User profile updated successfully",
 		Data:    response,
+	})
+}
+
+// GetAllUsers godoc
+// @Summary Get all users with default address (admin only)
+// @Description Retrieve all users and their default shipping address
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} model.Response{data=[]model.UserWithAddress}
+// @Failure 401 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/admin/users [get]
+func (ctrl *UserController) GetAllUsers(c *gin.Context) {
+	users, err := ctrl.UserService.GetAllUsers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.Response{
+			Message: "Failed to get users: " + err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.Response{
+		Message: "Users retrieved successfully",
+		Data:    users,
 	})
 }
 

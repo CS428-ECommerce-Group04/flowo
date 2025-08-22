@@ -17,6 +17,7 @@ type UserService interface {
 	GetCompleteUserInfo(firebaseUID string) (*CompleteUserInfo, error)
 	UpdateUserFromFirebase(firebaseUID string) (*model.User, error)
 	UpdateUserProfile(firebaseUID string, updateData *dto.UpdateProfileRequest) (*model.User, error)
+	GetAllUsers() ([]*model.UserWithAddress, error)
 }
 
 type userService struct {
@@ -178,4 +179,8 @@ func (s *userService) UpdateUserProfile(firebaseUID string, updateData *dto.Upda
 	}
 
 	return localUser, nil
+}
+
+func (s *userService) GetAllUsers() ([]*model.UserWithAddress, error) {
+	return s.userRepo.GetAllUsers()
 }

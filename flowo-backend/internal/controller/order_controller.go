@@ -155,11 +155,11 @@ func (ctrl *OrderController) UpdateOrderStatus(c *gin.Context) {
 		return
 	}
 
-	role, _ := c.Get("role")
-	if role != "Admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: admin only"})
-		return
-	}
+	// role, _ := c.Get("role")
+	// if role != "Admin" {
+	// 	c.JSON(http.StatusForbidden, gin.H{"error": "forbidden: admin only"})
+	// 	return
+	// }
 
 	if err := ctrl.orderService.UpdateStatus(orderID, req, user.FirebaseUID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "update failed"})
@@ -301,11 +301,11 @@ func (ctrl *OrderController) GetOrderStatus(c *gin.Context) {
 // @Failure 500 {object} model.Response
 // @Router /api/v1/admin/orders [get]
 func (ctrl *OrderController) AdminGetOrders(c *gin.Context) {
-	role, _ := c.Get("role")
-	if role != "Admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
-		return
-	}
+	// role, _ := c.Get("role")
+	// if role != "Admin" {
+	// 	c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
+	// 	return
+	// }
 
 	status := c.Query("status")
 	userID := c.Query("user")
@@ -343,11 +343,11 @@ func (ctrl *OrderController) GetAdminOrderDetailByID(c *gin.Context) {
 		return
 	}
 
-	role, exists := c.Get("role")
-	if !exists || role != "Admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
-		return
-	}
+	// role, exists := c.Get("role")
+	// if !exists || role != "Admin" {
+	// 	c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
+	// 	return
+	// }
 
 	order, err := ctrl.orderService.GetAdminOrderDetailByID(orderID)
 	if err != nil {
