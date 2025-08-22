@@ -50,7 +50,11 @@ func (pc *PaymentController) createPaymentLink(c *gin.Context) {
 		return
 	}
 	// get firebase uid from middleware
-	uidStr, _ := middleware.GetFirebaseUserID(c)
+	uidStr, exists := middleware.GetFirebaseUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Firebase UID not found"})
+		return
+	}
 	resp, err := pc.PaymentService.CreatePaymentLink(req, uidStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
