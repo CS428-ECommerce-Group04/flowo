@@ -45,7 +45,7 @@ type OrderItemDetail struct {
 
 type AdminOrderResponse struct {
 	OrderID     int       `json:"order_id"`
-	UserID      string    `json:"user_id"`
+	FirebaseUID string    `json:"firebase_uid"`
 	TotalAmount float64   `json:"total_amount"`
 	Status      string    `json:"status"`
 	OrderDate   time.Time `json:"order_date"`
@@ -62,4 +62,10 @@ type AdminOrderDetailResponse struct {
 	CustomerEmail string `json:"customer_email"`
 
 	Items []OrderItemDetail `json:"items"`
+}
+
+// OrderStatusResponse is a minimal response used by frontend to poll order status
+type OrderStatusResponse struct {
+	OrderID int    `json:"order_id"`
+	Status  string `json:"status"`
 }

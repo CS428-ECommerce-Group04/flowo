@@ -25,6 +25,7 @@ import (
 	"flowo-backend/internal/middleware"
 	"flowo-backend/internal/repository"
 	"flowo-backend/internal/service"
+	"flowo-backend/internal/payos"
 )
 
 // @title           Flowo List API
@@ -74,6 +75,7 @@ func main() {
 			repository.NewUserRepository,
 			repository.NewOrderRepository,
 			repository.NewAddressRepository,
+			repository.NewPaymentRepository,
 
 			service.NewService,
 			service.NewReviewService,
@@ -82,6 +84,7 @@ func main() {
 			service.NewUserService,
 			service.NewOrderService,
 			service.NewAddressService,
+			service.NewPaymentService,
 
 			controller.NewPricingController,
 			controller.NewController,
@@ -91,10 +94,11 @@ func main() {
 			controller.NewOrderController,
 			controller.NewUserController,
 			controller.NewAddressController,
+			controller.NewPaymentController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
-
+	
 	app.Run()
 }
 
@@ -132,7 +136,7 @@ func NewGinEngine(cfg *config.Config) *gin.Engine {
 
 	// Configure CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{cfg.Domain}, // Add your frontend URLs
+		AllowOrigins:     []string{cfg.Domain, "https://api-merchant.payos.vn", "https://3da59b85ac29.ngrok-free.app"}, // Add your frontend URLs
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -159,8 +163,10 @@ func RegisterRoutes(
 	authCtrl *controller.AuthController,
 	userCtrl *controller.UserController,
 	authMiddleware *middleware.AuthMiddleware,
+	paymentCtrl *controller.PaymentController,
 ) {
 
+	payos.InitPayOS(cfg)
 	controller.RegisterRoutes(router)
 
 	v1 := router.Group("/api/v1")
@@ -168,12 +174,14 @@ func RegisterRoutes(
 	reviewCtrl.RegisterRoutes(v1)
 	pricingCtrl.RegisterRoutes(v1)
 	userCtrl.RegisterRoutes(v1, authMiddleware)
+	paymentCtrl.RegisterRoutes(v1, authMiddleware)
 
 	v1.Use(authMiddleware.RequireAuth())
 
 	cartCtrl.RegisterRoutes(v1)
 	orderCtrl.RegisterRoutes(v1)
 	addressCtrl.RegisterRoutes(v1)
+	
 
 	logger.Init()
 
