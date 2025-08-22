@@ -119,7 +119,11 @@ func (pc *PaymentController) cancelOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order_id"})
 		return
 	}
-	uid, _ := middleware.GetFirebaseUserID(c)
+	uid, exists := middleware.GetFirebaseUserID(c)
+	if !exists || uid == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized: invalid or missing Firebase UID"})
+		return
+	}
 	if err := pc.PaymentService.CancelOrder(orderID, uid); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
