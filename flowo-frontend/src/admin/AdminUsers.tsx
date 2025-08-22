@@ -97,7 +97,7 @@ export default function AdminUsers() {
     (async () => {
       setLoading(true); setErr(null);
       try {
-        const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+        const res = await fetch(`${API_BASE}/admin/users`, {
           headers: { Accept: "application/json" },
           credentials: "include",
         });

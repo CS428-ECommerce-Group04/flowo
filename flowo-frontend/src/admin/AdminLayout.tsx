@@ -64,13 +64,20 @@ const Icon = {
       <circle cx="12" cy="8" r="3" />
       <path d="M19 21v-2a4 4 0 00-3-3.87M5 21v-2a4 4 0 013-3.87" />
     </svg>
-  )
+  ),
+    orders: (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M7 3h10l2 4v14H5V3h2z" />
+      <path d="M7 7h10M9 12h6M9 16h6" />
+    </svg>
+  ),
 };
 
 const items: Item[] = [
   { to: "/admin",            label: "Dashboard",          icon: Icon.dashboard },
   { to: "/admin/users",      label: "User Management",    icon: Icon.users },
   { to: "/admin/categories", label: "Product Categories", icon: Icon.categories },
+  { to: "/admin/orders",     label: "Order Management",   icon: Icon.users },
   { to: "/admin/messages",   label: "Messages",           icon: Icon.messages },
   { to: "/admin/settings",   label: "Settings",           icon: Icon.settings },
   { to: "/admin/support",    label: "Help & Support",     icon: Icon.help },

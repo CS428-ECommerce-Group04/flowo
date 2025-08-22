@@ -88,7 +88,7 @@ export default function AdminUserDetail() {
       setErr(null);
       try {
         const res = await fetch(
-          `${API_BASE}/api/v1/users/email/${encodeURIComponent(decodedEmail)}`,
+          `${API_BASE}/users/email/${encodeURIComponent(decodedEmail)}`,
           { headers: { Accept: "application/json" }, credentials: "include" }
         );
         const raw = await res.text();

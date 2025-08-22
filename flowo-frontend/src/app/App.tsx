@@ -25,6 +25,7 @@ import AdminAnalytics from "@/admin/pages/Analytics";
 import AdminProductsTable from "@/admin/ProductCategories";
 import AdminUsers from "@/admin/AdminUsers";
 import AdminUserDetail from "@/admin/AdminUserDetail";
+import AdminOrders from "@/admin/AdminOrders";   
 export default function App() {
   return (
     <BrowserRouter>
@@ -61,7 +62,8 @@ export default function App() {
           {/* admin */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-            <Route path="products" element={<AdminProductsTable />} /> {/* NEW */}
+            <Route path="products" element={<AdminProductsTable />} /> 
+            <Route path= "orders" element= {<AdminOrders />} />
             <Route path="categories" element={<AdminProductsTable />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="messages" element={<AdminMessages />} />
@@ -71,7 +73,7 @@ export default function App() {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="users/:id" element={<AdminUserDetail />} />
-            <Route path="users/email/:email" element={<AdminUserDetail />} />
+            <Route path=" users/email/:email" element={<AdminUserDetail />} />
           </Route>
 
           {/* shorthand redirects */}
