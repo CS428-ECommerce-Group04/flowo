@@ -14,3 +14,15 @@ type User struct {
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
+
+type UserWithAddress struct {
+	FirebaseUID    string    `json:"firebase_uid"`
+	Email          string    `json:"email"`
+	Username       *string   `json:"username"`
+	FullName       *string   `json:"full_name"`
+	Gender         string    `json:"gender"`
+	Role           string    `json:"role"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+	DefaultAddress *Address  `json:"default_address,omitempty"`
+}

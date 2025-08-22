@@ -209,7 +209,7 @@ function SearchAutocomplete({
   const highlightMatch = (text: string, query: string) => {
     if (!query.trim()) return text;
     const regex = new RegExp(
-      `(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      `(${query.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\$&")})`,
       "gi"
     );
     const parts = text.split(regex);
@@ -344,7 +344,6 @@ function FlowerCard({
     <div
       className="w-full rounded-[16px] bg-white shadow cursor-pointer"
       style={{
-        marginBottom: 32,
         boxShadow: isHighlighted
           ? "0 0 0 2px #e91e63, 0 2px 8px rgba(0,0,0,0.04)"
           : "0 2px 8px rgba(0,0,0,0.04)",
@@ -544,7 +543,7 @@ export default function Shop() {
     return [...new Set(products.flatMap((p) => p.tags || []))].sort();
   }, [products]);
 
-  const PAGE_SIZE = 4;
+  const PAGE_SIZE = 12;
   const MAX_VISIBLE_TAGS = 6;
 
   const filtered = useMemo(() => {
@@ -831,26 +830,34 @@ export default function Shop() {
           ) : paged.length === 0 ? (
             <div className="text-center text-lg text-[#2d5016] py-12">No products found.</div>
           ) : (
-            paged.map((p) => (
-              <div key={p.id} id={`product-${p.id}`}>
-                <FlowerCard
-                  product={p}
-                  isHighlighted={p.id === highlightedProductId}
-                  onAddToCart={() =>
-                    add({
-                      id: p.id,
-                      name: p.name,
-                      price: p.price,
-                      qty: 1,
-                      image: p.image,
-                      description: p.description,
-                      tags: p.tags,
-                    })
-                  }
-                  onNavigateToDetail={() => navigate(`/products/${p.slug}`)}
-                />
-              </div>
-            ))
+            <div 
+              className="grid gap-6 mb-8"
+              style={{ 
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                gridAutoRows: "min-content",
+              }}
+            >
+              {paged.map((p) => (
+                <div key={p.id} id={`product-${p.id}`}>
+                  <FlowerCard
+                    product={p}
+                    isHighlighted={p.id === highlightedProductId}
+                    onAddToCart={() => 
+                      add({
+                        id: p.id,
+                        name: p.name,
+                        price: p.price,
+                        qty: 1,
+                        image: p.image,
+                        description: p.description,
+                        tags: p.tags,
+                      })
+                    }
+                    onNavigateToDetail={() => navigate(`/products/${p.slug}`)}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </section>
 

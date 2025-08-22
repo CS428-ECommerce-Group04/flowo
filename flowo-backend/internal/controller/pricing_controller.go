@@ -85,7 +85,7 @@ func (c *PricingController) GetEffectivePrice(ctx *gin.Context) {
 func (c *PricingController) GetAllRules(ctx *gin.Context) {
 	rules, err := c.Service.GetAllRules()
 	if err != nil {
-		log.Printf("❌ Failed to fetch rules: %v", err)
+		log.Printf("Failed to fetch rules: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch rules"})
 		return
 	}

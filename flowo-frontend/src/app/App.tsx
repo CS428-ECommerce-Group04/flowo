@@ -10,9 +10,9 @@ import LearnMore from "@/app/routes/LearnMore";
 import Login from "@/app/routes/Login";
 import Register from "@/app/routes/Register";
 import ForgotPassword from "@/app/routes/ForgotPassword";
-import TrackOrder from "@/app/routes/TrackOrder";
-import OrderTrackingDetail from "@/app/routes/OrderTrackingDetail";
 import ChatWidget from "@/components/chat/ChatWidget";
+import OrderTracking from "./routes/OrderTracking";
+import OrderDetails from "./routes/OrderDetails";
 
 import AdminLayout from "@/admin/AdminLayout";
 import AdminDashboard from "@/admin/pages/Dashboard";
@@ -33,6 +33,29 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
+          <Route path="/*" element={
+            <>
+              <Header />
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/learn-more" element={<LearnMore />} />
+                <Route path="/products/:slug" element={<ProductDetail />} />
+                <Route path="/dashboard" element={<div className="p-8">Dashboard Page</div>} />
+                <Route path="/messages" element={<div className="p-8">Messages Page</div>} />
+                <Route path="/settings" element={<div className="p-8">Settings Page</div>} />
+                <Route path="/support" element={<div className="p-8">Help & Support Page</div>} />
+                <Route path="/billing" element={<div className="p-8">Billing Page</div>} />
+                <Route path="/reports" element={<div className="p-8">Reports Page</div>} />
+                <Route path="/analytics" element={<div className="p-8">Analytics Page</div>} />
+                <Route path="/order-tracking" element={<OrderTracking />} />
+                <Route path="/order-tracking/:orderId" element={<OrderDetails />} />
+              </Routes>
+              <ChatWidget />
+            </>
+          } />
           {/* admin */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
@@ -49,27 +72,6 @@ export default function App() {
           {/* shorthand redirects */}
           <Route path="/dashboard" element={<Navigate to="/admin" replace />} />
           <Route path="/settings"  element={<Navigate to="/admin/settings" replace />} />
-
-          {/* public site */}
-          <Route
-            path="/*"
-            element={
-              <>
-                <Header />
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/learn-more" element={<LearnMore />} />
-                  <Route path="/products/:slug" element={<ProductDetail />} />
-                  <Route path="/track" element={<TrackOrder />} />
-                  <Route path="/orders/:id" element={<OrderTrackingDetail />} />
-                </Routes>
-                <ChatWidget />
-              </>
-            }
-          />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

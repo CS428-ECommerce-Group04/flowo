@@ -126,6 +126,11 @@ func (s *OrderService) GetOrderOwnerID(orderID int) (string, error) {
 	return s.OrderRepo.GetOrderOwnerID(orderID)
 }
 
+// GetOrderByID returns a minimal order model used by controllers for status checks
+func (s *OrderService) GetOrderByID(orderID int) (*model.Order, error) {
+	return s.OrderRepo.GetOrderByID(orderID)
+}
+
 func (s *OrderService) AdminGetOrders(status, userID, startDate, endDate string, page, limit int) ([]dto.AdminOrderResponse, error) {
 	if page < 1 {
 		page = 1

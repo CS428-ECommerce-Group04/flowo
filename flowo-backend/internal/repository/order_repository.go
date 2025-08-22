@@ -17,6 +17,7 @@ type OrderRepository interface {
 	GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error)
 	AdminGetOrders(status, userID, startDate, endDate string, limit, offset int) ([]dto.AdminOrderResponse, error)
 	GetAdminOrderDetailByID(orderID int) (*dto.AdminOrderDetailResponse, error)
+	CancelOrderAndRestoreStock(orderID int) error
 }
 
 type orderRepository struct {
@@ -194,10 +195,10 @@ func (r *orderRepository) GetOrderDetailByID(orderID int) (*dto.OrderDetailRespo
 	return &order, nil
 }
 
-func (r *orderRepository) AdminGetOrders(status, userID, startDate, endDate string, limit, offset int) ([]dto.AdminOrderResponse, error) {
+func (r *orderRepository) AdminGetOrders(status, firebaseUID, startDate, endDate string, limit, offset int) ([]dto.AdminOrderResponse, error) {
 	query := "SELECT order_id, firebase_uid, final_total_amount, status, order_date FROM `Order` WHERE (status = ? OR ? = '') AND (firebase_uid = ? OR ? = '') AND (order_date >= ? OR ? = '') AND (order_date <= ? OR ? = '') ORDER BY order_date DESC LIMIT ? OFFSET ?"
 
-	rows, err := r.DB.Query(query, status, status, userID, userID, startDate, startDate, endDate, endDate, limit, offset)
+	rows, err := r.DB.Query(query, status, status, firebaseUID, firebaseUID, startDate, startDate, endDate, endDate, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +207,7 @@ func (r *orderRepository) AdminGetOrders(status, userID, startDate, endDate stri
 	var orders []dto.AdminOrderResponse
 	for rows.Next() {
 		var o dto.AdminOrderResponse
-		if err := rows.Scan(&o.OrderID, &o.UserID, &o.TotalAmount, &o.Status, &o.OrderDate); err != nil {
+		if err := rows.Scan(&o.OrderID, &o.FirebaseUID, &o.TotalAmount, &o.Status, &o.OrderDate); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)
@@ -252,4 +253,42 @@ func (r *orderRepository) GetAdminOrderDetailByID(orderID int) (*dto.AdminOrderD
 	order.Items = items
 
 	return &order, nil
+}
+
+func (r *orderRepository) CancelOrderAndRestoreStock(orderID int) error {
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	// get order items
+	rows, err := tx.Query("SELECT product_id, quantity FROM OrderItem WHERE order_id = ?", orderID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var productID, qty int
+		if err := rows.Scan(&productID, &qty); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("UPDATE FlowerProduct SET stock_quantity = stock_quantity + ? WHERE product_id = ?", qty, productID); err != nil {
+			return err
+		}
+	}
+
+	// update order status to cancelled
+	if _, err := tx.Exec("UPDATE `Order` SET status = ? WHERE order_id = ?", "CANCELLED", orderID); err != nil {
+		return err
+	}
+
+	return nil
 }

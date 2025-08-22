@@ -179,13 +179,13 @@ INSERT INTO PricingRule (
   time_of_day_start, time_of_day_end, special_day_id, valid_from, valid_to
 ) VALUES
 ('Valentine Rose Discount', 10, TRUE, 'percentage_discount', 15.00,
- @p_rose, NULL, 'NewFlower', '08:00:00', '20:00:00', @sd_val, '2025-02-10 00:00:00', '2025-02-14 23:59:59'),
+ @p_rose, NULL, 'NewFlower', '00:00:00', '23:59:59', @sd_val, '2025-08-17 00:00:00', '2025-08-27 23:59:59'),
 ('Spring Hydrangea -15% Morning', 20, TRUE, 'percentage_discount', 15.00,
- NULL, @ft_hydra, NULL, '06:00:00', '11:00:00', @sd_spr, '2025-03-20 00:00:00', '2025-03-27 23:59:59'),
+ NULL, @ft_hydra, NULL, '00:00:00', '23:59:59', @sd_spr, '2025-03-20 00:00:00', '2025-08-27 23:59:59'),
 ('Mother''s Day Lavender -$5', 25, TRUE, 'fixed_discount', 5.00,
- @p_lav, NULL, NULL, '00:00:00', '23:59:59', @sd_mom, '2025-05-08 00:00:00', '2025-05-12 23:59:59'),
+ @p_lav, NULL, NULL, '00:00:00', '23:59:59', @sd_mom, '2025-08-20 00:00:00', '2025-09-05 23:59:59'),
 ('LNY Carnation -$3', 30, TRUE, 'fixed_discount', 3.00,
- NULL, @ft_carn, NULL, '00:00:00', '23:59:59', @sd_lny, '2025-01-28 00:00:00', '2025-02-04 23:59:59');
+ NULL, @ft_carn, NULL, '00:00:00', '23:59:59', @sd_lny, '2025-03-21 00:00:00', '2025-10-05 23:59:59');
 
 -- =========================
 -- CARTS & ITEMS
@@ -351,12 +351,12 @@ INSERT INTO `Order` (
   final_total_amount, shipping_method, notes
 ) VALUES
 (@uid_sara, 'sara@example.com', 'Sara Lee', @addr_sara, @addr_sara,
- NOW(), 'Pending', 27.99, 0.00, 4.00, 31.99, 'Standard', 'Leave at door');
+ NOW(), 'Pending', 27.99, 0.00, 4.00, 2000.99, 'Standard', 'Leave at door');
 SET @order_sara := LAST_INSERT_ID();
 INSERT INTO OrderItem (order_id, product_id, quantity, price_per_unit_at_purchase, item_subtotal) VALUES
 (@order_sara, @p_iris, 1, 27.99, 27.99);
 INSERT INTO Payment (order_id, payment_method, payment_status, transaction_id, amount_paid, payment_date) VALUES
-(@order_sara, 'Card', 'Success', 'txn_sara_001', 31.99, NOW());
+(@order_sara, 'Card', 'Success', 'txn_sara_001', 2000.99, NOW());
 
 -- =========================
 -- LOYALTY PROGRAMS & TRANSACTIONS
