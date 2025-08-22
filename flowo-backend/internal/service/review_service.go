@@ -14,12 +14,12 @@ func NewReviewService(repo repository.ReviewRepository) *ReviewService {
 	return &ReviewService{Repo: repo}
 }
 
-func (s *ReviewService) CreateReview(productID int, req dto.CreateReviewRequest) error {
+func (s *ReviewService) CreateReview(productID int, firebaseUID string, req dto.CreateReviewRequest) error {
 	review := model.Review{
-		ProductID:  productID,
-		FirebaseUID: req.FirebaseUID,
-		Rating:     req.Rating,
-		Comment:    req.Comment,
+		ProductID:   productID,
+		FirebaseUID: firebaseUID,
+		Rating:      req.Rating,
+		Comment:     req.Comment,
 	}
 	return s.Repo.CreateReview(&review)
 }
@@ -33,12 +33,12 @@ func (s *ReviewService) GetReviewsByProduct(productID int) ([]dto.ReviewResponse
 	var res []dto.ReviewResponse
 	for _, r := range reviews {
 		res = append(res, dto.ReviewResponse{
-			ReviewID:   r.ReviewID,
-			ProductID:  r.ProductID,
+			ReviewID:    r.ReviewID,
+			ProductID:   r.ProductID,
 			FirebaseUID: r.FirebaseUID,
-			Rating:     r.Rating,
-			Comment:    r.Comment,
-			ReviewDate: r.ReviewDate.Format("2006-01-02 15:04:05"),
+			Rating:      r.Rating,
+			Comment:     r.Comment,
+			ReviewDate:  r.ReviewDate.Format("2006-01-02 15:04:05"),
 		})
 	}
 	return res, nil

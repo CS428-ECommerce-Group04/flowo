@@ -2,13 +2,52 @@
 
 AI-powered flower recommendation and search service built with Agno framework.
 
-## Features
+## 🏗️ Architecture
+
+The service follows a modular, extensible architecture:
+
+```
+flowo-agno-service/
+├── config/           # Configuration management
+│   └── settings.py   # Settings loader with env overrides
+├── core/             # Core agent functionality
+│   ├── agent.py      # Agent manager
+│   └── providers.py  # Model providers (OpenAI, Anthropic, etc.)
+├── api/              # API layer
+│   └── routes.py     # FastAPI routes
+├── memory/           # Memory management
+│   └── manager.py    # User preference storage
+├── storage/          # Conversation storage
+│   └── manager.py    # Session history
+├── tools/            # Custom tools
+│   ├── base.py       # Base tool class
+│   └── flower_tools.py # Flower search & recommendations
+├── settings.yaml     # Main configuration file
+└── main.py          # Application entry point
+```
+
+## 🚀 Features
 
 - **Intelligent Product Search**: Natural language search for flower products
 - **Personalized Recommendations**: AI-driven recommendations based on user preferences
 - **Memory & Personalization**: Remembers user preferences for future interactions
 - **Reasoning Capabilities**: Advanced reasoning for better responses
 - **AG-UI Components**: Ready-to-use UI components for CopilotKit integration
+
+## 🤖 Supported AI Providers
+
+The service supports multiple AI providers (default: OpenAI):
+
+- **OpenAI** (Default): GPT-4o-mini, GPT-4o
+- **Anthropic**: Claude 3 Haiku, Claude 3.5 Sonnet
+- **Google**: Gemini 1.5 Flash, Gemini 1.5 Pro
+- **Groq**: Fast inference with various models
+
+Configure via environment variables:
+```bash
+AGENT_PROVIDER=openai    # or anthropic, google, groq
+AGENT_MODEL=gpt-4o-mini  # or specific model ID
+```
 
 ## Setup
 
@@ -20,10 +59,16 @@ Copy `.env.example` to `.env` and configure:
 cp .env.example .env
 ```
 
-Required environment variables:
-- `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude
-- `OPENAI_API_KEY`: Your OpenAI API key for embeddings
+Required environment variables (at least one):
+- `OPENAI_API_KEY`: OpenAI API key (required for default config)
+- `ANTHROPIC_API_KEY`: Anthropic API key (for Claude models)
+- `GOOGLE_API_KEY`: Google API key (for Gemini models)
+- `GROQ_API_KEY`: Groq API key (for Groq models)
+
+Other settings:
 - `BACKEND_API_URL`: Backend API URL (default: http://backend:8081/api/v1)
+- `AGENT_PROVIDER`: AI provider (default: openai)
+- `AGENT_MODEL`: Model ID or alias (default: gpt-4o-mini)
 
 ### Local Development
 
