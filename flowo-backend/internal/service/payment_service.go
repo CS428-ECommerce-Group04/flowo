@@ -147,7 +147,22 @@ func (s *paymentService) HandleWebhook(webhook payos.WebhookType) error {
 		case float64:
 			orderID = int(vv)
 		case string:
-			fmt.Sscanf(vv, "%d", &orderID)
+			if parsedID, err := strconv.Atoi(vv); err == nil {
+				orderID = parsedID
+			} else {
+				log.Error().Err(err).Msgf("Failed to parse orderCode string '%s' to int", vv)
+			}
+		}
+	} else if v, ok := data["orderCode"]; ok && v != nil {
+		switch vv := v.(type) {
+		case float64:
+			orderID = int(vv)
+		case string:
+			if parsedID, err := strconv.Atoi(vv); err == nil {
+				orderID = parsedID
+			} else {
+				log.Error().Err(err).Msgf("Failed to parse orderCode string '%s' to int", vv)
+			}
 		}
 	}
 	log.Debug().Msgf("Processing PayOS webhook for order ID: %d", orderID)
