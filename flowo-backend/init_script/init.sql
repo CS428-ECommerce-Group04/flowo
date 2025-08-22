@@ -154,7 +154,7 @@ CREATE TABLE `Order` (
     shipping_address_id INT,
     billing_address_id INT,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(50) COMMENT "('Processing', 'AwaitingPayment', 'PaymentFailed', 'Delivering', 'Completed', 'Cancelled', 'Refunded')",
+    status VARCHAR(50) COMMENT "('Processing', 'AwaitingPayment', 'PaymentFailed', 'Delivering', 'Completed', 'Cancelled', 'Refunded', 'COMPLETED', 'CANCELLED')",
     subtotal_amount DECIMAL(10, 2),
     discount_amount DECIMAL(10, 2),
     shipping_cost DECIMAL(10, 2),
@@ -182,12 +182,17 @@ CREATE TABLE OrderItem (
 CREATE TABLE Payment (
     payment_id INT PRIMARY KEY AUTO_INCREMENT,
     order_id INT,
-    payment_method VARCHAR(50) COMMENT "('COD', 'Paypal', 'VNPAY')",
-    payment_status VARCHAR(50) COMMENT "('Pending', 'Success', 'Failed', 'Refunded')",
+    payment_method VARCHAR(50) COMMENT "('COD', 'Paypal', 'VNPAY', 'PayOS')",
+    payment_status VARCHAR(50) COMMENT "('Pending', 'Completed', 'Cancelled', 'Success', 'Failed', 'Refunded')",
     transaction_id VARCHAR(255),
+    payment_link_id VARCHAR(255) NULL,
+    checkout_url VARCHAR(512) NULL,
+    raw_webhook TEXT NULL,
     amount_paid DECIMAL(10, 2),
     payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES `Order`(order_id)
+    FOREIGN KEY (order_id) REFERENCES `Order`(order_id),
+    INDEX idx_payment_txn (transaction_id),
+    INDEX idx_payment_link (payment_link_id)
 );
 
 -- Table: LoyaltyProgram
