@@ -23,6 +23,8 @@ import AdminBilling from "@/admin/pages/Billing";
 import AdminReports from "@/admin/pages/Reports";
 import AdminAnalytics from "@/admin/pages/Analytics";
 import AdminProductsTable from "@/admin/ProductCategories";
+import AdminUsers from "@/admin/AdminUsers";
+import AdminUserDetail from "@/admin/AdminUserDetail";
 export default function App() {
   return (
     <BrowserRouter>
@@ -67,6 +69,9 @@ export default function App() {
             <Route path="billing" element={<AdminBilling />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="users/:id" element={<AdminUserDetail />} />
+            <Route path="users/email/:email" element={<AdminUserDetail />} />
           </Route>
 
           {/* shorthand redirects */}

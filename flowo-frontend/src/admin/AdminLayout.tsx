@@ -58,11 +58,18 @@ const Icon = {
       <path d="M4 7h16M4 12h16M4 17h16" strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
+  users: (
+    <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor">
+      <path d="M16 14a4 4 0 10-8 0v2h8v-2z" />
+      <circle cx="12" cy="8" r="3" />
+      <path d="M19 21v-2a4 4 0 00-3-3.87M5 21v-2a4 4 0 013-3.87" />
+    </svg>
+  )
 };
 
 const items: Item[] = [
   { to: "/admin",            label: "Dashboard",          icon: Icon.dashboard },
-  { to: "/admin/products",   label: "Products",           icon: Icon.products },
+  { to: "/admin/users",      label: "User Management",    icon: Icon.users },
   { to: "/admin/categories", label: "Product Categories", icon: Icon.categories },
   { to: "/admin/messages",   label: "Messages",           icon: Icon.messages },
   { to: "/admin/settings",   label: "Settings",           icon: Icon.settings },
