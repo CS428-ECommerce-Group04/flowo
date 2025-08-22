@@ -21,8 +21,8 @@ func NewAddressController(as service.AddressService, us service.UserService) *Ad
 
 func (ctrl *AddressController) RegisterRoutes(rg *gin.RouterGroup) {
 	addr := rg.Group("/addresses")
-	addr.POST("/", ctrl.CreateAddress)
-	addr.GET("/", ctrl.GetAddresses)
+	addr.POST("", ctrl.CreateAddress)
+	addr.GET("", ctrl.GetAddresses)
 	addr.DELETE("/:id", ctrl.DeleteAddress)
 	addr.PUT("/:id/default", ctrl.SetDefaultAddress)
 }
