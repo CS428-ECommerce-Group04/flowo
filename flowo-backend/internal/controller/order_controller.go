@@ -27,6 +27,9 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 	order.GET("/", ctrl.GetUserOrders)
 	order.GET("/:orderID", ctrl.GetOrderDetailByID)
 
+	// singular route for quick status check (used by frontend polling)
+	order.GET("/status", ctrl.GetOrderStatus)
+
 	// Admin routes
 	admin := rg.Group("/admin/orders")
 	admin.GET("/", ctrl.AdminGetOrders)
@@ -216,6 +219,68 @@ func (ctrl *OrderController) GetOrderDetailByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, order)
+}
+
+// GetOrderStatus godoc
+// @Summary Get order status
+// @Description Retrieve the status of an order by query param order_id (owner only)
+// @Tags orders
+// @Produce json
+// @Security BearerAuth
+// @Param order_id query int true "Order ID"
+// @Success 200 {object} dto.OrderStatusResponse
+// @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
+// @Failure 403 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/orders/status [get]
+func (ctrl *OrderController) GetOrderStatus(c *gin.Context) {
+	orderIDStr := c.Query("order_id")
+	if orderIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "order_id is required"})
+		return
+	}
+	orderID, err := strconv.Atoi(orderIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid order_id"})
+		return
+	}
+
+	firebaseUID, exists := middleware.GetFirebaseUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	user, err := ctrl.userService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil || user == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
+
+	ownerID, err := ctrl.orderService.GetOrderOwnerID(orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot verify order owner"})
+		return
+	}
+
+	if ownerID != user.FirebaseUID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not allowed"})
+		return
+	}
+
+	order, err := ctrl.orderService.GetOrderByID(orderID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "cannot fetch order status"})
+		return
+	}
+
+	if order == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "order not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.OrderStatusResponse{OrderID: order.OrderID, Status: order.Status})
 }
 
 // AdminGetOrders godoc
