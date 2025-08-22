@@ -351,12 +351,12 @@ INSERT INTO `Order` (
   final_total_amount, shipping_method, notes
 ) VALUES
 (@uid_sara, 'sara@example.com', 'Sara Lee', @addr_sara, @addr_sara,
- NOW(), 'Pending', 27.99, 0.00, 4.00, 31.99, 'Standard', 'Leave at door');
+ NOW(), 'Pending', 27.99, 0.00, 4.00, 2000.99, 'Standard', 'Leave at door');
 SET @order_sara := LAST_INSERT_ID();
 INSERT INTO OrderItem (order_id, product_id, quantity, price_per_unit_at_purchase, item_subtotal) VALUES
 (@order_sara, @p_iris, 1, 27.99, 27.99);
 INSERT INTO Payment (order_id, payment_method, payment_status, transaction_id, amount_paid, payment_date) VALUES
-(@order_sara, 'Card', 'Success', 'txn_sara_001', 31.99, NOW());
+(@order_sara, 'Card', 'Success', 'txn_sara_001', 2000.99, NOW());
 
 -- =========================
 -- LOYALTY PROGRAMS & TRANSACTIONS
