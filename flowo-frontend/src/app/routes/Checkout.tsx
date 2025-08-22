@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Container from "@/components/layout/Container";
 import { useCart } from "@/store/cart";
-import { createOrder } from "@/services/orders";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Payment = "cod" | "paypal" | "vnpay" | "momo";
 const FREE_SHIPPING_THRESHOLD = 50;
 const SHIPPING_FLAT = 7;
+const API_BASE = "http://localhost:8081/api/v1";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -29,6 +30,7 @@ function Badge({ children, color = "slate" }: { children: React.ReactNode; color
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // cart
   const items = useCart((s) => s.items);
@@ -44,12 +46,13 @@ export default function Checkout() {
   const total = useMemo(() => subtotal + shipping, [subtotal, shipping]);
 
   // TODO: replace with real user + address IDs from your profile
-  const firebaseUID = ""; // Get this from auth context
   const SHIPPING_ADDRESS_ID = 1;
   const BILLING_ADDRESS_ID = 2;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validation
     if (!form.name || !form.phone || !form.address || !form.city || !form.postal) {
       alert("Please fill all required fields.");
       return;
@@ -58,20 +61,75 @@ export default function Checkout() {
       alert("Your cart is empty.");
       return;
     }
+    if (!user) {
+      alert("Please log in to complete your order.");
+      return;
+    }
 
     setBusy(true);
     try {
-      const resp = await createOrder(firebaseUID, {
-        billing_address_id: BILLING_ADDRESS_ID,
-        shipping_address_id: SHIPPING_ADDRESS_ID,
-        shipping_method: "Standard",
-        notes: form.note?.trim() || `Payment: ${method.toUpperCase()}`,
+      // Make POST request to create order
+      const response = await fetch(`${API_BASE}/orders`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include', // Include cookies for authentication
+        body: JSON.stringify({
+          billing_address_id: BILLING_ADDRESS_ID,
+          shipping_address_id: SHIPPING_ADDRESS_ID,
+          shipping_method: "Standard",
+          notes: form.note?.trim() || `Payment: ${method.toUpperCase()}`
+        })
       });
 
-      const codeOrId = resp.order_code ?? String(resp.order_id);
-      navigate(`/orders/${encodeURIComponent(codeOrId)}`);
+      if (!response.ok) {
+        // Handle different error status codes
+        let errorMessage = 'Failed to create order';
+
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          // If response is not JSON, use status-based messages
+          switch (response.status) {
+            case 400:
+              errorMessage = 'Invalid order data. Please check your information and try again.';
+              break;
+            case 401:
+              errorMessage = 'Authentication failed. Please log in and try again.';
+              break;
+            case 422:
+              errorMessage = 'Invalid order information. Please verify your details.';
+              break;
+            case 500:
+              errorMessage = 'Server error. Please try again later.';
+              break;
+            default:
+              errorMessage = `Failed to create order (${response.status})`;
+          }
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      // Parse successful response
+      const orderData = await response.json();
+      console.log('Order created successfully:', orderData);
+
+      // Navigate to order confirmation/tracking page
+      const codeOrId = orderData.order_code ?? String(orderData.order_id ?? orderData.id);
+
+      if (codeOrId) {
+        navigate(`/order-tracking/${encodeURIComponent(codeOrId)}`);
+      } else {
+        // Fallback: navigate to orders list if no specific ID
+        navigate('/order-tracking');
+      }
+
     } catch (err: any) {
-      console.error(err);
+      console.error('Order creation error:', err);
       alert(`Failed to create order: ${err?.message || err}`);
     } finally {
       setBusy(false);
@@ -89,7 +147,7 @@ export default function Checkout() {
           {/* Payment Method */}
           <SectionCard title="Payment Method">
             <div className="grid gap-3 sm:grid-cols-2">
-              {(["cod","paypal","vnpay","momo"] as Payment[]).map((key) => (
+              {(["cod", "paypal", "vnpay", "momo"] as Payment[]).map((key) => (
                 <button
                   key={key}
                   type="button"

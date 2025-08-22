@@ -1,5 +1,6 @@
 import type { CartItem as Item } from "@/store/cart";
 import { useCart } from "@/store/cart";
+import { resolveProductImage } from "@/data/productImages";
 
 function Tag({ children }: { children: React.ReactNode }) {
   return (
@@ -9,18 +10,36 @@ function Tag({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Helper function to create slug from name or id
+function createSlug(name: string, id: string): string {
+  if (name) {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+  return id;
+}
+
 export default function CartItem({ item }: { item: Item }) {
   const { increment, decrement, remove } = useCart();
+
+  // Use the same image resolution logic as FlowerCard
+  const slug = createSlug(item.name, String(item.id));
+  const resolvedImage = item.image ?? resolveProductImage(item.name, slug);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
       <div className="grid grid-cols-[72px_1fr] gap-3 sm:grid-cols-[96px_1fr]">
-        {/* image */}
-        <img
-          src={item.image}
-          alt={item.name}
-          className="h-16 w-16 rounded-md object-cover sm:h-20 sm:w-20"
-        />
+        {/* image - updated with FlowerCard styling */}
+        <div className="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-md">
+          <img
+            src={resolvedImage}
+            alt={item.name}
+            className="h-full w-full object-cover hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        </div>
 
         {/* content */}
         <div>
@@ -41,7 +60,7 @@ export default function CartItem({ item }: { item: Item }) {
               ) : null}
             </div>
 
-            <div className="text-sm font-bold">${item.price.toFixed(2)}</div>
+            <div className="text-sm font-bold">$${item.price.toFixed(2)}</div>
           </div>
 
           {/* qty + total + remove */}
