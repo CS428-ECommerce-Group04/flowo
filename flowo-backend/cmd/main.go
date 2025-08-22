@@ -23,9 +23,9 @@ import (
 	"flowo-backend/internal/controller"
 	"flowo-backend/internal/logger"
 	"flowo-backend/internal/middleware"
+	"flowo-backend/internal/payos"
 	"flowo-backend/internal/repository"
 	"flowo-backend/internal/service"
-	"flowo-backend/internal/payos"
 )
 
 // @title           Flowo List API
@@ -98,7 +98,7 @@ func main() {
 		),
 		fx.Invoke(RegisterRoutes),
 	)
-	
+
 	app.Run()
 }
 
@@ -171,17 +171,16 @@ func RegisterRoutes(
 
 	v1 := router.Group("/api/v1")
 	authCtrl.RegisterRoutes(v1, authMiddleware)
-	reviewCtrl.RegisterRoutes(v1)
 	pricingCtrl.RegisterRoutes(v1)
 	userCtrl.RegisterRoutes(v1, authMiddleware)
 	paymentCtrl.RegisterRoutes(v1, authMiddleware)
 
 	v1.Use(authMiddleware.RequireAuth())
 
+	reviewCtrl.RegisterRoutes(v1)
 	cartCtrl.RegisterRoutes(v1)
 	orderCtrl.RegisterRoutes(v1)
 	addressCtrl.RegisterRoutes(v1)
-	
 
 	logger.Init()
 
