@@ -6,15 +6,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"flowo-backend/internal/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
 type ReviewController struct {
-	Service *service.ReviewService
+	Service     *service.ReviewService
+	userService service.UserService
 }
 
-func NewReviewController(s *service.ReviewService) *ReviewController {
-	return &ReviewController{Service: s}
+func NewReviewController(s *service.ReviewService, us service.UserService) *ReviewController {
+	return &ReviewController{Service: s, userService: us}
 }
 
 func (ctrl *ReviewController) RegisterRoutes(rg *gin.RouterGroup) {
@@ -22,22 +25,23 @@ func (ctrl *ReviewController) RegisterRoutes(rg *gin.RouterGroup) {
 	rg.POST("/products/:id/reviews", ctrl.CreateReview)
 }
 
-// CreateReview godoc
 // @Summary Create review for a product
-// @Description Submit a review for a specific product
+// @Description Submit a review for a specific product (user is detected automatically from Firebase)
 // @Tags reviews
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param id path int true "Product ID"
 // @Param review body dto.CreateReviewRequest true "Review body"
 // @Success 201 {object} model.Response
 // @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
 // @Failure 500 {object} model.Response
 // @Router /api/v1/products/{id}/reviews [post]
 func (ctrl *ReviewController) CreateReview(c *gin.Context) {
-	var req dto.CreateReviewRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	firebaseUID, exists := middleware.GetFirebaseUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
@@ -47,7 +51,13 @@ func (ctrl *ReviewController) CreateReview(c *gin.Context) {
 		return
 	}
 
-	if err := ctrl.Service.CreateReview(productID, req); err != nil {
+	var req dto.CreateReviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := ctrl.Service.CreateReview(productID, firebaseUID, req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create review"})
 		return
 	}
