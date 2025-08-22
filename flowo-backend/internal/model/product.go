@@ -33,7 +33,8 @@ type Product struct {
 	// Total number of reviews
 	ReviewCount int `json:"review_count" example:"23"`
 	// Best-selling rank (for sorting)
-	SalesRank int `json:"sales_rank" example:"1"`
+	SalesRank int  `json:"sales_rank" example:"1"`
+	IsActive  bool `gorm:"default:true" json:"is_active"`
 }
 
 // ProductImage represents an image associated with a product
