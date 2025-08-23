@@ -1,93 +1,221 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/layout/Header';
 import OrderCard from '@/components/order-tracking/OrderCard';
+import ErrorMessage from '@/components/ui/ErrorMessage';
 
-// Mock data for orders
-const mockOrders = [
-  {
-    orderId: 'ORD-2024-001',
-    status: 'out-for-delivery' as const,
-    customerName: 'Sarah Johnson',
-    items: [
+// API response type with order items
+interface ApiOrderItem {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+  image_url?: string;
+}
+
+// API response type with all possible status values
+interface ApiOrder {
+  order_id: string;
+  status: 'Processing' | 'AwaitingPayment' | 'PaymentFailed' | 'Delivering' | 'Completed' | 'Cancelled' | 'Refunded' | 'COMPLETED' | 'CANCELLED' | string;
+  order_date: string;
+  total_amount: number;
+  shipping_method?: string;
+  items?: ApiOrderItem[]; // Order items from API
+  order_items?: ApiOrderItem[]; // Alternative field name
+}
+
+// UI order type for OrderCard component - extended with new statuses
+interface UIOrder {
+  orderId: string;
+  status: 'processing' | 'awaiting-payment' | 'payment-failed' | 'out-for-delivery' | 'delivered' | 'cancelled' | 'refunded';
+  customerName: string;
+  items: string[];
+  total: number;
+  orderDate: string;
+}
+
+const API_BASE = 'http://localhost:8081/api/v1';
+
+// Hash function to convert numeric ID to unique string (same as in OrderCard)
+function hashOrderId(orderId: string): string {
+  // Extract numeric part if the ID contains non-numeric characters
+  const numericId = orderId;
+  
+  if (!numericId) {
+    // If no numeric part found, use the original string
+    return orderId;
+  }
+  
+  const id = parseInt(numericId, 10);
+  
+  // Simple hash function that creates a consistent string from numeric ID
+  let hash = 0;
+  const str = id.toString();
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Convert to positive number and create alphanumeric string
+  const positiveHash = Math.abs(hash);
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = 'hash';
+  
+  let temp = positiveHash;
+  for (let i = 0; i < 8; i++) {
+    result += chars[temp % chars.length];
+    temp = Math.floor(temp / chars.length);
+  }
+  
+  return result;
+}
+
+// Function to normalize and map API status to UI status
+function normalizeOrderStatus(apiStatus: string): UIOrder['status'] {
+  const normalizedStatus = apiStatus.toLowerCase().trim();
+  
+  switch (normalizedStatus) {
+    case 'processing':
+      return 'processing';
+    case 'awaitingpayment':
+    case 'awaiting_payment':
+    case 'awaiting-payment':
+      return 'awaiting-payment';
+    case 'paymentfailed':
+    case 'payment_failed':
+    case 'payment-failed':
+      return 'payment-failed';
+    case 'delivering':
+    case 'out-for-delivery':
+    case 'out_for_delivery':
+      return 'out-for-delivery';
+    case 'completed':
+    case 'delivered':
+      return 'delivered';
+    case 'cancelled':
+    case 'canceled':
+      return 'cancelled';
+    case 'refunded':
+      return 'refunded';
+    default:
+      // Fallback for unknown statuses
+      console.warn(`Unknown order status: ${apiStatus}, defaulting to 'processing'`);
+      return 'processing';
+  }
+}
+
+// Function to extract product names from order items
+function extractProductNames(order: ApiOrder): string[] {
+  const orderItems = order.items || order.order_items || [];
+  
+  if (orderItems.length === 0) {
+    // Fallback to placeholder images if no items provided
+    return [
       'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/8b756a1d-7b24-4e7b-8fc0-b7578e1a866c',
       'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/df98f9d2-392b-4860-9ac6-51ddf81b64dc'
-    ],
-    total: 85.00,
-    orderDate: 'January 15, 2024'
-  },
-  {
-    orderId: 'ORD-2024-002',
-    status: 'processing' as const,
-    customerName: 'Michael Chen',
-    items: [
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/666f5e36-f3ce-4731-9191-c012071198c0',
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/eb172ed8-4073-48ce-8c45-724a8a53b755'
-    ],
-    total: 50.00,
-    orderDate: 'January 16, 2024'
-  },
-  {
-    orderId: 'ORD-2024-003',
-    status: 'delivered' as const,
-    customerName: 'Emily Rodriguez',
-    items: [
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/7d2e6dfc-f182-455c-9a26-eda51e2c20ec',
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/4f4a85b9-e7cb-4fa6-b4de-be819ff4c5c7'
-    ],
-    total: 76.00,
-    orderDate: 'January 12, 2024'
-  },
-  {
-    orderId: 'ORD-2024-004',
-    status: 'out-for-delivery' as const,
-    customerName: 'David Wilson',
-    items: [
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/f141673b-2688-4cc6-a8a8-48a830a091d6',
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/967ba690-3b2a-414b-a1f5-82bfdd41e4b7'
-    ],
-    total: 157.00,
-    orderDate: 'January 14, 2024'
-  },
-  {
-    orderId: 'ORD-2024-005',
-    status: 'processing' as const,
-    customerName: 'Lisa Thompson',
-    items: [
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/eba67259-aded-4ae6-9b0c-5df0fbcfb23e'
-    ],
-    total: 65.00,
-    orderDate: 'January 16, 2024'
-  },
-  {
-    orderId: 'ORD-2024-006',
-    status: 'delivered' as const,
-    customerName: 'Robert Kim',
-    items: [
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/71562124-bb54-4d08-9dbc-dedd42882d20',
-      'https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/7491f084-2a3a-4728-84e1-153078b92af8'
-    ],
-    total: 69.00,
-    orderDate: 'January 10, 2024'
+    ];
   }
-];
+  
+  // Extract product names from order items
+  return orderItems.map(item => {
+    const productName = item.product_name || `Product ${item.product_id}`;
+    // Include quantity if more than 1
+    return item.quantity > 1 ? `${productName} (${item.quantity})` : productName;
+  });
+}
 
 export default function OrderTracking() {
+  const { user, isLoading: authLoading } = useAuth();
   const [orderIdInput, setOrderIdInput] = useState('');
   const [trackedOrder, setTrackedOrder] = useState<string | null>(null);
+  const [orders, setOrders] = useState<UIOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch orders from API
+  useEffect(() => {
+    // Wait for auth to load
+    if (authLoading) return;
+
+    // Check if user is authenticated
+    if (!user) {
+      setError('Please log in to view your orders');
+      setLoading(false);
+      return;
+    }
+
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Make API call using cookie-based authentication
+        const response = await fetch(`${API_BASE}/orders`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include' // Include cookies for authentication
+        });
+
+        if (!response.ok) {
+          // Handle different error status codes
+          switch (response.status) {
+            case 400:
+              throw new Error('Invalid request. Please try again.');
+            case 401:
+              throw new Error('Authentication failed. Please log in again.');
+            case 500:
+              throw new Error('Server error. Please try again later.');
+            default:
+              throw new Error(`Failed to fetch orders (${response.status})`);
+          }
+        }
+
+        const apiOrders: ApiOrder[] = await response.json();
+
+        // Map API response to UI format with normalized status and dynamic product names
+        const uiOrders: UIOrder[] = apiOrders.map((order) => ({
+          orderId: order.order_id,
+          status: normalizeOrderStatus(order.status),
+          customerName: `${user.firstName} ${user.lastName}`.trim() || user.email || 'Customer',
+          items: extractProductNames(order), // Use actual product names from order data
+          total: order.total_amount,
+          orderDate: new Date(order.order_date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
+        }));
+
+        setOrders(uiOrders);
+      } catch (err: any) {
+        console.error('Error fetching orders:', err);
+        setError(err.message || 'Failed to load orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user, authLoading]);
 
   const handleTrackOrder = () => {
     if (orderIdInput.trim()) {
-      setTrackedOrder(orderIdInput.trim());
-      // Here you would typically make an API call to track the order
-      console.log('Tracking order:', orderIdInput.trim());
+      const hashedId = hashOrderId(orderIdInput.trim());
+      setTrackedOrder(hashedId);
+      console.log('Tracking order:', hashedId);
     }
   };
 
   const handleTrackOrderFromCard = (orderId: string) => {
-    setOrderIdInput(orderId);
-    setTrackedOrder(orderId);
-    // Here you would typically navigate to a detailed tracking page or show tracking details
-    console.log('Tracking order from card:', orderId);
+    const hashedId = hashOrderId(orderId);
+    setOrderIdInput(hashedId);
+    setTrackedOrder(hashedId);
+    console.log('Tracking order from card:', hashedId);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -96,15 +224,42 @@ export default function OrderTracking() {
     }
   };
 
+  const handleRetry = () => {
+    window.location.reload();
+  };
+
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-white">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show login prompt if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-white">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-slate-800 mb-2">Authentication Required</h2>
+          <p className="text-slate-600 mb-4">Please log in to view your orders.</p>
+          <a href="/login" className="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-green-800 transition-colors">
+            Go to Login
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="min-h-screen"
-      style={{
+      style={{ 
         background: '#fefefe',
         fontFamily: 'Inter, sans-serif'
       }}
     >
-
       {/* Main Content */}
       <main className="w-full px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto py-8">
@@ -112,7 +267,7 @@ export default function OrderTracking() {
           <div className="text-center mb-12">
             <h1
               className="font-bold mb-4"
-              style={{
+              style={{ 
                 color: '#2d5016',
                 fontSize: '48px',
                 lineHeight: '60px',
@@ -123,7 +278,7 @@ export default function OrderTracking() {
             </h1>
             <p
               className="max-w-2xl mx-auto"
-              style={{
+              style={{ 
                 color: '#666666',
                 fontSize: '20px',
                 lineHeight: '32px',
@@ -137,7 +292,7 @@ export default function OrderTracking() {
           {/* Search Section */}
           <div
             className="bg-white rounded-2xl p-8 mb-8 mx-auto"
-            style={{
+            style={{ 
               maxWidth: '1056px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.04), 0 1.5px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04), 0 0.5px 1px rgba(0,0,0,0.04), 0 0.25px 0.5px rgba(0,0,0,0.04)'
             }}
@@ -149,9 +304,9 @@ export default function OrderTracking() {
                   value={orderIdInput}
                   onChange={(e) => setOrderIdInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Enter Order ID (e.g., ORD-2024-001)"
+                  placeholder="Enter Order ID (e.g., hashj2j2jsau)"
                   className="w-full px-4 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-700 focus:border-transparent"
-                  style={{
+                  style={{ 
                     fontSize: '18px',
                     lineHeight: '22px',
                     fontFamily: 'Inter, sans-serif',
@@ -163,7 +318,7 @@ export default function OrderTracking() {
               <button
                 onClick={handleTrackOrder}
                 className="px-8 py-4 rounded-lg font-medium hover:opacity-90 transition-opacity duration-200"
-                style={{
+                style={{ 
                   backgroundColor: '#2d5016',
                   color: '#ffffff',
                   fontSize: '18px',
@@ -179,40 +334,84 @@ export default function OrderTracking() {
             </div>
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <ErrorMessage 
+              message={error} 
+              type="error"
+              onClose={() => setError(null)}
+            />
+          )}
+
           {/* Orders Section */}
           <div
             className="bg-white rounded-2xl p-8"
-            style={{
+            style={{ 
               boxShadow: '0 2px 8px rgba(0,0,0,0.04), 0 1.5px 4px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04), 0 0.5px 1px rgba(0,0,0,0.04), 0 0.25px 0.5px rgba(0,0,0,0.04)'
             }}
           >
             <h2
               className="font-bold mb-8"
-              style={{
+              style={{ 
                 color: '#2d5016',
                 fontSize: '24px',
                 lineHeight: '32px',
                 fontFamily: 'Inter, sans-serif'
               }}
             >
-              Current Orders - Click to Track
+              Your Orders - Click to Track
             </h2>
 
+            {/* Loading State */}
+            {loading && (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div>
+                <p className="mt-2 text-gray-600">Loading your orders...</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!loading && !error && orders.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-4">No orders found.</p>
+                <button
+                  onClick={handleRetry}
+                  className="text-green-700 hover:underline"
+                >
+                  Refresh
+                </button>
+              </div>
+            )}
+
             {/* Orders Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
-              {mockOrders.map((order) => (
-                <OrderCard
-                  key={order.orderId}
-                  orderId={order.orderId}
-                  status={order.status}
-                  customerName={order.customerName}
-                  items={order.items}
-                  total={order.total}
-                  orderDate={order.orderDate}
-                  onTrackOrder={handleTrackOrderFromCard}
-                />
-              ))}
-            </div>
+            {!loading && !error && orders.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+                {orders.map((order) => (
+                  <OrderCard
+                    key={order.orderId}
+                    orderId={order.orderId}
+                    status={order.status}
+                    customerName={order.customerName}
+                    items={order.items}
+                    total={order.total}
+                    orderDate={order.orderDate}
+                    onTrackOrder={handleTrackOrderFromCard}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Retry Button for Errors */}
+            {error && (
+              <div className="text-center py-4">
+                <button
+                  onClick={handleRetry}
+                  className="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-green-800 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Tracked Order Indicator */}
@@ -221,7 +420,7 @@ export default function OrderTracking() {
               className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg text-center"
             >
               <p
-                style={{
+                style={{ 
                   color: '#2d5016',
                   fontSize: '16px',
                   fontFamily: 'Inter, sans-serif'

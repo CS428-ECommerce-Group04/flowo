@@ -6,7 +6,9 @@ interface FlowerCardProps {
     slug: string;
     name: string;
     description: string;
-    price: number;
+    price: number; // Keep for backward compatibility
+    effective_price?: number;
+    base_price?: number;
     image: string;
     tags: string[];
   };
@@ -15,6 +17,17 @@ interface FlowerCardProps {
 }
 
 export default function FlowerCard({ flower, onAddToCart, onViewDetails }: FlowerCardProps) {
+  // Pricing logic
+  const effectivePrice = flower.effective_price ?? flower.price;
+  const basePrice = flower.base_price;
+
+  const showStrikethrough = basePrice !== undefined && 
+                           effectivePrice !== basePrice && 
+                           basePrice !== effectivePrice;
+
+  const displayPrice = effectivePrice;
+  const strikethroughPrice = showStrikethrough ? basePrice : undefined;
+
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 h-full">
       <div className="w-full h-48 sm:h-56 md:h-64 overflow-hidden cursor-pointer" onClick={onViewDetails}>
@@ -31,7 +44,16 @@ export default function FlowerCard({ flower, onAddToCart, onViewDetails }: Flowe
           <p className="text-slate-600 text-sm md:text-base leading-6 mb-4 line-clamp-2">{flower.description}</p>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xl md:text-2xl font-bold text-green-800">${flower.price.toFixed(2)}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xl md:text-2xl font-bold text-green-800">
+              ${displayPrice.toFixed(2)}
+            </span>
+            {strikethroughPrice && (
+              <span className="text-sm md:text-base text-slate-400 line-through">
+                ${strikethroughPrice.toFixed(2)}
+              </span>
+            )}
+          </div>
           <Button
             onClick={onAddToCart}
             className="bg-pink-600 hover:bg-pink-700 text-white px-4 md:px-6 py-2 text-xs md:text-sm"

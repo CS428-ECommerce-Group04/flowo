@@ -35,11 +35,28 @@ const slugify = (s: string) =>
 /** Map API product -> UI product */
 function mapApiToShopUI(p: ApiProduct) {
   const id = String(p.id ?? p.product_id ?? "");
-  const price = Number(p.effective_price ?? p.price ?? p.base_price ?? 0);
   const slug = p.slug ?? (p.name ? slugify(p.name) : id);
 
   const imageFromApi = p.image_url ?? p.primaryImageUrl;
   const image = imageFromApi ?? resolveProductImage(p.name, slug);
+
+  // Updated pricing logic
+  let price: number;
+  let compareAtPrice: number | undefined;
+
+  const effectivePrice = p.effective_price ? Number(p.effective_price) : null;
+  const basePrice = p.base_price ? Number(p.base_price) : null;
+  const fallbackPrice = p.price ? Number(p.price) : null;
+
+  if (effectivePrice !== null && basePrice !== null && effectivePrice !== basePrice) {
+    // Show effective price normally, base price crossed out
+    price = effectivePrice;
+    compareAtPrice = basePrice;
+  } else {
+    // Show just the base price (or fallback to effective price or price)
+    price = basePrice ?? effectivePrice ?? fallbackPrice ?? 0;
+    compareAtPrice = undefined;
+  }
 
   return {
     id,
@@ -51,10 +68,7 @@ function mapApiToShopUI(p: ApiProduct) {
     tags: Array.isArray(p.tags)
       ? p.tags
       : ([p.flower_type, p.status].filter(Boolean) as string[]),
-    compareAtPrice:
-      p.base_price && price && price < p.base_price
-        ? Number(p.base_price)
-        : undefined,
+    compareAtPrice,
     stock: p.stock_quantity ?? undefined,
     slug,
     care: "", // optional field your UI reads
@@ -208,11 +222,13 @@ function SearchAutocomplete({
 
   const highlightMatch = (text: string, query: string) => {
     if (!query.trim()) return text;
-    const regex = new RegExp(
-      `(${query.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\$&")})`,
-      "gi"
-    );
+
+    // Escape regex special chars from the query
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const regex = new RegExp(`(${escapedQuery})`, "gi");
     const parts = text.split(regex);
+
     return parts.map((part, i) =>
       regex.test(part) ? (
         <span key={i} className="bg-yellow-200 font-medium">
@@ -238,12 +254,7 @@ function SearchAutocomplete({
             if (value.trim() && suggestions.length > 0) setShowSuggestions(true);
           }}
           className="rounded-[8px] border border-[#dddddd] px-4 py-3 w-full focus:outline-none focus:ring-2 focus:ring-[#2d5016] focus:border-transparent pr-10"
-          style={{
-            fontSize: 16,
-            color: "#2d5016",
-            background: "#fff",
-            minHeight: 49,
-          }}
+          style={{ fontSize: 16, color: "#2d5016", background: "#fff", minHeight: 49, }}
         />
 
         {/* Search icon */}
@@ -527,8 +538,11 @@ function useProducts() {
 
 export default function Shop() {
   const add = useCart((s) => s.add);
+  const loading = useCart((s) => s.loading);
+  const error = useCart((s) => s.error);
+  const clearError = useCart((s) => s.clearError);
   const navigate = useNavigate();
-  const { data: products, loading, error } = useProducts();
+  const { data: products, loading: productsLoading, error: productsError } = useProducts();
 
   const [search, setSearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -633,6 +647,16 @@ export default function Shop() {
     }, 100);
   }
 
+  // Clear cart errors after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        clearError();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, clearError]);
+
   return (
     <main
       className="w-full min-h-screen"
@@ -651,6 +675,23 @@ export default function Shop() {
         >
           Discover our beautiful selection of handpicked flowers, perfect for every occasion and moment that matters.
         </p>
+
+        {/* Cart Error Message */}
+        {error && (
+          <div className="w-full max-w-5xl mb-4">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="text-red-600 text-sm">⚠️ {error}</div>
+                <button
+                  onClick={clearError}
+                  className="ml-auto text-red-600 hover:text-red-800"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Controls */}
         <section
@@ -823,16 +864,16 @@ export default function Shop() {
 
         {/* Product list */}
         <section className="w-full max-w-5xl">
-          {loading ? (
+          {productsLoading ? (
             <div className="text-center text-lg text-[#2d5016] py-12">Loading products...</div>
-          ) : error ? (
+          ) : productsError ? (
             <div className="text-center text-lg text-red-500 py-12">Error loading products. Please try again.</div>
           ) : paged.length === 0 ? (
             <div className="text-center text-lg text-[#2d5016] py-12">No products found.</div>
           ) : (
-            <div 
+            <div
               className="grid gap-6 mb-8"
-              style={{ 
+              style={{
                 gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
                 gridAutoRows: "min-content",
               }}
@@ -842,19 +883,10 @@ export default function Shop() {
                   <FlowerCard
                     product={p}
                     isHighlighted={p.id === highlightedProductId}
-                    onAddToCart={() => 
-                      add({
-                        id: p.id,
-                        name: p.name,
-                        price: p.price,
-                        qty: 1,
-                        image: p.image,
-                        description: p.description,
-                        tags: p.tags,
-                      })
-                    }
+                    onAddToCart={() => add(Number(p.id), 1)}
                     onNavigateToDetail={() => navigate(`/products/${p.slug}`)}
                   />
+                  {console.log("Huh? ",p.id) || null}
                 </div>
               ))}
             </div>
