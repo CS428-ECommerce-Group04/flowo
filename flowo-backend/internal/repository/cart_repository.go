@@ -56,7 +56,7 @@ func (r *cartRepository) AddOrUpdateCartItem(cartID int, productID int, quantity
 	err = tx.QueryRow(`
         SELECT stock_quantity 
         FROM FlowerProduct 
-        WHERE product_id = ?`, productID).Scan(&currentStock)
+        WHERE product_id = ? AND is_active = TRUE`, productID).Scan(&currentStock)
 	if err != nil {
 		return err
 	}

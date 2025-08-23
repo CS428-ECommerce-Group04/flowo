@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useCart } from "@/store/cart";
 import { useNavigate } from "react-router-dom";
 
@@ -8,6 +8,9 @@ const VALID_CODE = "FLOWER10"; // 10% off demo code
 
 export default function CartSummary() {
   const subtotal = useCart((s) => s.subtotal());
+  const loading = useCart((s) => s.loading);
+  const error = useCart((s) => s.error);
+  const clearError = useCart((s) => s.clearError);
   const [code, setCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const navigate = useNavigate();
@@ -27,8 +30,33 @@ export default function CartSummary() {
     }
   };
 
+  // Clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        clearError();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, clearError]);
+
   return (
     <aside className="space-y-4">
+      {/* Error Message */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="text-red-600 text-sm">⚠️ {error}</div>
+            <button
+              onClick={clearError}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Promo */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="font-semibold text-slate-800">Promo Code</div>
@@ -38,10 +66,12 @@ export default function CartSummary() {
             onChange={(e) => setCode(e.target.value)}
             placeholder="Enter promo code"
             className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+            disabled={loading}
           />
           <button
             onClick={apply}
-            className="rounded-md bg-green-700 px-3 py-2 text-sm font-semibold text-white"
+            disabled={loading}
+            className="rounded-md bg-green-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             Apply
           </button>
@@ -55,7 +85,9 @@ export default function CartSummary() {
         <dl className="mt-3 space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-slate-500">Subtotal</dt>
-            <dd className="font-medium">${subtotal.toFixed(2)}</dd>
+            <dd className="font-medium">
+              {loading ? "..." : `$${subtotal.toFixed(2)}`}
+            </dd>
           </div>
           {discount > 0 && (
             <div className="flex justify-between">
@@ -78,19 +110,23 @@ export default function CartSummary() {
         <div className="mt-4 flex items-center justify-between">
           <div className="text-sm text-slate-500">Total</div>
           <div className="text-xl font-extrabold text-slate-900">
-            ${total.toFixed(2)}
+            {loading ? "..." : `$${total.toFixed(2)}`}
           </div>
         </div>
 
-      <button
-        type="button"                             
-        onClick={() => navigate("/checkout")}
-        className="mt-4 w-full rounded-md bg-pink-600 px-4 py-2 text-sm font-semibold text-white"
-      >
-        Proceed to Checkout
-      </button>
+        <button
+          type="button"
+          onClick={() => navigate("/checkout")}
+          disabled={loading || subtotal === 0}
+          className="mt-4 w-full rounded-md bg-pink-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {loading ? "Loading..." : "Proceed to Checkout"}
+        </button>
 
-        <button className="mt-2 w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+        <button
+          className="mt-2 w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
+          disabled={loading}
+        >
           Continue Shopping
         </button>
       </div>

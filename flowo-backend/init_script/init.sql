@@ -227,3 +227,7 @@ CREATE TABLE UserProductInteraction (
     FOREIGN KEY (firebase_uid) REFERENCES User(firebase_uid),
     FOREIGN KEY (product_id) REFERENCES FlowerProduct(product_id)
 );
+
+-- Add is_active column to FlowerProduct
+ALTER TABLE FlowerProduct 
+ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;

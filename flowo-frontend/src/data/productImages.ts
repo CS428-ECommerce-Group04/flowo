@@ -45,6 +45,9 @@ export function resolveProductImage(name?: string, slug?: string): string {
   const derived = slugify(n).replace(/_/g, "-");
   if (derived && productImageMap[derived]) return productImageMap[derived];
 
+  //console.log(derived);
+  //console.log(productImageMap[derived]);
+
   // 4) fallback placeholder
   return "/images/placeholder.png";
 }
