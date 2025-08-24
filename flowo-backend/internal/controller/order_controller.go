@@ -23,8 +23,8 @@ func NewOrderController(os *service.OrderService, us service.UserService, as ser
 
 func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 	order := rg.Group("/orders")
-	order.POST("", ctrl.CreateOrder)
-	order.GET("", ctrl.GetUserOrders)
+	order.POST("/", ctrl.CreateOrder)
+	order.GET("/", ctrl.GetUserOrders)
 	order.GET("/:orderID", ctrl.GetOrderDetailByID)
 
 	// singular route for quick status check (used by frontend polling)
@@ -32,7 +32,7 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 
 	// Admin routes
 	admin := rg.Group("/admin/orders")
-	admin.GET("/", ctrl.AdminGetOrders)
+	admin.GET("", ctrl.AdminGetOrders)
 	admin.GET("/:orderID", ctrl.GetAdminOrderDetailByID)
 	admin.PUT("/:orderID/status", ctrl.UpdateOrderStatus)
 }

@@ -44,14 +44,14 @@ func (s *OrderService) GetUserOrders(FirebaseUID string) ([]dto.OrderResponse, e
 }
 
 func (s *OrderService) UpdateStatus(orderID int, req dto.UpdateOrderStatusRequest, FirebaseUID string) error {
-	order, err := s.OrderRepo.GetOrderByID(orderID)
-	if err != nil {
-		return err
-	}
+	// order, err := s.OrderRepo.GetOrderByID(orderID)
+	// if err != nil {
+	// 	return err
+	// }
 
-	if order.FirebaseUID != FirebaseUID {
-		return errors.New("unauthorized: not your order")
-	}
+	// if order.FirebaseUID != FirebaseUID {
+	// 	return errors.New("unauthorized: not your order")
+	// }
 
 	var methodPtr *string
 	if req.ShippingMethod != "" {
