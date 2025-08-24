@@ -99,7 +99,7 @@ async function fetchProductById(productId: string): Promise<ApiProduct> {
   return productData;
 }
 
-// Function to fetch reviews for a product
+// Function to fetch reviews for a product (null-safe)
 async function fetchProductReviews(productId: string): Promise<Review[]> {
   const reviewsUrl = `${API_BASE}/products/${productId}/reviews`;
   console.log("[ProductDetail] Fetching reviews from:", reviewsUrl);
@@ -110,20 +110,33 @@ async function fetchProductReviews(productId: string): Promise<Review[]> {
   });
 
   const raw = await response.text();
+
   if (!response.ok) {
+    if (response.status === 404) return [];
     throw new Error(raw || `HTTP ${response.status} - Failed to fetch reviews`);
   }
 
-  let parsed: ReviewsApiResponse | Review[];
+  if (!raw || raw.trim() === "" || raw.trim() === "null") {
+    return [];
+  }
+
+  let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error("Invalid JSON from reviews endpoint");
+    return [];
   }
 
-  // Handle both direct response and envelope response
-  const reviewsData: Review[] = Array.isArray(parsed) ? parsed : parsed.data ?? [];
-  return reviewsData;
+  if (Array.isArray(parsed)) {
+    return parsed as Review[];
+  }
+
+  if (parsed && typeof parsed === "object") {
+    const maybe = parsed as ReviewsApiResponse & { data?: Review[] | null };
+    return Array.isArray(maybe.data) ? maybe.data : [];
+  }
+
+  return [];
 }
 
 // Function to submit a new review
