@@ -886,7 +886,6 @@ export default function Shop() {
                     onAddToCart={() => add(Number(p.id), 1)}
                     onNavigateToDetail={() => navigate(`/products/${p.slug}`)}
                   />
-                  {console.log("Huh? ",p.id) || null}
                 </div>
               ))}
             </div>
