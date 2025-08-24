@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = useCallback(async () => {
     try {
       // Always try the server (cookie-based session)
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/check-auth`, {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/auth/check-auth`, {
         method: "GET",
         headers: { accept: "application/json" },
         credentials: "include",
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login: AuthContextType["login"] = async (email, password) => {
     try {
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/login`, {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
         method: "POST",
         headers: {
           accept: "application/json",
@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register: AuthContextType["register"] = async (data) => {
     try {
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/register`, {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/auth/register`, {
         method: "POST",
         headers: {
           accept: "application/json",
@@ -207,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout: AuthContextType["logout"] = async () => {
     try {
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/logout`, {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/auth/logout`, {
         method: "POST",
         headers: { accept: "application/json" },
         credentials: "include",
@@ -231,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword: AuthContextType["resetPassword"] = async (email) => {
     try {
-      const res = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/reset-password`, {
+      const res = await fetch(`${API_CONFIG.BASE_URL}/auth/reset-password`, {
         method: "POST",
         headers: {
           accept: "application/json",

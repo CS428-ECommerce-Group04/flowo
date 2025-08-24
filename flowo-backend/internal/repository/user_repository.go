@@ -12,6 +12,7 @@ type UserRepository interface {
 	GetUserByEmail(email string) (*model.User, error)
 	UpdateUser(user *model.User) error
 	CheckUserExists(firebaseUID string) (bool, error)
+	GetAllUsers() ([]*model.UserWithAddress, error)
 }
 
 type userRepository struct {
@@ -142,4 +143,74 @@ func (r *userRepository) CheckUserExists(firebaseUID string) (bool, error) {
 	}
 
 	return count > 0, nil
+}
+
+func (r *userRepository) GetAllUsers() ([]*model.UserWithAddress, error) {
+	query := `
+		SELECT 
+			u.firebase_uid, u.username, u.email, u.full_name, u.gender, u.role, u.created_at, u.updated_at,
+			a.address_id, a.recipient_name, a.phone_number, a.street_address, a.city, a.postal_code, a.country
+		FROM User u
+		LEFT JOIN Address a 
+			ON u.firebase_uid = a.firebase_uid AND a.is_default_shipping = true
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query users with addresses: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*model.UserWithAddress
+	for rows.Next() {
+		var user model.UserWithAddress
+		var username, fullname sql.NullString
+		var addressID sql.NullInt64
+		var recipientName, phoneNumber, streetAddress, city, postalCode, country sql.NullString
+
+		err := rows.Scan(
+			&user.FirebaseUID,
+			&username,
+			&user.Email,
+			&fullname,
+			&user.Gender,
+			&user.Role,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+			&addressID,
+			&recipientName,
+			&phoneNumber,
+			&streetAddress,
+			&city,
+			&postalCode,
+			&country,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if username.Valid {
+			user.Username = &username.String
+		}
+		if fullname.Valid {
+			user.FullName = &fullname.String
+		}
+
+		if addressID.Valid {
+			user.DefaultAddress = &model.Address{
+				AddressID:     int(addressID.Int64),
+				FirebaseUID:   user.FirebaseUID,
+				RecipientName: recipientName.String,
+				PhoneNumber:   phoneNumber.String,
+				StreetAddress: streetAddress.String,
+				City:          city.String,
+				PostalCode:    postalCode.String,
+				Country:       country.String,
+			}
+		}
+
+		users = append(users, &user)
+	}
+
+	return users, nil
 }
