@@ -558,7 +558,6 @@ export default function Shop() {
   }, [products]);
 
   const PAGE_SIZE = 12;
-  const MAX_VISIBLE_TAGS = 6;
 
   const filtered = useMemo(() => {
     if (!products.length) return [];
@@ -599,12 +598,6 @@ export default function Shop() {
     return filtered[Math.floor(Math.random() * filtered.length)];
   }, [filtered]);
 
-  function handleTagToggle(tag: string) {
-    setHighlightedProductId(null);
-    setPage(1);
-    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-  }
-
   function handleReset() {
     setSearch("");
     setSelectedTags([]);
@@ -612,11 +605,6 @@ export default function Shop() {
     setPage(1);
     setHighlightedProductId(null);
     setShowFilters(false);
-  }
-
-  function handleSortChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setSortKey(e.target.value as any);
-    setPage(1);
   }
 
   function handleRecommendationClick() {
@@ -632,10 +620,6 @@ export default function Shop() {
 
   function toggleFilters() {
     setShowFilters(!showFilters);
-  }
-
-  function handleNavigateToProduct(product: any) {
-    navigate(`/products/${product.slug}`);
   }
 
   function handleProductSelect(product: any) {
@@ -886,7 +870,6 @@ export default function Shop() {
                     onAddToCart={() => add(Number(p.id), 1)}
                     onNavigateToDetail={() => navigate(`/products/${p.slug}`)}
                   />
-                  {console.log("Huh? ",p.id) || null}
                 </div>
               ))}
             </div>
