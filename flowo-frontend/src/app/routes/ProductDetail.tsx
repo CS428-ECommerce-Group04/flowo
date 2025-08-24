@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "@/store/cart";
 import { useProductsStore, type UIFlower } from "@/store/products";
+import { getSimilarRecommendations, type RecommendationResponseDTO, recordRecommendationFeedback } from "@/services/recommendations";
 
 type ApiEnvelope<T> = { message?: string; data: T };
 
@@ -88,6 +89,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
+  const [similar, setSimilar] = useState<RecommendationResponseDTO | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -223,6 +225,22 @@ export default function ProductDetail() {
       alive = false;
     };
   }, [slug, baseProduct, setAll]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const productId = baseProduct?.id || ui?.id;
+        const pidNum = productId ? parseInt(String(productId), 10) : undefined;
+        if (!pidNum || Number.isNaN(pidNum)) return;
+        const rec = await getSimilarRecommendations(pidNum, 8);
+        if (!cancelled) setSimilar(rec);
+      } catch (e) {
+        if (!cancelled) setSimilar(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [baseProduct?.id, ui?.id]);
 
   const oldPrice = useMemo(() => (ui ? Number((ui.price * 1.25).toFixed(2)) : 0), [ui]);
   const hasCompare = ui ? oldPrice > ui.price : false;
@@ -420,6 +438,34 @@ export default function ProductDetail() {
             Contact Our Experts
           </button>
         </div>
+
+        {/* Similar products */}
+        {similar && similar.recommendations?.length > 0 && (
+          <div className="mt-10">
+            <h2 className="text-2xl font-bold text-[#2d5016] mb-4">You may also like</h2>
+            <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))"}}>
+              {similar.recommendations.slice(0, 6).map((rec) => (
+                <button
+                  key={rec.product.product_id}
+                  className="text-left bg-white rounded-xl shadow hover:shadow-md transition p-3"
+                  onClick={() => {
+                    recordRecommendationFeedback({ product_id: rec.product.product_id, recommendation_type: "similar", action: "clicked" });
+                    navigate(`/products/${(rec.product.name || String(rec.product.product_id)).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
+                  }}
+                >
+                  <img
+                    src={baseProduct?.image || "/images/placeholder.png"}
+                    alt={rec.product.name}
+                    className="w-full h-40 object-cover rounded-lg mb-2"
+                  />
+                  <div className="font-semibold text-[#2d5016] truncate">{rec.product.name}</div>
+                  <div className="text-sm text-slate-600 truncate">{rec.reason}</div>
+                  <div className="text-[#2d5016] font-bold mt-1">${(rec.product.effective_price ?? rec.product.base_price ?? 0).toFixed(2)}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="text-center text-slate-500 text-sm mt-10">

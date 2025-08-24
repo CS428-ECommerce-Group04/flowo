@@ -69,6 +69,7 @@ func main() {
 			cache.ProvideRedisCache,
 
 			repository.NewRepository,
+			repository.NewRecommendationRepository,
 			repository.NewReviewRepository,
 			repository.NewCartRepository,
 			repository.NewPricingRuleRepository,
@@ -78,6 +79,7 @@ func main() {
 			repository.NewPaymentRepository,
 
 			service.NewService,
+			service.NewRecommendationService,
 			service.NewReviewService,
 			service.NewCartService,
 			service.NewPricingService,
@@ -88,6 +90,7 @@ func main() {
 
 			controller.NewPricingController,
 			controller.NewController,
+			controller.NewRecommendationController,
 			controller.NewReviewController,
 			controller.NewCartController,
 			controller.NewAuthController,
@@ -155,6 +158,7 @@ func RegisterRoutes(
 	router *gin.Engine,
 	cfg *config.Config,
 	controller *controller.Controller,
+	recCtrl *controller.RecommendationController,
 	reviewCtrl *controller.ReviewController,
 	cartCtrl *controller.CartController,
 	pricingCtrl *controller.PricingController,
@@ -168,6 +172,8 @@ func RegisterRoutes(
 
 	payos.InitPayOS(cfg)
 	controller.RegisterRoutes(router)
+	// Register recommendation routes (separate group managed within controller)
+	controller.RegisterRecommendationRoutes(router, recCtrl)
 
 	v1 := router.Group("/api/v1")
 	authCtrl.RegisterRoutes(v1, authMiddleware)

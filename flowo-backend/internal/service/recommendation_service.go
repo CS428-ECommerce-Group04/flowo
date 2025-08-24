@@ -21,6 +21,8 @@ type RecommendationService interface {
 	UpdateUserPreferences(ctx context.Context, firebaseUID string) error
 	CalculateProductSimilarities(ctx context.Context, productID uint) error
 	UpdateTrendingProducts(ctx context.Context) error
+	RecordRecommendationFeedback(ctx context.Context, feedback *dto.RecommendationFeedbackDTO) error
+	GetRecommendationStats(ctx context.Context, period string) (*dto.RecommendationStatsDTO, error)
 }
 
 type recommendationService struct {
@@ -799,4 +801,44 @@ func (s *recommendationService) UpdateTrendingProducts(ctx context.Context) erro
 	}
 	
 	return s.recommendationRepo.UpdateTrendingProducts(trendingProducts)
+}
+
+// RecordRecommendationFeedback persists user feedback on recommendations
+func (s *recommendationService) RecordRecommendationFeedback(ctx context.Context, feedback *dto.RecommendationFeedbackDTO) error {
+    if feedback == nil {
+        return errors.New("feedback payload is required")
+    }
+    if feedback.FirebaseUID == "" {
+        feedback.FirebaseUID = "anonymous"
+    }
+    return s.recommendationRepo.SaveRecommendationFeedback(feedback.FirebaseUID, feedback.ProductID, feedback.RecommendationType, feedback.Action)
+}
+
+// GetRecommendationStats retrieves basic analytics for recommendations
+func (s *recommendationService) GetRecommendationStats(ctx context.Context, period string) (*dto.RecommendationStatsDTO, error) {
+    statsMap, err := s.recommendationRepo.GetRecommendationStats(period)
+    if err != nil {
+        return nil, err
+    }
+
+    dtoStats := &dto.RecommendationStatsDTO{
+        TotalRecommendations: 0,
+        ClickThroughRate:     0,
+        ConversionRate:       0,
+        AverageScore:         0,
+        TopPerformingType:    "",
+    }
+
+    if v, ok := statsMap["total_recommendations"]; ok {
+        switch t := v.(type) {
+        case int:
+            dtoStats.TotalRecommendations = t
+        case int64:
+            dtoStats.TotalRecommendations = int(t)
+        case float64:
+            dtoStats.TotalRecommendations = int(t)
+        }
+    }
+
+    return dtoStats, nil
 }

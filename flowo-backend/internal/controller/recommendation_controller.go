@@ -388,8 +388,15 @@ func (rc *RecommendationController) RecordRecommendationFeedback(c *gin.Context)
 		return
 	}
 
-	// In a real implementation, you would save this feedback to the database
-	// For now, we'll just return success
+	ctx := context.Background()
+	if err := rc.recommendationService.RecordRecommendationFeedback(ctx, &feedback); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to record feedback",
+			"details": err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Feedback recorded successfully",
 	})
@@ -415,14 +422,14 @@ func (rc *RecommendationController) GetRecommendationStats(c *gin.Context) {
 		return
 	}
 
-	// This is a placeholder implementation
-	// In a real system, you would calculate actual statistics
-	stats := dto.RecommendationStatsDTO{
-		TotalRecommendations: 1000,
-		ClickThroughRate:     0.15,
-		ConversionRate:       0.05,
-		AverageScore:         0.75,
-		TopPerformingType:    "personalized",
+	ctx := context.Background()
+	stats, err := rc.recommendationService.GetRecommendationStats(ctx, period)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to get recommendation stats",
+			"details": err.Error(),
+		})
+		return
 	}
 
 	c.JSON(http.StatusOK, stats)

@@ -2,6 +2,7 @@ import type { Product } from "@/types/product";
 import Button from "@/components/ui/Button";
 import { useCart } from "@/store/cart";
 import { Link } from "react-router-dom";
+import { recordRecommendationFeedback } from "@/services/recommendations";
 
 export default function ProductRow({ p }: { p: Product }) {
   const add = useCart((s) => s.add);

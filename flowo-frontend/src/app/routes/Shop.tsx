@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useCart } from "@/store/cart";
 import { useNavigate } from "react-router-dom";
 import { resolveProductImage } from "@/data/productImages";
+import { getTrendingRecommendations, type RecommendationResponseDTO, recordRecommendationFeedback } from "@/services/recommendations";
 
 /* ------------------------------- API types ------------------------------- */
 
@@ -529,6 +530,7 @@ export default function Shop() {
   const add = useCart((s) => s.add);
   const navigate = useNavigate();
   const { data: products, loading, error } = useProducts();
+  const [trending, setTrending] = useState<RecommendationResponseDTO | null>(null);
 
   const [search, setSearch] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -581,6 +583,17 @@ export default function Shop() {
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const recommended = useMemo(() => {
+    if (trending && trending.recommendations?.length > 0) {
+      const top = trending.recommendations[0];
+      const p = top.product;
+      return {
+        id: String(p.product_id),
+        name: p.name,
+        description: p.description || "",
+        image: resolveProductImage(p.name, String(p.product_id)),
+        tags: [p.flower_type, p.status].filter(Boolean) as string[],
+      } as any;
+    }
     if (filtered.length === 0) return null;
     return filtered[Math.floor(Math.random() * filtered.length)];
   }, [filtered]);
@@ -607,6 +620,13 @@ export default function Shop() {
 
   function handleRecommendationClick() {
     if (!recommended) return;
+    // Fire feedback non-blocking
+    try {
+      if (trending && trending.recommendations?.length > 0) {
+        const pid = trending.recommendations[0]?.product?.product_id;
+        if (pid) recordRecommendationFeedback({ product_id: pid, recommendation_type: "trending", action: "clicked" });
+      }
+    } catch {}
     if (recommended.tags && recommended.tags.length > 0) {
       setSelectedTags(recommended.tags);
       setHighlightedProductId(null);
@@ -621,6 +641,9 @@ export default function Shop() {
   }
 
   function handleNavigateToProduct(product: any) {
+    try {
+      // feedback when navigating via card selection from the list is not tracked here
+    } catch {}
     navigate(`/products/${product.slug}`);
   }
 
@@ -632,6 +655,19 @@ export default function Shop() {
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 100);
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rec = await getTrendingRecommendations("weekly", 8);
+        if (!cancelled) setTrending(rec);
+      } catch (e) {
+        if (!cancelled) setTrending(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <main
