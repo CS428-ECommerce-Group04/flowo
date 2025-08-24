@@ -78,12 +78,13 @@ const items: Item[] = [
   { to: "/admin/users",      label: "User Management",    icon: Icon.users },
   { to: "/admin/categories", label: "Product Categories", icon: Icon.categories },
   { to: "/admin/orders",     label: "Order Management",   icon: Icon.users },
+  { to: "/admin/pricing-rules", label: "Pricing Rules",   icon: Icon.billing },
   { to: "/admin/messages",   label: "Messages",           icon: Icon.messages },
   { to: "/admin/settings",   label: "Settings",           icon: Icon.settings },
   { to: "/admin/support",    label: "Help & Support",     icon: Icon.help },
-  { to: "/admin/billing",    label: "Billing",            icon: Icon.billing },
-  { to: "/admin/reports",    label: "Reports",            icon: Icon.reports },
-  { to: "/admin/analytics",  label: "Analytics",          icon: Icon.analytics },
+  // { to: "/admin/billing",    label: "Billing",            icon: Icon.billing },
+  // { to: "/admin/reports",    label: "Reports",            icon: Icon.reports },
+  // { to: "/admin/analytics",  label: "Analytics",          icon: Icon.analytics },
 ];
 
 export default function AdminLayout() {

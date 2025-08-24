@@ -26,6 +26,8 @@ import AdminProductsTable from "@/admin/ProductCategories";
 import AdminUsers from "@/admin/AdminUsers";
 import AdminUserDetail from "@/admin/AdminUserDetail";
 import AdminOrders from "@/admin/AdminOrders";   
+import PricingRules from "@/admin/PricingRules";
+import Profile from "@/app/routes/Profile";
 export default function App() {
   return (
     <BrowserRouter>
@@ -41,6 +43,7 @@ export default function App() {
               <Header />
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
@@ -65,6 +68,7 @@ export default function App() {
             <Route path="products" element={<AdminProductsTable />} /> 
             <Route path= "orders" element= {<AdminOrders />} />
             <Route path="categories" element={<AdminProductsTable />} />
+            <Route path="pricing-rules" element={<PricingRules />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="support" element={<AdminSupport />} />
