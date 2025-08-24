@@ -76,6 +76,7 @@ func main() {
 			repository.NewOrderRepository,
 			repository.NewAddressRepository,
 			repository.NewPaymentRepository,
+			repository.NewReportRepository,
 
 			service.NewService,
 			service.NewReviewService,
@@ -85,6 +86,7 @@ func main() {
 			service.NewOrderService,
 			service.NewAddressService,
 			service.NewPaymentService,
+			service.NewReportService,
 
 			controller.NewPricingController,
 			controller.NewController,
@@ -95,6 +97,7 @@ func main() {
 			controller.NewUserController,
 			controller.NewAddressController,
 			controller.NewPaymentController,
+			controller.NewReportController,
 		),
 		fx.Invoke(RegisterRoutes),
 	)
@@ -165,6 +168,7 @@ func RegisterRoutes(
 	userCtrl *controller.UserController,
 	authMiddleware *middleware.AuthMiddleware,
 	paymentCtrl *controller.PaymentController,
+	reportCtrl *controller.ReportController,
 ) {
 
 	payos.InitPayOS(cfg)
@@ -182,6 +186,7 @@ func RegisterRoutes(
 	cartCtrl.RegisterRoutes(v1)
 	orderCtrl.RegisterRoutes(v1)
 	addressCtrl.RegisterRoutes(v1)
+	reportCtrl.RegisterRoutes(v1)
 
 	logger.Init()
 

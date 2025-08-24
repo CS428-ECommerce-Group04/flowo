@@ -82,6 +82,8 @@ const items: Item[] = [
   { to: "/admin/messages",   label: "Messages",           icon: Icon.messages },
   { to: "/admin/settings",   label: "Settings",           icon: Icon.settings },
   { to: "/admin/support",    label: "Help & Support",     icon: Icon.help },
+  { to: "/admin/reports",    label: "Reports",            icon: Icon.reports },
+
   // { to: "/admin/billing",    label: "Billing",            icon: Icon.billing },
   // { to: "/admin/reports",    label: "Reports",            icon: Icon.reports },
   // { to: "/admin/analytics",  label: "Analytics",          icon: Icon.analytics },
