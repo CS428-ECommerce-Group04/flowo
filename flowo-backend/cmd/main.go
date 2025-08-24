@@ -136,7 +136,8 @@ func NewGinEngine(cfg *config.Config) *gin.Engine {
 
 	// Configure CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "https://api-merchant.payos.vn", "https://3da59b85ac29.ngrok-free.app"}, // Add your frontend URLs
+		//AllowOrigins: []string{"*"},
+		AllowOrigins:     []string{cfg.Domain, "https://api-merchant.payos.vn", "https://3da59b85ac29.ngrok-free.app", "http://localhost:8081"}, // Add your frontend URLs
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},

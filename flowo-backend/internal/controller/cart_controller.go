@@ -23,7 +23,7 @@ func (ctrl *CartController) RegisterRoutes(rg *gin.RouterGroup) {
 	cart.POST("/add", ctrl.AddToCart)
 	cart.PUT("/update", ctrl.UpdateCartItem)
 	cart.DELETE("/remove", ctrl.RemoveCartItem)
-	cart.GET("", ctrl.GetCartItems)
+	cart.GET("/", ctrl.GetCartItems)
 }
 
 // AddToCart godoc

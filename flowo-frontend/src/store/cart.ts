@@ -111,7 +111,7 @@ export const useCart = create<CartState>((set, get) => ({
   fetchCart: async () => {
     set({ loading: true, error: null });
     try {
-      const apiItems: ApiCartItem[] = await makeApiRequest('/cart');
+      const apiItems: ApiCartItem[] = await makeApiRequest('/cart/');
       const items = apiItems.map(mapApiItemToCartItem);
       set({ items, loading: false });
     } catch (error: any) {
