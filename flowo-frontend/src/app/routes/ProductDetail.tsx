@@ -31,6 +31,20 @@ type ApiProduct = {
   last_updated?: string;
 };
 
+type CartApiResponse = {
+  message?: string;
+  success?: boolean;
+  error?: string;
+  data?: {
+    cart_id?: string;
+    items?: Array<{
+      product_id: number;
+      quantity: number;
+      price: number;
+    }>;
+  };
+};
+
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
 
@@ -64,6 +78,96 @@ async function fetchProductById(productId: string): Promise<ApiProduct> {
   }
 
   return productData;
+}
+
+// Function to add product to cart via API
+async function addProductToCart(productId: string, quantity: number): Promise<CartApiResponse> {
+  const cartUrl = `${API_BASE}/cart/add`;
+  console.log("[ProductDetail] Adding to cart:", { productId, quantity });
+
+  const response = await fetch(cartUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    credentials: "include",
+    body: JSON.stringify({
+      product_id: Number(productId),
+      quantity: quantity
+    })
+  });
+
+  const raw = await response.text();
+  let parsed: CartApiResponse;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // If we can't parse the response, create a generic error response
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status} - Failed to add to cart`
+      };
+    }
+    return {
+      success: true,
+      message: "Product added to cart"
+    };
+  }
+
+  // If the API returned an error message
+  if (!response.ok || parsed.error) {
+    return {
+      success: false,
+      error: parsed.error || parsed.message || `HTTP ${response.status} - Failed to add to cart`
+    };
+  }
+
+  return {
+    success: true,
+    message: parsed.message || "Product added to cart",
+    data: parsed.data
+  };
+}
+
+// --- Cart store helpers (optimistic update) ---
+function setCartFromApiPayload(items?: Array<{ product_id: number; quantity: number; price: number }>) {
+  if (!items) return false;
+  // Map API -> store shape (id, qty, price)
+  const mapped = items.map((it) => ({
+    id: it.product_id,
+    qty: it.quantity,
+    price: it.price,
+  }));
+  try {
+    // Zustand hook has setState on it:
+    (useCart as any).setState((s: any) => ({ ...s, items: mapped }));
+    // Optionally update any derived counts in the store:
+    (useCart as any).getState()?.updateCount?.();
+  } catch {}
+  return true;
+}
+
+function optimisticBumpCart(productId: number, qty: number, unitPrice: number) {
+  try {
+    (useCart as any).setState((s: any) => {
+      const items = Array.isArray(s.items) ? [...s.items] : [];
+      const idx = items.findIndex(
+        (i: any) => (i.id ?? i.product_id) === productId
+      );
+      if (idx >= 0) {
+        const prev = items[idx];
+        const prevQty = prev.qty ?? prev.quantity ?? 0;
+        items[idx] = { ...prev, id: productId, qty: prevQty + qty, price: unitPrice };
+      } else {
+        items.push({ id: productId, qty, price: unitPrice });
+      }
+      return { ...s, items };
+    });
+    (useCart as any).getState()?.updateCount?.();
+  } catch {}
 }
 
 // Fallback function to find product ID from slug using products list
@@ -102,7 +206,9 @@ export default function ProductDetail() {
   const { slug = "" } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const location = useLocation() as { state?: { product?: UIFlower } };
-  const add = useCart((s) => s.add);
+  
+  // Cart store access for updating header state
+
 
   // Zustand store access
   const findBySlug = useProductsStore((s) => s.findBySlug);
@@ -133,6 +239,11 @@ export default function ProductDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
+
+  // Add to cart states
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartSuccess, setCartSuccess] = useState<string | null>(null);
+  const [cartError, setCartError] = useState<string | null>(null);
 
   // Function to refresh product data
   const refreshProduct = async (productId: string) => {
@@ -171,6 +282,65 @@ export default function ProductDetail() {
     } finally {
       setRefreshing(false);
     }
+  };
+
+  // Function to handle adding product to cart
+  const handleAddToCart = async () => {
+    if (!ui) return;
+
+    // Clear previous messages
+    setCartSuccess(null);
+    setCartError(null);
+
+    // Validate quantity against stock
+    if (ui.stock !== undefined && qty > ui.stock) {
+      setCartError(`Cannot add ${qty} items. Only ${ui.stock} available in stock.`);
+      return;
+    }
+
+    // Validate minimum quantity
+    if (qty <= 0) {
+      setCartError("Quantity must be at least 1");
+      return;
+    }
+
+    setAddingToCart(true);
+
+    try {
+      const result = await addProductToCart(ui.id, qty);
+
+      if (result.success) {
+        // 1) Instant UI update: try to hydrate from API payload if present,
+        //    otherwise do an optimistic local bump so Header updates immediately.
+        const unitPrice = pricingInfo.displayPrice;
+        const pid = Number(ui.id);
+
+        const applied = setCartFromApiPayload(result.data?.items);
+        if (!applied) {
+          optimisticBumpCart(pid, qty, unitPrice);
+        }
+
+        setCartSuccess(result.message || `Added ${qty} ${ui.name} to your cart`);
+
+        // Auto-hide success message after 3s
+        setTimeout(() => setCartSuccess(null), 3000);
+      } else {
+        setCartError(result.error || "Failed to add item to cart");
+
+        // Auto-hide error message after 5 seconds
+        setTimeout(() => {
+          setCartError(null);
+        }, 5000);
+      }
+    } catch (error: any) {
+      console.error("[ProductDetail] Add to cart error:", error);
+      setCartError(error?.message || "Failed to add item to cart");
+    } finally {
+      setAddingToCart(false);
+    }
+
+    // Refresh product data to get updated stock levels
+    refreshProduct(ui.id);
   };
 
   useEffect(() => {
@@ -316,22 +486,45 @@ export default function ProductDetail() {
 
   return (
     <div className="w-full min-h-screen bg-[#fefefe]">
-      {/* Header mini */}
-      <header className="sticky top-0 z-10 h-16 bg-white shadow flex items-center justify-between px-6">
-        <Link to="/" className="text-2xl font-extrabold text-green-800">
-          Flowo
-        </Link>
-        <div className="flex gap-4 opacity-70">
-          <div className="w-5 h-5 bg-slate-200 rounded" />
-          <div className="w-5 h-5 bg-slate-200 rounded" />
-        </div>
-      </header>
-
       {/* Main */}
       <div className="max-w-6xl mx-auto p-6">
         <Link to="/" className="text-sm text-green-800 hover:underline">
           ← Back to Collection
         </Link>
+
+        {/* Cart Success Message */}
+        {cartSuccess && (
+          <div className="mt-4 mb-4">
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="text-green-600 text-sm"> {cartSuccess}</div>
+                <button
+                  onClick={() => setCartSuccess(null)}
+                  className="ml-auto text-green-600 hover:text-green-800"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cart Error Message */}
+        {cartError && (
+          <div className="mt-4 mb-4">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="text-red-600 text-sm"> {cartError}</div>
+                <button
+                  onClick={() => setCartError(null)}
+                  className="ml-auto text-red-600 hover:text-red-800"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-10 mt-8">
           {/* Image */}
@@ -388,7 +581,7 @@ export default function ProductDetail() {
               </div>
               <div>
                 <div className="text-slate-500 text-xs">Reviews</div>
-                <div className="text-[#2d5016] font-semibold">{ui.reviews ?? 0}</div>
+                <div className="text-[#2d5016] font-semibtml">{ui.reviews ?? 0}</div>
               </div>
             </div>
 
@@ -433,8 +626,9 @@ export default function ProductDetail() {
             <div className="mt-6 flex items-center gap-4">
               <div className="flex items-center border border-slate-300 rounded">
                 <button
-                  className="w-9 h-10"
+                  className="w-9 h-10 hover:bg-gray-50 disabled:opacity-50"
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  disabled={addingToCart}
                 >
                   –
                 </button>
@@ -446,34 +640,59 @@ export default function ProductDetail() {
                     const n = parseInt(e.target.value, 10);
                     setQty(Number.isFinite(n) && n > 0 ? n : 1);
                   }}
+                  disabled={addingToCart}
+                  min="1"
+                  max={ui.stock !== undefined ? ui.stock : undefined}
                 />
-                <button className="w-9 h-10" onClick={() => setQty((q) => q + 1)}>
+                <button
+                  className="w-9 h-10 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={() => setQty((q) => q + 1)}
+                  disabled={addingToCart || (ui.stock !== undefined && qty >= ui.stock)}
+                >
                   +
                 </button>
               </div>
 
               <button
-                className="rounded bg-pink-600 text-white px-6 py-2 font-medium disabled:opacity-50"
-                disabled={pricingInfo.isLoading}
-                onClick={() => {
-                  add({
-                    id: ui.id,
-                    name: ui.name,
-                    price: pricingInfo.displayPrice,
-                    qty,
-                    image: ui.image,
-                    description: ui.description,
-                    tags: ui.tags,
-                  });
-                }}
+                className="rounded bg-pink-600 text-white px-6 py-2 font-medium hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={addingToCart || pricingInfo.isLoading || (ui.stock !== undefined && ui.stock <= 0)}
+                onClick={handleAddToCart}
               >
-                {pricingInfo.isLoading ? 'Loading Price...' : 'Add to Cart'}
+                {addingToCart ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Adding...
+                  </span>
+                ) : pricingInfo.isLoading ? (
+                  'Loading Price...'
+                ) : (ui.stock !== undefined && ui.stock <= 0) ? (
+                  'Out of Stock'
+                ) : (
+                  `Add ${qty} to Cart`
+                )}
               </button>
 
-              <button className="rounded border border-[#2d5016] text-[#2d5016] px-4 py-2">
+              <button className="rounded border border-[#2d5016] text-[#2d5016] px-4 py-2 hover:bg-[#2d5016] hover:text-white transition-colors">
                 Add to Wishlist
               </button>
             </div>
+
+            {/* Stock warning */}
+            {ui.stock !== undefined && ui.stock <= 5 && ui.stock > 0 && (
+              <div className="mt-2 text-amber-600 text-sm">
+                ⚠️ Only {ui.stock} left in stock
+              </div>
+            )}
+
+            {/* Quantity validation warning */}
+            {ui.stock !== undefined && qty > ui.stock && (
+              <div className="mt-2 text-red-600 text-sm">
+                ⚠️ Requested quantity exceeds available stock
+              </div>
+            )}
           </div>
         </div>
 
