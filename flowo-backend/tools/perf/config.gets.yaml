@@ -1,0 +1,53 @@
+base_url: "http://localhost:8081"
+timeout_ms: 10000
+headers:
+  Accept: application/json
+
+http:
+  max_idle_conns: 512
+  max_idle_conns_per_host: 512
+  idle_conn_timeout_ms: 30000
+  insecure_skip_tls_verify: false
+
+endpoints:
+  - name: health
+    method: GET
+    path: /health
+    weight: 1
+  - name: flower_types
+    method: GET
+    path: /api/v1/flower-types
+    weight: 2
+  - name: products
+    method: GET
+    path: /api/v1/products
+    weight: 5
+  - name: pricing_rules
+    method: GET
+    path: /api/v1/pricing/rules
+    weight: 1
+  - name: todos
+    method: GET
+    path: /api/v1/todos
+    weight: 1
+
+test:
+  mode: ramp
+  duration_sec: 60
+  total_requests: 0
+  concurrency: 10
+  global_rate_limit_per_sec: 0
+
+  # ramp mode
+  max_concurrency: 50
+  step: 5
+  step_duration_sec: 15
+  max_error_rate: 0.05
+  max_p95_ms: 500
+
+report:
+  out_dir: tools/perf/reports
+  formats: ["json", "md"]
+  include_per_endpoint: true
+
+

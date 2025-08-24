@@ -1,0 +1,32 @@
+{
+  "started_at": "2025-08-24T16:47:19.86729751Z",
+  "duration": 15035286132,
+  "overall": {
+    "requests": 0,
+    "errors": 0,
+    "error_rate": 0,
+    "bytes_total": 0,
+    "throughput_rps": 0,
+    "p50_ms": 0,
+    "p90_ms": 0,
+    "p95_ms": 0,
+    "p99_ms": 0,
+    "min_ms": 0,
+    "max_ms": 0
+  },
+  "per_endpoint": {},
+  "notes": {
+    "base_url": "http://localhost:8081",
+    "concurrency": "10",
+    "duration_sec": "60",
+    "endpoint_count": "5",
+    "global_rate_limit_per_sec": "0",
+    "max_concurrency": "50",
+    "max_error_rate": "0.0500",
+    "max_p95_ms": "500",
+    "max_sustained_concurrency": "0",
+    "step": "5",
+    "step_duration_sec": "15",
+    "test_mode": "ramp"
+  }
+}
