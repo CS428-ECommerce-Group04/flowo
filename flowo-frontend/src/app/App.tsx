@@ -20,7 +20,7 @@ import AdminSettings from "@/admin/pages/Settings";
 import AdminMessages from "@/admin/pages/Messages";
 import AdminSupport from "@/admin/pages/Support";
 import AdminBilling from "@/admin/pages/Billing";
-import AdminReports from "@/admin/pages/Reports";
+import AdminReports from "@/admin/AdminReport";
 import AdminAnalytics from "@/admin/pages/Analytics";
 import AdminProductsTable from "@/admin/ProductCategories";
 import AdminUsers from "@/admin/AdminUsers";

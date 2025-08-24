@@ -30,10 +30,12 @@ type OrderItemRequest struct {
 type OrderDetailResponse struct {
 	OrderID        int               `json:"order_id"`
 	Status         string            `json:"status"`
-	OrderDate      string            `json:"order_date"`
+	OrderDate      time.Time         `json:"order_date"`
 	TotalAmount    float64           `json:"total_amount"`
 	ShippingMethod string            `json:"shipping_method"`
 	Items          []OrderItemDetail `json:"items"`
+
+	ShippingAddress *AddressResponse `json:"shipping_address,omitempty"`
 }
 
 type OrderItemDetail struct {

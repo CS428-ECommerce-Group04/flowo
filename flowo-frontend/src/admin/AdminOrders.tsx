@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { API_CONFIG } from "@/config/api";
 import AdminOrderDetail from "./AdminOrderDetail";
+import { makeApiRequest } from "@/config/api";
+
 
 
 type ApiEnvelope<T> = { message?: string; data?: T };
@@ -143,6 +145,107 @@ function DebugPanel({ rec }: { rec: DebugRecord | null }) {
   );
 }
 
+function Modal({
+  open, onClose, title, children,
+}: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative w-[92vw] max-w-lg rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="rounded p-1 text-slate-500 hover:bg-slate-100" aria-label="Close">✕</button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function EditOrderModal({
+  order, onClose, onSaved,
+}: {
+  order: UIOrder;
+  onClose: () => void;
+  onSaved: (newStatus: string) => void;
+}) {
+  const [status, setStatus] = useState<string>(order.status);
+  const [shipping, setShipping] = useState<string>("Standard");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setOk(null);
+    try {
+      setSaving(true);
+      await makeApiRequest(`/admin/orders/${order.id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({
+          shipping_method: shipping,
+          status: status, // Allowed: Pending | Processing | Completed | Cancelled | Delivered
+        }),
+      });
+      setOk("Updated successfully.");
+      onSaved(status);
+    } catch (e: any) {
+      setErr(e?.message || "Failed to update order");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open={!!order} onClose={onClose} title={`Edit Order #${order.id.toString().padStart(6, "0")}`}>
+      <form onSubmit={handleSave} className="space-y-4">
+        {err && <div className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">{err}</div>}
+        {ok && <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700">{ok}</div>}
+
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Status</label>
+            <select
+              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="Pending">Pending</option>
+              <option value="Processing">Processing</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Shipping Method</label>
+            <select
+              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              value={shipping}
+              onChange={(e) => setShipping(e.target.value)}
+            >
+              <option value="Standard">Standard</option>
+              <option value="Express">Express</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50">
+            Cancel
+          </button>
+          <button type="submit" disabled={saving} className="rounded-lg bg-green-700 px-4 py-2 text-white hover:bg-green-800 disabled:opacity-60">
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 /* -------------------------------- Component -------------------------------- */
 
 export default function AdminOrders() {
@@ -155,6 +258,8 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [viewing, setViewing] = useState<number | null>(null);
+  const [editing, setEditing] = useState<UIOrder | null>(null);
+
 
 
   // controls
@@ -167,7 +272,7 @@ export default function AdminOrders() {
   const [debugRec, setDebugRec] = useState<DebugRecord | null>(null);
 
   async function load() {
-    const url = `${API_BASE}/admin/orders/`;
+    const url = `${API_BASE}/admin/orders`;
     const rec: DebugRecord = {
       url,
       apiBase: API_BASE,
@@ -400,12 +505,20 @@ export default function AdminOrders() {
                   </td>
                   <td className="px-4 py-3 text-slate-800 font-semibold">{money(o.total)}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => setViewing(o.id)}
-                      className="px-3 py-1.5 rounded-lg text-slate-700 border border-slate-300 hover:bg-slate-50"
-                    >
-                      View
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => setViewing(o.id)}
+                        className="px-3 py-1.5 rounded-lg text-slate-700 border border-slate-300 hover:bg-slate-50"
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => setEditing(o)} 
+                        className="rounded-md bg-rose-600 px-3 py-1.5 text-white hover:bg-rose-700"
+                      >
+                        Edit
+                      </button>
+                    </div>         
                   </td>
                 </tr>
               ))}
@@ -430,6 +543,18 @@ export default function AdminOrders() {
         onClose={() => setViewing(null)}
       />
       )}
+
+      {editing && (
+      <EditOrderModal
+        order={editing}
+        onClose={() => setEditing(null)}
+        onSaved={(newStatus) => {
+          setRows(prev => prev.map(r => r.id === editing.id ? { ...r, status: newStatus } : r));
+          setEditing(null);
+        }}
+      />
+      )}
+
     </div>
   );
 }

@@ -32,7 +32,7 @@ func (ctrl *OrderController) RegisterRoutes(rg *gin.RouterGroup) {
 
 	// Admin routes
 	admin := rg.Group("/admin/orders")
-	admin.GET("/", ctrl.AdminGetOrders)
+	admin.GET("", ctrl.AdminGetOrders)
 	admin.GET("/:orderID", ctrl.GetAdminOrderDetailByID)
 	admin.PUT("/:orderID/status", ctrl.UpdateOrderStatus)
 }
