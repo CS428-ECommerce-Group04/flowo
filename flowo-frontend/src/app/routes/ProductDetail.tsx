@@ -7,8 +7,9 @@ import { resolveProductImage } from "@/data/productImages";
 
 type ApiEnvelope<T> = { message?: string; data: T };
 
-type ApiDetailProduct = {
+type ApiProduct = {
   product_id?: number;
+  id?: number;
   name?: string;
   description?: string;
   flower_type?: string;
@@ -25,35 +26,76 @@ type ApiDetailProduct = {
   sales_rank?: number;
   image_url?: string;
   primaryImageUrl?: string;
-  // Add other fields your API returns if needed (e.g., image urls)
+  discount_percentage?: number;
+  price_valid_until?: string;
+  last_updated?: string;
 };
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
 
-// Utility: choose a detail record from the list that best matches a product
-function pickDetailForProduct(
-  list: ApiDetailProduct[],
-  base: UIFlower | undefined
-): ApiDetailProduct | undefined {
-  if (!list.length) return undefined;
-  if (!base) return list[0];
+// Function to fetch product data from backend API
+async function fetchProductById(productId: string): Promise<ApiProduct> {
+  const productUrl = `${API_BASE}/product/${productId}`;
+  console.log("[ProductDetail] Fetching product from:", productUrl);
 
-  // try name match (case-insensitive)
-  const byName = list.find(
-    (d) => (d.name || "").toLowerCase() === base.name.toLowerCase()
-  );
-  if (byName) return byName;
+  const response = await fetch(productUrl, {
+    headers: { Accept: "application/json" },
+    credentials: "include",
+  });
 
-  // try flower type match
-  const byType = list.find(
-    (d) =>
-      (d.flower_type || "").toLowerCase() ===
-      (base.flower_type || "").toLowerCase()
-  );
-  if (byType) return byType;
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(raw || `HTTP ${response.status} - Failed to fetch product`);
+  }
 
-  return list[0];
+  let parsed: ApiEnvelope<ApiProduct> | ApiProduct;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Invalid JSON from product endpoint");
+  }
+
+  // Handle both direct response and envelope response
+  const productData: ApiProduct = 'data' in parsed ? parsed.data : parsed as ApiProduct;
+
+  if (!productData) {
+    throw new Error("Invalid product data received from API");
+  }
+
+  return productData;
+}
+
+// Fallback function to find product ID from slug using products list
+async function findProductIdBySlug(slug: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE}/products`, {
+      headers: { Accept: "application/json" },
+    });
+    const raw = await res.text();
+    if (!res.ok) return null;
+
+    let parsed: ApiEnvelope<any[]> | any[];
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+
+    const arr: any[] = Array.isArray(parsed) ? parsed : parsed.data ?? [];
+
+    // Find product by slug
+    const product = arr.find(p => {
+      const productSlug = p.slug ?? (p.name
+        ? p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+        : String(p.id ?? p.product_id ?? ""));
+      return productSlug === slug;
+    });
+
+    return product ? String(product.id ?? product.product_id ?? "") : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function ProductDetail() {
@@ -63,15 +105,10 @@ export default function ProductDetail() {
   const add = useCart((s) => s.add);
 
   // Zustand store access
-  const loaded = useProductsStore((s) => s.loaded);
-  const list = useProductsStore((s) => s.list);
-  const setAll = useProductsStore((s) => s.setAll);
   const findBySlug = useProductsStore((s) => s.findBySlug);
 
   // If navigated from Landing, this can be present
   const productFromState = location.state?.product;
-
-  // Fast candidate from state OR store
   const productFromStore = findBySlug(slug);
   const baseProduct = productFromState || productFromStore;
 
@@ -80,19 +117,61 @@ export default function ProductDetail() {
     name: string;
     description: string;
     flowerType: string;
-    price: number;
-    effectivePrice?: number;
+    effectivePrice: number;
     basePrice?: number;
+    currentPrice?: number;
+    discountPercentage?: number;
     stock?: number;
     rating?: number;
     reviews?: number;
     image: string;
     tags: string[];
+    lastUpdated?: string;
   } | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [qty, setQty] = useState(1);
+
+  // Function to refresh product data
+  const refreshProduct = async (productId: string) => {
+    setRefreshing(true);
+    setErr(null);
+
+    try {
+      const productData = await fetchProductById(productId);
+
+      // Use consistent image resolution logic
+      const imageFromApi = productData.image_url ?? productData.primaryImageUrl;
+      const resolvedImage = resolveProductImage(productData.name || "", slug);
+      const finalImage = imageFromApi || resolvedImage;
+
+      const updatedUi = {
+        id: String(productData.product_id ?? productData.id ?? productId),
+        name: productData.name || "Unknown Product",
+        description: productData.description || "",
+        flowerType: productData.flower_type || "",
+        effectivePrice: productData.effective_price ?? 0,
+        basePrice: productData.base_price,
+        currentPrice: productData.current_price,
+        discountPercentage: productData.discount_percentage,
+        stock: productData.stock_quantity,
+        rating: productData.average_rating,
+        reviews: productData.review_count,
+        image: finalImage,
+        tags: [productData.flower_type, productData.status].filter(Boolean) as string[],
+        lastUpdated: productData.last_updated,
+      };
+
+      setUi(updatedUi);
+    } catch (error: any) {
+      console.error("[ProductDetail] Product refresh error:", error);
+      setErr(error?.message || "Failed to refresh product data");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -102,130 +181,48 @@ export default function ProductDetail() {
       setErr(null);
 
       try {
-        // Ensure we have the base product (with flower_type) even on hard-refresh
-        let base: UIFlower | undefined = baseProduct;
+        // Try to get product ID from various sources
+        let productId: string | null = null;
 
-        if (!base) {
-          console.log("[ProductDetail] store empty or product not found, fetching /products…");
-          const res = await fetch(`${API_BASE}/products`, {
-            headers: { Accept: "application/json" },
-          });
-          const raw = await res.text();
-          if (!res.ok) throw new Error(raw || `HTTP ${res.status}`);
-
-          let parsed: ApiEnvelope<any[]> | any[];
-          try {
-            parsed = JSON.parse(raw);
-          } catch {
-            throw new Error("Invalid JSON from /products");
-          }
-
-          const arr: any[] = Array.isArray(parsed) ? parsed : parsed.data ?? [];
-
-          // Map minimal fields to reuse your UIFlower structure
-          const mapped: UIFlower[] = arr.map((p) => ({
-            id: String(p.id ?? p.product_id ?? ""),
-            slug:
-              p.slug ??
-              (p.name
-                ? p.name
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, "-")
-                    .replace(/(^-|-$)/g, "")
-                : String(p.id ?? p.product_id ?? "")),
-            name: p.name,
-            description: p.description ?? "",
-            price: Number(p.effective_price ?? p.price ?? p.base_price ?? 0),
-            image: p.image_url ?? p.primaryImageUrl ?? "/images/placeholder.png",
-            tags: Array.isArray(p.tags)
-              ? p.tags
-              : [p.flower_type, p.status].filter(Boolean) as string[],
-            flower_type: p.flower_type,
-          }));
-
-          // Put into the cache for future pages
-          setAll(mapped);
-
-          base = mapped.find((x) => x.slug === slug);
-          if (!base) {
-            throw new Error("Product not found.");
-          }
+        // First, try from state or store
+        if (baseProduct?.id) {
+          productId = baseProduct.id;
+        } else {
+          // Fallback: find product ID by slug from products list
+          productId = await findProductIdBySlug(slug);
         }
 
-        // We must have a proper flower type
-        const flowerType = (base.flower_type || "").trim();
-        if (!flowerType) {
-          throw new Error("Missing flower type for this product.");
+        if (!productId) {
+          throw new Error("Product not found.");
         }
 
-        // Fetch detail by flower type — use EXACT string from store, url-encoded
-        const detailUrl = `${API_BASE}/product/flower-type/${encodeURIComponent(
-          flowerType
-        )}`;
-        console.log("[ProductDetail] GET", detailUrl);
-
-        const dRes = await fetch(detailUrl, {
-          headers: { Accept: "application/json" },
-        });
-        const dRaw = await dRes.text();
-        if (!dRes.ok) throw new Error(dRaw || `HTTP ${dRes.status}`);
-
-        let dParsed: ApiEnvelope<ApiDetailProduct[]> | ApiDetailProduct[];
-        try {
-          dParsed = JSON.parse(dRaw);
-        } catch (e) {
-          console.error("[ProductDetail] JSON parse error (detail):", e);
-          throw new Error("Invalid JSON from detail endpoint");
-        }
-
-        const detailList: ApiDetailProduct[] = Array.isArray(dParsed)
-          ? dParsed
-          : dParsed.data ?? [];
-
-        if (!detailList.length) {
-          throw new Error("No product found for this flower type.");
-        }
-
-        const best = pickDetailForProduct(detailList, base) || detailList[0];
-
-        // Extract pricing information
-        const effectivePrice = best.effective_price ? Number(best.effective_price) : null;
-        const basePrice = best.base_price ? Number(best.base_price) : null;
-        const currentPrice = best.current_price ? Number(best.current_price) : null;
-        const fallbackPrice = best.price ? Number(best.price) : null;
-
-        // Calculate display price preference: current -> effective -> price -> base
-        const displayPrice = Number(
-          currentPrice ??
-            effectivePrice ??
-            fallbackPrice ??
-            basePrice ??
-            base.price ??
-            0
-        );
-
-        // Use consistent image resolution logic from shop view
-        const imageFromApi = best.image_url ?? best.primaryImageUrl ?? base.image;
-        const resolvedImage = resolveProductImage(best.name || base.name, slug);
-
-        const uiObj = {
-          id: String(
-            best.product_id ?? base.id ?? ""
-          ),
-          name: best.name || base.name,
-          description: best.description || base.description,
-          flowerType,
-          price: Number.isFinite(displayPrice) ? displayPrice : 0,
-          effectivePrice: effectivePrice || undefined,
-          basePrice: basePrice || undefined,
-          stock: best.stock_quantity,
-          rating: best.average_rating,
-          reviews: best.review_count,
-          image: resolvedImage,
-          tags: [flowerType, best.status || ""].filter(Boolean) as string[],
-        };
+        // Fetch product data from backend API
+        const productData = await fetchProductById(productId);
 
         if (!alive) return;
+
+        // Use consistent image resolution logic
+        const imageFromApi = productData.image_url ?? productData.primaryImageUrl;
+        const resolvedImage = resolveProductImage(productData.name || "", slug);
+        const finalImage = imageFromApi || resolvedImage;
+
+        const uiObj = {
+          id: String(productData.product_id ?? productData.id ?? productId),
+          name: productData.name || "Unknown Product",
+          description: productData.description || "",
+          flowerType: productData.flower_type || "",
+          effectivePrice: productData.effective_price ?? 0,
+          basePrice: productData.base_price,
+          currentPrice: productData.current_price,
+          discountPercentage: productData.discount_percentage,
+          stock: productData.stock_quantity,
+          rating: productData.average_rating,
+          reviews: productData.review_count,
+          image: finalImage,
+          tags: [productData.flower_type, productData.status].filter(Boolean) as string[],
+          lastUpdated: productData.last_updated,
+        };
+
         setUi(uiObj);
         setLoading(false);
       } catch (e: any) {
@@ -239,33 +236,58 @@ export default function ProductDetail() {
     return () => {
       alive = false;
     };
-  }, [slug, baseProduct, setAll]);
+  }, [slug, baseProduct]);
 
-  // Updated pricing logic to match shop view requirements
+  // Auto-refresh product data every 60 seconds to keep it current
+  useEffect(() => {
+    if (!ui?.id) return;
+
+    const interval = setInterval(() => {
+      refreshProduct(ui.id);
+    }, 60000); // 60 seconds
+
+    return () => clearInterval(interval);
+  }, [ui?.id]);
+
+  // Pricing logic using effective_price from backend API
   const pricingInfo = useMemo(() => {
-    if (!ui) return { displayPrice: 0, strikethroughPrice: undefined, hasDiscount: false, discountPct: 0 };
+    if (!ui) {
+      return {
+        displayPrice: 0,
+        strikethroughPrice: undefined,
+        hasDiscount: false,
+        discountPct: 0,
+        isLoading: refreshing
+      };
+    }
 
     const effectivePrice = ui.effectivePrice;
     const basePrice = ui.basePrice;
+    const currentPrice = ui.currentPrice;
 
-    if (effectivePrice !== undefined && basePrice !== undefined && effectivePrice !== basePrice) {
-      // Show effective price normally, base price crossed out
+    // Use current price if available, otherwise effective price
+    const displayPrice = currentPrice ?? effectivePrice;
+
+    if (basePrice && displayPrice !== basePrice && displayPrice < basePrice) {
+      // Show discount pricing
       return {
-        displayPrice: effectivePrice,
+        displayPrice,
         strikethroughPrice: basePrice,
         hasDiscount: true,
-        discountPct: Math.round(((basePrice - effectivePrice) / basePrice) * 100)
+        discountPct: ui.discountPercentage ?? Math.round(((basePrice - displayPrice) / basePrice) * 100),
+        isLoading: refreshing
       };
     } else {
-      // Show just the base price (or effective price if base price not available)
+      // Show regular pricing
       return {
-        displayPrice: basePrice ?? effectivePrice ?? ui.price,
+        displayPrice,
         strikethroughPrice: undefined,
         hasDiscount: false,
-        discountPct: 0
+        discountPct: 0,
+        isLoading: refreshing
       };
     }
-  }, [ui]);
+  }, [ui, refreshing]);
 
   if (loading) {
     return (
@@ -370,11 +392,14 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Updated price display */}
+            {/* Updated price display using effective_price from backend API */}
             <div className="mt-6">
               <div className="flex items-center gap-3">
-                <div className="text-3xl font-bold text-[#2d5016]">
+                <div className={`text-3xl font-bold text-[#2d5016] ${pricingInfo.isLoading ? 'opacity-50' : ''}`}>
                   ${pricingInfo.displayPrice.toFixed(2)}
+                  {pricingInfo.isLoading && (
+                    <span className="ml-2 text-sm text-slate-500">Updating...</span>
+                  )}
                 </div>
                 {pricingInfo.strikethroughPrice && (
                   <div className="text-slate-400 line-through">
@@ -386,9 +411,21 @@ export default function ProductDetail() {
                     {pricingInfo.discountPct}% OFF
                   </span>
                 )}
+                <button
+                  onClick={() => refreshProduct(ui.id)}
+                  className="ml-2 text-xs text-slate-500 hover:text-slate-700 underline"
+                  disabled={pricingInfo.isLoading}
+                >
+                  {pricingInfo.isLoading ? 'Updating...' : 'Refresh Price'}
+                </button>
               </div>
               <div className="text-slate-500 text-sm mt-1">
                 Price includes delivery within 24 hours
+                {ui.lastUpdated && (
+                  <span className="ml-2">
+                    • Updated {new Date(ui.lastUpdated).toLocaleTimeString()}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -416,7 +453,8 @@ export default function ProductDetail() {
               </div>
 
               <button
-                className="rounded bg-pink-600 text-white px-6 py-2 font-medium"
+                className="rounded bg-pink-600 text-white px-6 py-2 font-medium disabled:opacity-50"
+                disabled={pricingInfo.isLoading}
                 onClick={() => {
                   add({
                     id: ui.id,
@@ -429,7 +467,7 @@ export default function ProductDetail() {
                   });
                 }}
               >
-                Add to Cart
+                {pricingInfo.isLoading ? 'Loading Price...' : 'Add to Cart'}
               </button>
 
               <button className="rounded border border-[#2d5016] text-[#2d5016] px-4 py-2">
