@@ -120,6 +120,16 @@ export default function Sidebar({ isOpen, onClose, isLoggedIn, user }: SidebarPr
                   <p className="font-medium text-slate-900">{user.name}</p>
                   <p>{user.email}</p>
                 </div>
+
+                  {/* Profile link */}
+                <Link
+                  to="/profile"
+                  onClick={onClose}
+                  className="block text-lg font-medium text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm px-2 py-2"
+                  aria-label="View your profile"
+                >
+                  Profile
+                </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full text-left text-lg font-medium text-slate-700 hover:text-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 rounded-sm px-2 py-2"
