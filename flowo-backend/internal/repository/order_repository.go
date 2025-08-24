@@ -217,7 +217,7 @@ func (r *orderRepository) AdminGetOrders(status, firebaseUID, startDate, endDate
 
 func (r *orderRepository) GetAdminOrderDetailByID(orderID int) (*dto.AdminOrderDetailResponse, error) {
 	var order dto.AdminOrderDetailResponse
-	err := r.DB.QueryRow("SELECT o.order_id, o.status, o.order_date, o.final_total_amount, o.shipping_method, o.customer_name, o.customer_email FROM `Order` o WHERE o.order_id = ?", orderID).
+	err := r.DB.QueryRow("SELECT o.order_id, o.status, o.order_date, o.final_total_amount, o.shipping_method, IFNULL(o.customer_name, ''), IFNULL(o.customer_email, '') FROM `Order` o WHERE o.order_id = ?", orderID).
 		Scan(
 			&order.OrderID,
 			&order.Status,
