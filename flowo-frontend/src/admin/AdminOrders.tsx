@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { API_CONFIG } from "@/config/api";
+import AdminOrderDetail from "./AdminOrderDetail";
+
 
 type ApiEnvelope<T> = { message?: string; data?: T };
 type ApiOrder = {
@@ -152,6 +154,8 @@ export default function AdminOrders() {
   const [rows, setRows] = useState<UIOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<number | null>(null);
+
 
   // controls
   const [q, setQ] = useState("");
@@ -396,7 +400,10 @@ export default function AdminOrders() {
                   </td>
                   <td className="px-4 py-3 text-slate-800 font-semibold">{money(o.total)}</td>
                   <td className="px-4 py-3">
-                    <button className="px-3 py-1.5 rounded-lg text-slate-700 border border-slate-300 hover:bg-slate-50">
+                    <button
+                      onClick={() => setViewing(o.id)}
+                      className="px-3 py-1.5 rounded-lg text-slate-700 border border-slate-300 hover:bg-slate-50"
+                    >
                       View
                     </button>
                   </td>
@@ -416,6 +423,13 @@ export default function AdminOrders() {
 
       {/* Debug panel (only when enabled) */}
       {DEBUG_ON && <DebugPanel rec={debugRec} />}
+
+      {viewing && (
+      <AdminOrderDetail
+        orderId={viewing}
+        onClose={() => setViewing(null)}
+      />
+      )}
     </div>
   );
 }
