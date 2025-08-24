@@ -51,7 +51,7 @@ func (r *cartRepository) AddOrUpdateCartItem(cartID int, productID int, quantity
 		}
 	}()
 
-	// 1. Check current stock in Flower Product
+	// 1. Get current stock
 	var currentStock int
 	err = tx.QueryRow(`
         SELECT stock_quantity 
@@ -60,29 +60,8 @@ func (r *cartRepository) AddOrUpdateCartItem(cartID int, productID int, quantity
 	if err != nil {
 		return err
 	}
-	if currentStock < quantity {
-		return errors.New("not enough stock")
-	}
 
-	// // 2. Decrease stock quantity in Flower Product
-	// _, err = tx.Exec(`
-	//     UPDATE FlowerProduct
-	//     SET stock_quantity = stock_quantity - ?
-	//     WHERE product_id = ?`, quantity, productID)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // 3. Update status in Flower Product if stock is low
-	// _, err = tx.Exec(`
-	//     UPDATE FlowerProduct
-	//     SET status = 'LowStock'
-	//     WHERE product_id = ? AND stock_quantity < 5`, productID)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// 4. Check if CartItem already exists
+	// 2. Check if cart already has the product
 	var existingQty int
 	err = tx.QueryRow(`
         SELECT quantity 
@@ -90,21 +69,30 @@ func (r *cartRepository) AddOrUpdateCartItem(cartID int, productID int, quantity
         WHERE cart_id = ? AND product_id = ?`, cartID, productID).Scan(&existingQty)
 
 	if err == sql.ErrNoRows {
-		// 5. if not exists, insert new CartItem
+		// If not exists -> check new quantity
+		if quantity > currentStock {
+			return errors.New("not enough stock")
+		}
 		_, err = tx.Exec(`
             INSERT INTO CartItem (cart_id, product_id, quantity) 
             VALUES (?, ?, ?)`, cartID, productID, quantity)
 		return err
+
 	} else if err != nil {
 		return err
 	}
 
-	// 6. If exists, update quantity in CartItem
+	// If exists -> check total quantity after update
+	newQty := existingQty + quantity
+	if newQty > currentStock {
+		return errors.New("not enough stock")
+	}
+
 	_, err = tx.Exec(`
         UPDATE CartItem 
-        SET quantity = quantity + ? 
+        SET quantity = ? 
         WHERE cart_id = ? AND product_id = ?`,
-		quantity, cartID, productID)
+		newQty, cartID, productID)
 	return err
 }
 
