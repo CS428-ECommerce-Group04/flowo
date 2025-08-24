@@ -6,7 +6,6 @@ import { useProductsStore, type UIFlower } from "@/store/products";
 import { resolveProductImage } from "@/data/productImages";
 
 type ApiEnvelope<T> = { message?: string; data: T };
-
 type ApiProduct = {
   product_id?: number;
   id?: number;
@@ -30,7 +29,6 @@ type ApiProduct = {
   price_valid_until?: string;
   last_updated?: string;
 };
-
 type CartApiResponse = {
   message?: string;
   success?: boolean;
@@ -43,6 +41,27 @@ type CartApiResponse = {
       price: number;
     }>;
   };
+};
+type Review = {
+  id: number;
+  user_id: number;
+  product_id: number;
+  rating: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  user_name?: string;
+};
+type ReviewsApiResponse = {
+  message?: string;
+  data?: Review[];
+  error?: string;
+};
+type SubmitReviewResponse = {
+  message?: string;
+  success?: boolean;
+  error?: string;
+  data?: Review;
 };
 
 const API_BASE =
@@ -78,6 +97,83 @@ async function fetchProductById(productId: string): Promise<ApiProduct> {
   }
 
   return productData;
+}
+
+// Function to fetch reviews for a product
+async function fetchProductReviews(productId: string): Promise<Review[]> {
+  const reviewsUrl = `${API_BASE}/products/${productId}/reviews`;
+  console.log("[ProductDetail] Fetching reviews from:", reviewsUrl);
+
+  const response = await fetch(reviewsUrl, {
+    headers: { Accept: "application/json" },
+    credentials: "include",
+  });
+
+  const raw = await response.text();
+  if (!response.ok) {
+    throw new Error(raw || `HTTP ${response.status} - Failed to fetch reviews`);
+  }
+
+  let parsed: ReviewsApiResponse | Review[];
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Invalid JSON from reviews endpoint");
+  }
+
+  // Handle both direct response and envelope response
+  const reviewsData: Review[] = Array.isArray(parsed) ? parsed : parsed.data ?? [];
+  return reviewsData;
+}
+
+// Function to submit a new review
+async function submitProductReview(productId: string, rating: number, comment: string): Promise<SubmitReviewResponse> {
+  const reviewsUrl = `${API_BASE}/products/${productId}/reviews`;
+  console.log("[ProductDetail] Submitting review to:", reviewsUrl);
+
+  const response = await fetch(reviewsUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    credentials: "include",
+    body: JSON.stringify({
+      rating: rating,
+      comment: comment
+    })
+  });
+
+  const raw = await response.text();
+  let parsed: SubmitReviewResponse;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    if (!response.ok) {
+      return {
+        success: false,
+        error: `HTTP ${response.status} - Failed to submit review`
+      };
+    }
+    return {
+      success: true,
+      message: "Review submitted successfully"
+    };
+  }
+
+  if (!response.ok || parsed.error) {
+    return {
+      success: false,
+      error: parsed.error || parsed.message || `HTTP ${response.status} - Failed to submit review`
+    };
+  }
+
+  return {
+    success: true,
+    message: parsed.message || "Review submitted successfully",
+    data: parsed.data
+  };
 }
 
 // Function to add product to cart via API
@@ -209,7 +305,6 @@ export default function ProductDetail() {
   
   // Cart store access for updating header state
 
-
   // Zustand store access
   const findBySlug = useProductsStore((s) => s.findBySlug);
 
@@ -244,6 +339,90 @@ export default function ProductDetail() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartSuccess, setCartSuccess] = useState<string | null>(null);
   const [cartError, setCartError] = useState<string | null>(null);
+
+  // Review states
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'reviews' | 'care'>('reviews');
+
+  // Review form states
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState<string | null>(null);
+  const [reviewSubmitError, setReviewSubmitError] = useState<string | null>(null);
+
+  // Function to fetch reviews
+  const fetchReviews = async (productId: string) => {
+    setReviewsLoading(true);
+    setReviewsError(null);
+
+    try {
+      const reviewsData = await fetchProductReviews(productId);
+      setReviews(reviewsData);
+    } catch (error: any) {
+      console.error("[ProductDetail] Reviews fetch error:", error);
+      setReviewsError(error?.message || "Failed to load reviews");
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  // Function to handle review submission
+  const handleSubmitReview = async () => {
+    if (!ui) return;
+
+    // Clear previous messages
+    setReviewSubmitSuccess(null);
+    setReviewSubmitError(null);
+
+    // Validate inputs
+    if (reviewComment.trim().length < 10) {
+      setReviewSubmitError("Review comment must be at least 10 characters long");
+      return;
+    }
+
+    if (reviewRating < 1 || reviewRating > 5) {
+      setReviewSubmitError("Rating must be between 1 and 5 stars");
+      return;
+    }
+
+    setSubmittingReview(true);
+
+    try {
+      const result = await submitProductReview(ui.id, reviewRating, reviewComment.trim());
+
+      if (result.success) {
+        setReviewSubmitSuccess(result.message || "Review submitted successfully!");
+        
+        // Clear form
+        setReviewComment('');
+        setReviewRating(5);
+        
+        // Refresh reviews to show the new one
+        await fetchReviews(ui.id);
+        
+        // Refresh product data to update review count and average rating
+        await refreshProduct(ui.id);
+        // Auto-hide success message after 3 seconds
+        setTimeout(() => {
+          setReviewSubmitSuccess(null);
+        }, 3000);
+      } else {
+        setReviewSubmitError(result.error || "Failed to submit review");
+        // Auto-hide error message after 5 seconds
+        setTimeout(() => {
+          setReviewSubmitError(null);
+        }, 5000);
+      }
+    } catch (error: any) {
+      console.error("[ProductDetail] Submit review error:", error);
+      setReviewSubmitError(error?.message || "Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // Function to refresh product data
   const refreshProduct = async (productId: string) => {
@@ -338,7 +517,6 @@ export default function ProductDetail() {
     } finally {
       setAddingToCart(false);
     }
-
     // Refresh product data to get updated stock levels
     refreshProduct(ui.id);
   };
@@ -395,6 +573,8 @@ export default function ProductDetail() {
 
         setUi(uiObj);
         setLoading(false);
+        // Fetch reviews for this product
+        await fetchReviews(productId);
       } catch (e: any) {
         console.error("[ProductDetail] error:", e);
         if (!alive) return;
@@ -458,6 +638,29 @@ export default function ProductDetail() {
       };
     }
   }, [ui, refreshing]);
+
+  // Helper function to render star rating
+  const renderStars = (rating: number, interactive: boolean = false, onRatingChange?: (rating: number) => void) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <button
+          key={i}
+          type={interactive ? "button" : undefined}
+          className={`text-lg ${
+            i <= rating 
+              ? 'text-yellow-400' 
+              : 'text-gray-300'
+          } ${interactive ? 'hover:text-yellow-400 cursor-pointer' : 'cursor-default'}`}
+          onClick={interactive && onRatingChange ? () => onRatingChange(i) : undefined}
+          disabled={!interactive}
+        >
+          ★
+        </button>
+      );
+    }
+    return <div className="flex">{stars}</div>;
+  };
 
   if (loading) {
     return (
@@ -575,13 +778,14 @@ export default function ProductDetail() {
               </div>
               <div>
                 <div className="text-slate-500 text-xs">Rating</div>
-                <div className="text-[#2d5016] font-semibold">
+                <div className="text-[#2d5016] font-semibold flex items-center gap-2">
                   {ui.rating != null ? ui.rating.toFixed(1) : "—"}
+                  {ui.rating != null && renderStars(Math.round(ui.rating))}
                 </div>
               </div>
               <div>
                 <div className="text-slate-500 text-xs">Reviews</div>
-                <div className="text-[#2d5016] font-semibtml">{ui.reviews ?? 0}</div>
+                <div className="text-[#2d5016] font-semibold">{ui.reviews ?? 0}</div>
               </div>
             </div>
 
@@ -696,20 +900,203 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Simple tabs (placeholder) */}
+        {/* Enhanced tabs with reviews functionality */}
         <div className="mt-10">
           <div className="border-b border-slate-200 flex gap-8">
-            <button className="py-2 border-b-2 border-[#2d5016] text-[#2d5016] font-medium">
+            <button 
+              className={`py-2 border-b-2 font-medium ${
+                activeTab === 'reviews' 
+                  ? 'border-[#2d5016] text-[#2d5016]' 
+                  : 'border-transparent text-slate-600 hover:text-[#2d5016]'
+              }`}
+              onClick={() => setActiveTab('reviews')}
+            >
               Customer Reviews ({ui.reviews ?? 0})
             </button>
-            <button className="py-2 text-slate-600">Care Instructions</button>
+            <button 
+              className={`py-2 border-b-2 font-medium ${
+                activeTab === 'care' 
+                  ? 'border-[#2d5016] text-[#2d5016]' 
+                  : 'border-transparent text-slate-600 hover:text-[#2d5016]'
+              }`}
+              onClick={() => setActiveTab('care')}
+            >
+              Care Instructions
+            </button>
           </div>
 
-          <div className="mt-4 rounded-2xl bg-white p-4 shadow">
-            <div className="text-slate-600 text-sm">No reviews yet.</div>
-          </div>
+          {/* Reviews Tab Content */}
+          {activeTab === 'reviews' && (
+            <div className="mt-4">
+              {/* Review Submission Success/Error Messages */}
+              {reviewSubmitSuccess && (
+                <div className="mb-4">
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="text-green-600 text-sm">{reviewSubmitSuccess}</div>
+                      <button
+                        onClick={() => setReviewSubmitSuccess(null)}
+                        className="ml-auto text-green-600 hover:text-green-800"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {reviewSubmitError && (
+                <div className="mb-4">
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="text-red-600 text-sm">{reviewSubmitError}</div>
+                      <button
+                        onClick={() => setReviewSubmitError(null)}
+                        className="ml-auto text-red-600 hover:text-red-800"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Write a Review Form */}
+              <div className="rounded-2xl bg-white p-6 shadow mb-6">
+                <h3 className="text-lg font-semibold text-[#2d5016] mb-4">Write a Review</h3>
+                <div className="space-y-4">
+                  {/* Rating Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Your Rating
+                    </label>
+                    {renderStars(reviewRating, true, setReviewRating)}
+                  </div>
+
+                  {/* Comment Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Your Review
+                    </label>
+                    <textarea
+                      className="w-full border border-slate-300 rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-[#2d5016] focus:border-transparent"
+                      rows={4}
+                      placeholder="Share your experience with this product... (minimum 10 characters)"
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      disabled={submittingReview}
+                    />
+                    <div className="text-xs text-slate-500 mt-1">
+                      {reviewComment.length}/10 characters minimum
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    className="rounded bg-[#2d5016] text-white px-6 py-2 font-medium hover:bg-[#1f3a0f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    onClick={handleSubmitReview}
+                    disabled={submittingReview || reviewComment.trim().length < 10}
+                  >
+                    {submittingReview ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Submitting...
+                      </span>
+                    ) : (
+                      'Submit Review'
+                    )}
+                  </button>
+                </div>
+              </div>
+              {/* Reviews List */}
+              <div className="rounded-2xl bg-white p-6 shadow">
+                <h3 className="text-lg font-semibold text-[#2d5016] mb-4">
+                  Customer Reviews ({reviews.length})
+                </h3>
+                {reviewsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-slate-600">Loading reviews...</div>
+                  </div>
+                ) : reviewsError ? (
+                  <div className="text-center py-8">
+                    <div className="text-red-600 mb-2">Failed to load reviews</div>
+                    <div className="text-sm text-slate-500">{reviewsError}</div>
+                    <button
+                      onClick={() => fetchReviews(ui.id)}
+                      className="mt-2 text-sm text-[#2d5016] hover:underline"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : reviews.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-slate-600 mb-2">No reviews yet</div>
+                    <div className="text-sm text-slate-500">Be the first to review this product!</div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border-b border-slate-200 pb-4 last:border-b-0">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="font-medium text-slate-900">
+                              {review.user_name || `User ${review.user_id}`}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {renderStars(review.rating)}
+                              <span className="text-sm text-slate-500">
+                                {new Date(review.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-slate-700 text-sm leading-relaxed">
+                          {review.comment}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {/* Care Instructions Tab Content */}
+          {activeTab === 'care' && (
+            <div className="mt-4 rounded-2xl bg-white p-6 shadow">
+              <h3 className="text-lg font-semibold text-[#2d5016] mb-4">Care Instructions</h3>
+              <div className="space-y-4 text-slate-700">
+                <div>
+                  <h4 className="font-medium text-[#2d5016] mb-2">🌸 Flower Care</h4>
+                  <ul className="text-sm space-y-1 ml-4">
+                    <li>• Keep flowers in a cool, dry place away from direct sunlight</li>
+                    <li>• Change water every 2-3 days for fresh arrangements</li>
+                    <li>• Trim stems at an angle under running water</li>
+                    <li>• Remove wilted flowers and leaves regularly</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium text-[#2d5016] mb-2">💧 Watering</h4>
+                  <ul className="text-sm space-y-1 ml-4">
+                    <li>• Use clean, lukewarm water</li>
+                    <li>• Add flower food if provided</li>
+                    <li>• Ensure vase is clean before use</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium text-[#2d5016] mb-2">📍 Placement</h4>
+                  <ul className="text-sm space-y-1 ml-4">
+                    <li>• Avoid heat sources like radiators or direct sunlight</li>
+                    <li>• Keep away from drafts and air conditioning</li>
+                    <li>• Choose a stable surface to prevent tipping</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
         {/* Help */}
         <div className="mt-10 rounded-2xl bg-[#6bb937] p-8 text-center">
           <h2 className="text-black text-xl font-bold mb-2">Need Help Choosing?</h2>
@@ -720,7 +1107,6 @@ export default function ProductDetail() {
             Contact Our Experts
           </button>
         </div>
-
         {/* Footer */}
         <div className="text-center text-slate-500 text-sm mt-10">
           © 2025 Flowo. All rights reserved.
