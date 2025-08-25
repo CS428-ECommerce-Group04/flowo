@@ -1,0 +1,78 @@
+base_url: "http://host.docker.internal:8081"
+timeout_ms: 15000
+headers:
+  Accept: application/json
+  Content-Type: application/json
+  
+
+auth:
+  email: ""
+  password: ""
+  signup_first: true
+  login_endpoint: "/api/v1/auth/login"
+  signup_endpoint: "/api/v1/auth/signup"
+  check_auth_endpoint: "/api/v1/auth/check-auth"
+
+http:
+  max_idle_conns: 512
+  max_idle_conns_per_host: 512
+  idle_conn_timeout_ms: 30000
+  insecure_skip_tls_verify: false
+
+endpoints:
+  # Public
+  - { name: health, method: GET, path: /health, weight: 1 }
+  - { name: flower_types, method: GET, path: /api/v1/flower-types, weight: 2 }
+  - { name: products, method: GET, path: /api/v1/products, weight: 4 }
+  - { name: pricing_rules, method: GET, path: /api/v1/pricing/rules, weight: 1 }
+  - { name: reviews_list, method: GET, path: /api/v1/products/1/reviews, weight: 1 }
+
+  # Authenticated (Require session cookie)
+  - name: cart_get
+    method: GET
+    path: /api/v1/cart
+    weight: 1
+  - name: cart_add
+    method: POST
+    path: /api/v1/cart/add
+    weight: 1
+    body: '{"product_id":1,"quantity":1}'
+  - name: cart_update
+    method: PUT
+    path: /api/v1/cart/update
+    weight: 1
+    body: '{"product_id":1,"quantity":2}'
+  - name: cart_remove
+    method: DELETE
+    path: /api/v1/cart/remove
+    weight: 1
+    body: '{"product_id":1}'
+  - name: review_create
+    method: POST
+    path: /api/v1/products/1/reviews
+    weight: 1
+    body: '{"rating":5,"comment":"great"}'
+  - name: product_create
+    method: POST
+    path: /api/v1/product
+    weight: 1
+    body: '{"name":"Perf Product","description":"Load test","flower_type":"Rose","base_price":9.99,"status":"NewFlower","stock_quantity":10}'
+  - name: todo_create
+    method: POST
+    path: /api/v1/todos
+    weight: 1
+    body: '{"title":"perf todo","description":"load test","status":"pending"}'
+
+test:
+  mode: fixed
+  duration_sec: 45
+  total_requests: 0
+  concurrency: 20
+  global_rate_limit_per_sec: 0
+
+report:
+  out_dir: tools/perf/reports
+  formats: ["json", "md"]
+  include_per_endpoint: true
+
+

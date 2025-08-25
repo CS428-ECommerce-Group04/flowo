@@ -1,0 +1,32 @@
+{
+  "started_at": "2025-08-24T17:18:35.737212045Z",
+  "duration": 60112164402,
+  "overall": {
+    "requests": 43427,
+    "errors": 242,
+    "error_rate": 0.005572570060100859,
+    "bytes_total": 70813971,
+    "throughput_rps": 722.4328125931719,
+    "p50_ms": 4,
+    "p90_ms": 8,
+    "p95_ms": 10,
+    "p99_ms": 26,
+    "min_ms": 0,
+    "max_ms": 344
+  },
+  "per_endpoint": {},
+  "notes": {
+    "base_url": "http://host.docker.internal:8081",
+    "concurrency": "10",
+    "duration_sec": "60",
+    "endpoint_count": "5",
+    "global_rate_limit_per_sec": "0",
+    "max_concurrency": "50",
+    "max_error_rate": "0.0500",
+    "max_p95_ms": "500",
+    "max_sustained_concurrency": "15",
+    "step": "5",
+    "step_duration_sec": "15",
+    "test_mode": "ramp"
+  }
+}
