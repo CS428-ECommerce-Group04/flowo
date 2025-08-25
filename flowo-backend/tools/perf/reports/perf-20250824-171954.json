@@ -1,0 +1,118 @@
+{
+  "started_at": "2025-08-24T17:19:54.619101179Z",
+  "duration": 60005165193,
+  "overall": {
+    "requests": 17958,
+    "errors": 25,
+    "error_rate": 0.0013921372090433233,
+    "bytes_total": 1512341894,
+    "throughput_rps": 299.27423651347465,
+    "p50_ms": 5,
+    "p90_ms": 270,
+    "p95_ms": 328,
+    "p99_ms": 429,
+    "min_ms": 0,
+    "max_ms": 996
+  },
+  "per_endpoint": {
+    "flower_types": {
+      "requests": 2995,
+      "errors": 0,
+      "error_rate": 0,
+      "bytes_total": 2503820,
+      "throughput_rps": 49.912369882941114,
+      "p50_ms": 1,
+      "p90_ms": 3,
+      "p95_ms": 5,
+      "p99_ms": 16,
+      "min_ms": 0,
+      "max_ms": 55
+    },
+    "health": {
+      "requests": 1465,
+      "errors": 0,
+      "error_rate": 0,
+      "bytes_total": 23440,
+      "throughput_rps": 24.414564901004585,
+      "p50_ms": 0,
+      "p90_ms": 2,
+      "p95_ms": 2,
+      "p99_ms": 7,
+      "min_ms": 0,
+      "max_ms": 15
+    },
+    "pricing_rules": {
+      "requests": 1462,
+      "errors": 0,
+      "error_rate": 0,
+      "bytes_total": 1928378,
+      "throughput_rps": 24.364569204961573,
+      "p50_ms": 1,
+      "p90_ms": 3,
+      "p95_ms": 4,
+      "p99_ms": 11,
+      "min_ms": 0,
+      "max_ms": 59
+    },
+    "product_create": {
+      "requests": 1491,
+      "errors": 0,
+      "error_rate": 0,
+      "bytes_total": 499485,
+      "throughput_rps": 24.847860933377365,
+      "p50_ms": 4,
+      "p90_ms": 9,
+      "p95_ms": 13,
+      "p99_ms": 41,
+      "min_ms": 2,
+      "max_ms": 100
+    },
+    "products": {
+      "requests": 7542,
+      "errors": 25,
+      "error_rate": 0.0033147706178732433,
+      "bytes_total": 1340597678,
+      "throughput_rps": 125.68917985213419,
+      "p50_ms": 193,
+      "p90_ms": 338,
+      "p95_ms": 376,
+      "p99_ms": 476,
+      "min_ms": 2,
+      "max_ms": 996
+    },
+    "todo_create": {
+      "requests": 1537,
+      "errors": 0,
+      "error_rate": 0,
+      "bytes_total": 295104,
+      "throughput_rps": 25.614461606036894,
+      "p50_ms": 4,
+      "p90_ms": 9,
+      "p95_ms": 17,
+      "p99_ms": 43,
+      "min_ms": 1,
+      "max_ms": 118
+    },
+    "todos": {
+      "requests": 1466,
+      "errors": 0,
+      "error_rate": 0,
+      "bytes_total": 166493989,
+      "throughput_rps": 24.431230133018925,
+      "p50_ms": 3,
+      "p90_ms": 6,
+      "p95_ms": 7,
+      "p99_ms": 15,
+      "min_ms": 0,
+      "max_ms": 96
+    }
+  },
+  "notes": {
+    "base_url": "http://host.docker.internal:8081",
+    "concurrency": "25",
+    "duration_sec": "60",
+    "endpoint_count": "7",
+    "global_rate_limit_per_sec": "0",
+    "test_mode": "fixed"
+  }
+}

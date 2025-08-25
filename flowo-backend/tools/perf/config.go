@@ -9,56 +9,73 @@ import (
 )
 
 type Config struct {
-	BaseURL string            `yaml:"base_url"`
-	Headers map[string]string `yaml:"headers"`
-	TimeoutMs int             `yaml:"timeout_ms"`
-	Endpoints []EndpointConfig `yaml:"endpoints"`
-	Test      TestConfig       `yaml:"test"`
-	Report    ReportConfig     `yaml:"report"`
-	HTTP      HTTPConfig       `yaml:"http"`
-	Auth      AuthConfig       `yaml:"auth"`
+	BaseURL   string            `yaml:"base_url"`
+	Headers   map[string]string `yaml:"headers"`
+	TimeoutMs int               `yaml:"timeout_ms"`
+	Endpoints []EndpointConfig  `yaml:"endpoints"`
+	Test      TestConfig        `yaml:"test"`
+	Report    ReportConfig      `yaml:"report"`
+	HTTP      HTTPConfig        `yaml:"http"`
+	Auth      AuthConfig        `yaml:"auth"`
+	Setup     []SetupStep       `yaml:"setup"`
 }
 
 type EndpointConfig struct {
-	Name   string            `yaml:"name"`
-	Method string            `yaml:"method"`
-	Path   string            `yaml:"path"`
-	Body   string            `yaml:"body"`
-	Weight int               `yaml:"weight"`
+	Name    string            `yaml:"name"`
+	Method  string            `yaml:"method"`
+	Path    string            `yaml:"path"`
+	Body    string            `yaml:"body"`
+	Weight  int               `yaml:"weight"`
 	Headers map[string]string `yaml:"headers"`
 }
 
 type TestConfig struct {
 	Mode string `yaml:"mode"`
 	// fixed mode
-	DurationSec int `yaml:"duration_sec"`
+	DurationSec   int `yaml:"duration_sec"`
 	TotalRequests int `yaml:"total_requests"`
-	Concurrency int `yaml:"concurrency"`
+	Concurrency   int `yaml:"concurrency"`
 	// ramp mode
-	MaxConcurrency int `yaml:"max_concurrency"`
-	Step int `yaml:"step"`
-	StepDurationSec int `yaml:"step_duration_sec"`
-	MaxErrorRate float64 `yaml:"max_error_rate"`
-	MaxP95Ms int `yaml:"max_p95_ms"`
+	MaxConcurrency  int     `yaml:"max_concurrency"`
+	Step            int     `yaml:"step"`
+	StepDurationSec int     `yaml:"step_duration_sec"`
+	MaxErrorRate    float64 `yaml:"max_error_rate"`
+	MaxP95Ms        int     `yaml:"max_p95_ms"`
 	// global rate limit
 	GlobalRateLimitPerSec int `yaml:"global_rate_limit_per_sec"`
 }
 
 type ReportConfig struct {
-	OutDir string   `yaml:"out_dir"`
-	Formats []string `yaml:"formats"`
-	IncludePerEndpoint bool `yaml:"include_per_endpoint"`
+	OutDir             string   `yaml:"out_dir"`
+	Formats            []string `yaml:"formats"`
+	IncludePerEndpoint bool     `yaml:"include_per_endpoint"`
 }
 
 type HTTPConfig struct {
-	MaxIdleConns        int  `yaml:"max_idle_conns"`
-	MaxIdleConnsPerHost int  `yaml:"max_idle_conns_per_host"`
-	IdleConnTimeoutMs   int  `yaml:"idle_conn_timeout_ms"`
+	MaxIdleConns          int  `yaml:"max_idle_conns"`
+	MaxIdleConnsPerHost   int  `yaml:"max_idle_conns_per_host"`
+	IdleConnTimeoutMs     int  `yaml:"idle_conn_timeout_ms"`
 	InsecureSkipTLSVerify bool `yaml:"insecure_skip_tls_verify"`
 }
 
 type AuthConfig struct {
-	BearerToken string `yaml:"bearer_token"`
+	BearerToken      string `yaml:"bearer_token"`
+	Email            string `yaml:"email"`
+	Password         string `yaml:"password"`
+	SignupFirst      bool   `yaml:"signup_first"`
+	LoginEndpoint    string `yaml:"login_endpoint"`
+	SignupEndpoint   string `yaml:"signup_endpoint"`
+	CheckAuthEndpoint string `yaml:"check_auth_endpoint"`
+}
+
+type SetupStep struct {
+	Name     string            `yaml:"name"`
+	Method   string            `yaml:"method"`
+	Path     string            `yaml:"path"`
+	Body     string            `yaml:"body"`
+	Headers  map[string]string `yaml:"headers"`
+	Optional bool              `yaml:"optional"`
+	Capture  map[string]string `yaml:"capture"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -133,6 +150,16 @@ func (c *Config) setDefaultsAndValidate() error {
 	}
 	if c.Test.MaxP95Ms <= 0 {
 		c.Test.MaxP95Ms = 1000
+	}
+	// auth defaults
+	if c.Auth.LoginEndpoint == "" {
+		c.Auth.LoginEndpoint = "/api/v1/auth/login"
+	}
+	if c.Auth.SignupEndpoint == "" {
+		c.Auth.SignupEndpoint = "/api/v1/auth/signup"
+	}
+	if c.Auth.CheckAuthEndpoint == "" {
+		c.Auth.CheckAuthEndpoint = "/api/v1/auth/check-auth"
 	}
 	return nil
 }

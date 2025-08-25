@@ -1,4 +1,4 @@
-base_url: "http://localhost:8081"
+base_url: "http://host.docker.internal:8081"
 timeout_ms: 10000
 headers:
   Accept: application/json

@@ -15,18 +15,19 @@ import (
 )
 
 type RunResult struct {
-	Config     *Config          `json:"-"`
-	StartedAt  time.Time        `json:"started_at"`
-	Duration   time.Duration    `json:"duration"`
-	Overall    MetricsSnapshot  `json:"overall"`
+	Config      *Config                 `json:"-"`
+	StartedAt   time.Time               `json:"started_at"`
+	Duration    time.Duration           `json:"duration"`
+	Overall     MetricsSnapshot         `json:"overall"`
 	PerEndpoint map[string]MetricsSnapshot `json:"per_endpoint"`
-	Notes      map[string]string `json:"notes,omitempty"`
+	Notes       map[string]string       `json:"notes,omitempty"`
 }
 
 type Runner struct {
-	cfg    *Config
-	client *http.Client
-	pool   []weightedEndpoint
+	cfg           *Config
+	client        *http.Client
+	pool          []weightedEndpoint
+	sessionCookie string
 }
 
 type weightedEndpoint struct {
@@ -67,6 +68,13 @@ func NewRunner(cfg *Config) *Runner {
 func (r *Runner) RunFixed() (*RunResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(r.cfg.Test.DurationSec)*time.Second)
 	defer cancel()
+
+	// Attempt auth if configured
+	if r.sessionCookie == "" {
+		if cookie, err := performAuth(r.cfg, r.client); err == nil && cookie != "" {
+			r.sessionCookie = cookie
+		}
+	}
 
 	limiter := newRateLimiter(r.cfg.Test.GlobalRateLimitPerSec)
 	metrics := NewMetrics()
@@ -124,6 +132,13 @@ func (r *Runner) RunRamp() (*RunResult, error) {
 		step = 1
 	}
 	stepDur := time.Duration(r.cfg.Test.StepDurationSec) * time.Second
+
+	// Attempt auth if configured
+	if r.sessionCookie == "" {
+		if cookie, err := performAuth(r.cfg, r.client); err == nil && cookie != "" {
+			r.sessionCookie = cookie
+		}
+	}
 
 	var bestCC int
 	var lastGood MetricsSnapshot
@@ -208,6 +223,9 @@ func (r *Runner) doRequest(ctx context.Context, ep weightedEndpoint) (status int
 	}
 	if r.cfg.Auth.BearerToken != "" {
 		req.Header.Set("Authorization", "Bearer "+r.cfg.Auth.BearerToken)
+	}
+	if r.sessionCookie != "" {
+		req.Header.Add("Cookie", r.sessionCookie)
 	}
 
 	resp, err := r.client.Do(req)

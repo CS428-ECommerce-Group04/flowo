@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"os"
 
 	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
@@ -24,6 +25,18 @@ func NewAuthMiddleware(firebaseAuth *auth.Client) *AuthMiddleware {
 // RequireAuth middleware that requires valid Firebase authentication
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Test bypass: allow setting a fake user via header when AUTH_BYPASS=1 (non-production only)
+		if os.Getenv("AUTH_BYPASS") == "1" {
+			uid := c.GetHeader("X-Test-UID")
+			if uid == "" {
+				uid = "firebase_uid_john_doe"
+			}
+			c.Set("firebase_uid", uid)
+			c.Set("user_email", "")
+			c.Next()
+			return
+		}
+
 		var token *auth.Token
 		var err error
 
