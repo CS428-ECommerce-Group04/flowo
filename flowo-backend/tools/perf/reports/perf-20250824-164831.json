@@ -1,0 +1,118 @@
+{
+  "started_at": "2025-08-24T16:48:30.513501584Z",
+  "duration": 60963222945,
+  "overall": {
+    "requests": 4490151,
+    "errors": 4490151,
+    "error_rate": 1,
+    "bytes_total": 0,
+    "throughput_rps": 73653.43863218877,
+    "p50_ms": 0,
+    "p90_ms": 0,
+    "p95_ms": 0,
+    "p99_ms": 2,
+    "min_ms": 0,
+    "max_ms": 283
+  },
+  "per_endpoint": {
+    "flower_types": {
+      "requests": 748329,
+      "errors": 748329,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 12275.089207063904,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 264
+    },
+    "health": {
+      "requests": 374191,
+      "errors": 374191,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 6137.979291836143,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 146
+    },
+    "pricing_rules": {
+      "requests": 374136,
+      "errors": 374136,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 6137.077108563293,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 264
+    },
+    "product_create": {
+      "requests": 374655,
+      "errors": 374655,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 6145.59043799255,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 166
+    },
+    "products": {
+      "requests": 1869686,
+      "errors": 1869686,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 30669.080630576234,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 283
+    },
+    "todo_create": {
+      "requests": 374671,
+      "errors": 374671,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 6145.852891308288,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 235
+    },
+    "todos": {
+      "requests": 374483,
+      "errors": 374483,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 6142.769064848365,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 139
+    }
+  },
+  "notes": {
+    "base_url": "http://localhost:8081",
+    "concurrency": "25",
+    "duration_sec": "60",
+    "endpoint_count": "7",
+    "global_rate_limit_per_sec": "0",
+    "test_mode": "fixed"
+  }
+}

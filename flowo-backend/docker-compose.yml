@@ -41,6 +41,7 @@ services:
       - REDIS_PASSWORD=  
       - RETRY_ATTEMPTS=10
       - RETRY_DELAY=10
+      - AUTH_BYPASS=1
     depends_on:
       mysql:
         condition: service_healthy

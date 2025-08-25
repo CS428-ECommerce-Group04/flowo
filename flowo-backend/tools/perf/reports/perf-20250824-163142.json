@@ -1,0 +1,58 @@
+{
+  "started_at": "2025-08-24T16:31:41.681310715Z",
+  "duration": 30417402014,
+  "overall": {
+    "requests": 2031983,
+    "errors": 2031983,
+    "error_rate": 1,
+    "bytes_total": 0,
+    "throughput_rps": 66803.30552440848,
+    "p50_ms": 0,
+    "p90_ms": 0,
+    "p95_ms": 0,
+    "p99_ms": 2,
+    "min_ms": 0,
+    "max_ms": 87
+  },
+  "per_endpoint": {
+    "health": {
+      "requests": 406991,
+      "errors": 406991,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 13380.202550259788,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 69
+    },
+    "list_products": {
+      "requests": 1218792,
+      "errors": 1218792,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 40068.905274652825,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 87
+    },
+    "list_recommendations": {
+      "requests": 406200,
+      "errors": 406200,
+      "error_rate": 1,
+      "bytes_total": 0,
+      "throughput_rps": 13354.197699495875,
+      "p50_ms": 0,
+      "p90_ms": 0,
+      "p95_ms": 0,
+      "p99_ms": 2,
+      "min_ms": 0,
+      "max_ms": 82
+    }
+  }
+}

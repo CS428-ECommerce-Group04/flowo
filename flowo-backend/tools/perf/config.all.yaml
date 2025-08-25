@@ -1,0 +1,45 @@
+base_url: "http://host.docker.internal:8081"
+timeout_ms: 15000
+headers:
+  Content-Type: application/json
+  Accept: application/json
+
+http:
+  max_idle_conns: 512
+  max_idle_conns_per_host: 512
+  idle_conn_timeout_ms: 30000
+  insecure_skip_tls_verify: false
+
+endpoints:
+  # Safe GETs
+  - { name: health, method: GET, path: /health, weight: 1 }
+  - { name: flower_types, method: GET, path: /api/v1/flower-types, weight: 2 }
+  - { name: products, method: GET, path: /api/v1/products, weight: 5 }
+  - { name: pricing_rules, method: GET, path: /api/v1/pricing/rules, weight: 1 }
+  - { name: todos, method: GET, path: /api/v1/todos, weight: 1 }
+
+  # POST/PUT/DELETE coverage (light weight)
+  - name: todo_create
+    method: POST
+    path: /api/v1/todos
+    weight: 1
+    body: '{"title":"perf todo","description":"load test","status":"pending"}'
+  - name: product_create
+    method: POST
+    path: /api/v1/product
+    weight: 1
+    body: '{"name":"Perf Product","description":"Load test","flower_type":"Rose","base_price":9.99,"status":"NewFlower","stock_quantity":10}'
+
+test:
+  mode: fixed
+  duration_sec: 60
+  total_requests: 0
+  concurrency: 25
+  global_rate_limit_per_sec: 0
+
+report:
+  out_dir: tools/perf/reports
+  formats: ["json", "md"]
+  include_per_endpoint: true
+
+

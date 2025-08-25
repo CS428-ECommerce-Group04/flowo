@@ -46,7 +46,7 @@ const API_BASE = "http://localhost:8081/api/v1";
 // Helper function to map API response to CartItem
 function mapApiItemToCartItem(apiItem: ApiCartItem): CartItem {
   return {
-    id: apiItem.product_id,
+    id: parseInt(apiItem.product_id),
     name: apiItem.name,
     price: apiItem.effective_price ?? apiItem.price,
     qty: apiItem.quantity,
