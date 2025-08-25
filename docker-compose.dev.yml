@@ -30,9 +30,8 @@ services:
       - app-network
 
   backend-dev:
-    build:
-      context: ./flowo-backend
-      dockerfile: Dockerfile
+    image: golang:alpine
+    working_dir: /app
     ports:
       - "8081:8081"
     environment:
@@ -48,6 +47,15 @@ services:
       - RETRY_DELAY=10
     volumes:
       - ./flowo-backend:/app
+      - go_modules:/go/pkg/mod
+    command: >
+      sh -c "
+        apk add --no-cache gcc musl-dev &&
+        go install github.com/swaggo/swag/cmd/swag@v1.8.12 &&
+        go mod download &&
+        swag init -g cmd/main.go &&
+        go run cmd/main.go
+      "
     depends_on:
       mysql:
         condition: service_healthy
@@ -119,19 +127,13 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-    command: >
-      sh -c "
-        uv venv && 
-        . .venv/bin/activate &&
-        uv pip install -e . &&
-        python main.py
-      "
 
 volumes:
   mysql_data: 
   frontend_node_modules:
   agno_venv:
   agno_data:
+  go_modules:
 
 networks:
   app-network:

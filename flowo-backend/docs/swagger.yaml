@@ -1,5 +1,68 @@
 basePath: /
 definitions:
+  controller.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  controller.ForgotPasswordResponse:
+    properties:
+      email:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  controller.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  controller.LoginResponse:
+    properties:
+      message:
+        type: string
+      session:
+        $ref: '#/definitions/controller.SessionInfo'
+      success:
+        type: boolean
+    type: object
+  controller.SessionInfo:
+    properties:
+      created_at:
+        type: integer
+      expires_at:
+        type: integer
+      session_id:
+        type: string
+    type: object
+  controller.SignUpRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  controller.SignUpResponse:
+    properties:
+      email:
+        type: string
+      message:
+        type: string
+      password:
+        type: string
+      success:
+        type: boolean
+    type: object
   dto.AddToCartRequest:
     properties:
       product_id:
@@ -7,12 +70,62 @@ definitions:
       quantity:
         minimum: 1
         type: integer
-      firebase_uid:
-        type: integer
     required:
     - product_id
     - quantity
-    - firebase_uid
+    type: object
+  dto.AddressResponse:
+    properties:
+      address_id:
+        type: integer
+      city:
+        type: string
+      country:
+        type: string
+      is_default_shipping:
+        type: boolean
+      phone_number:
+        type: string
+      postal_code:
+        type: string
+      recipient_name:
+        type: string
+      street_address:
+        type: string
+    type: object
+  dto.AdminOrderDetailResponse:
+    properties:
+      customer_email:
+        type: string
+      customer_name:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/dto.OrderItemDetail'
+        type: array
+      order_date:
+        type: string
+      order_id:
+        type: integer
+      shipping_method:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  dto.AdminOrderResponse:
+    properties:
+      firebase_uid:
+        type: string
+      order_date:
+        type: string
+      order_id:
+        type: integer
+      status:
+        type: string
+      total_amount:
+        type: number
     type: object
   dto.CartItemResponse:
     properties:
@@ -31,6 +144,62 @@ definitions:
         type: integer
       total_price:
         type: number
+    type: object
+  dto.CompleteUserResponse:
+    properties:
+      firebase_info:
+        $ref: '#/definitions/dto.FirebaseUserInfo'
+      local_user:
+        $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.CreateAddressRequest:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      is_default_shipping:
+        description: if True server set to default
+        type: boolean
+      phone_number:
+        type: string
+      postal_code:
+        type: string
+      recipient_name:
+        type: string
+      street_address:
+        type: string
+    required:
+    - city
+    - country
+    - phone_number
+    - recipient_name
+    - street_address
+    type: object
+  dto.CreateOrderRequest:
+    properties:
+      billing_address_id:
+        description: ShippingAddressID int  `json:"shipping_address_id" binding:"required"`
+        type: integer
+      notes:
+        type: string
+      shipping_method:
+        type: string
+    required:
+    - shipping_method
+    type: object
+  dto.CreatePaymentLinkRequest:
+    properties:
+      cancel_url:
+        type: string
+      order_id:
+        type: integer
+      return_url:
+        type: string
+    required:
+    - cancel_url
+    - order_id
+    - return_url
     type: object
   dto.CreatePricingRuleRequest:
     properties:
@@ -78,12 +247,84 @@ definitions:
         maximum: 5
         minimum: 1
         type: integer
-      firebase_uid:
-        description: ProductID int    `json:"product_id" binding:"required"`
-        type: integer
     required:
     - rating
-    - firebase_uid
+    type: object
+  dto.FirebaseUserInfo:
+    properties:
+      created_at:
+        type: string
+      disabled:
+        type: boolean
+      display_name:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      last_login_at:
+        type: string
+      photo_url:
+        type: string
+      uid:
+        type: string
+    type: object
+  dto.OrderDetailResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.OrderItemDetail'
+        type: array
+      order_date:
+        type: string
+      order_id:
+        type: integer
+      shipping_method:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  dto.OrderItemDetail:
+    properties:
+      price:
+        type: number
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+      subtotal:
+        type: number
+    type: object
+  dto.OrderResponse:
+    properties:
+      order_date:
+        type: string
+      order_id:
+        type: integer
+      shipping_method:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  dto.OrderStatusResponse:
+    properties:
+      order_id:
+        type: integer
+      status:
+        type: string
+    type: object
+  dto.PayOSWebhookRequest:
+    type: object
+  dto.PaymentLinkResponse:
+    properties:
+      checkout_url:
+        type: string
+      payment_link_id:
+        type: string
     type: object
   dto.ProductCreate:
     description: Product creation request body
@@ -124,19 +365,116 @@ definitions:
     - status
     - stock_quantity
     type: object
+  dto.ProductResponse:
+    properties:
+      base_price:
+        type: number
+      created_at:
+        type: string
+      description:
+        type: string
+      effective_price:
+        type: number
+      flower_type:
+        type: string
+      name:
+        type: string
+      product_id:
+        type: integer
+      status:
+        type: string
+      stock_quantity:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  dto.RecommendationFeedbackDTO:
+    properties:
+      action:
+        enum:
+        - clicked
+        - purchased
+        - dismissed
+        - liked
+        type: string
+      firebase_uid:
+        type: string
+      product_id:
+        type: integer
+      recommendation_type:
+        type: string
+      session_id:
+        type: string
+    required:
+    - action
+    - firebase_uid
+    - product_id
+    - recommendation_type
+    type: object
+  dto.RecommendationResponseDTO:
+    properties:
+      explanation:
+        description: Explanation of why these were recommended
+        type: string
+      generated_at:
+        description: Timestamp when recommendations were generated
+        type: string
+      recommendation_type:
+        description: Type of recommendation used
+        type: string
+      recommendations:
+        description: List of recommended products with scores
+        items:
+          $ref: '#/definitions/dto.RecommendedProductDTO'
+        type: array
+      total:
+        description: Total number of available recommendations
+        type: integer
+    type: object
+  dto.RecommendationStatsDTO:
+    properties:
+      average_score:
+        type: number
+      click_through_rate:
+        type: number
+      conversion_rate:
+        type: number
+      top_performing_type:
+        type: string
+      total_recommendations:
+        type: integer
+    type: object
+  dto.RecommendedProductDTO:
+    properties:
+      category:
+        description: Category of recommendation
+        example: similar_products
+        type: string
+      product:
+        allOf:
+        - $ref: '#/definitions/dto.ProductResponse'
+        description: Product information
+      reason:
+        description: Reason for recommendation
+        example: Based on your previous purchases
+        type: string
+      score:
+        description: Recommendation score (0.0 to 1.0)
+        example: 0.85
+        type: number
+    type: object
   dto.RemoveCartItemRequest:
     properties:
       product_id:
         type: integer
-      firebase_uid:
-        type: integer
     required:
     - product_id
-    - firebase_uid
     type: object
   dto.ReviewResponse:
     properties:
       comment:
+        type: string
+      firebase_uid:
         type: string
       product_id:
         type: integer
@@ -145,8 +483,6 @@ definitions:
       review_date:
         type: string
       review_id:
-        type: integer
-      firebase_uid:
         type: integer
     type: object
   dto.TodoCreate:
@@ -178,15 +514,95 @@ definitions:
       quantity:
         minimum: 1
         type: integer
-      firebase_uid:
-        type: integer
     required:
     - product_id
     - quantity
-    - firebase_uid
+    type: object
+  dto.UpdateOrderStatusRequest:
+    properties:
+      shipping_method:
+        type: string
+      status:
+        type: string
+    required:
+    - status
+    type: object
+  dto.UpdateProfileRequest:
+    properties:
+      full_name:
+        type: string
+      gender:
+        enum:
+        - Male
+        - Female
+        - Other
+        type: string
+      username:
+        type: string
+    type: object
+  dto.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      firebase_uid:
+        type: string
+      full_name:
+        type: string
+      gender:
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  model.Address:
+    properties:
+      address_id:
+        type: integer
+      city:
+        type: string
+      country:
+        type: string
+      firebase_uid:
+        type: string
+      is_default_shipping:
+        type: boolean
+      phone_number:
+        type: string
+      postal_code:
+        type: string
+      recipient_name:
+        type: string
+      street_address:
+        type: string
+    type: object
+  model.FilterOptions:
+    properties:
+      flower_types:
+        description: Available flower types
+        items:
+          $ref: '#/definitions/model.FlowerType'
+        type: array
+      occasions:
+        description: Available occasions
+        items:
+          $ref: '#/definitions/model.Occasion'
+        type: array
+      price_range:
+        allOf:
+        - $ref: '#/definitions/model.PriceRange'
+        description: Price range
     type: object
   model.FlowerType:
     properties:
+      description:
+        description: Description of the flower type
+        example: Classic romantic flower
+        type: string
       flower_type_id:
         description: Unique identifier of the flower type
         example: 1
@@ -195,6 +611,55 @@ definitions:
         description: Name of the flower type
         example: Rose
         type: string
+    type: object
+  model.Occasion:
+    properties:
+      name:
+        description: Name of the occasion
+        example: Valentine's Day
+        type: string
+      occasion_id:
+        description: Unique identifier of the occasion
+        example: 1
+        type: integer
+    type: object
+  model.PaginationInfo:
+    properties:
+      has_next:
+        description: Whether there's a next page
+        example: true
+        type: boolean
+      has_prev:
+        description: Whether there's a previous page
+        example: false
+        type: boolean
+      limit:
+        description: Number of items per page
+        example: 20
+        type: integer
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      total:
+        description: Total number of items
+        example: 150
+        type: integer
+      total_pages:
+        description: Total number of pages
+        example: 8
+        type: integer
+    type: object
+  model.PriceRange:
+    properties:
+      max:
+        description: Maximum price in the catalog
+        example: 199.99
+        type: number
+      min:
+        description: Minimum price in the catalog
+        example: 5.99
+        type: number
     type: object
   model.PricingRule:
     properties:
@@ -229,6 +694,10 @@ definitions:
     type: object
   model.Product:
     properties:
+      average_rating:
+        description: Average rating from reviews
+        example: 4.5
+        type: number
       base_price:
         description: Base price of the product
         example: 29.99
@@ -237,6 +706,10 @@ definitions:
         description: Timestamp when the product was created
         example: "2024-03-15T08:00:00Z"
         type: string
+      current_price:
+        description: Current price (after applying dynamic pricing rules)
+        example: 25.49
+        type: number
       description:
         description: Description of the product
         example: A beautiful bouquet of red roses, perfect for any occasion.
@@ -245,12 +718,30 @@ definitions:
         description: Flower type of the product (e.g., Rose, Tulip, Lily)
         example: Rose
         type: string
+      images:
+        description: Images associated with the product
+        items:
+          $ref: '#/definitions/model.ProductImage'
+        type: array
       name:
         description: Name of the product
         example: Red Rose Bouquet
         type: string
+      occasions:
+        description: Occasions this product is suitable for
+        items:
+          type: string
+        type: array
       product_id:
         description: Unique identifier of the product
+        example: 1
+        type: integer
+      review_count:
+        description: Total number of reviews
+        example: 23
+        type: integer
+      sales_rank:
+        description: Best-selling rank (for sorting)
         example: 1
         type: integer
       status:
@@ -269,6 +760,45 @@ definitions:
         description: Timestamp when the product was last updated
         example: "2024-03-15T08:00:00Z"
         type: string
+    type: object
+  model.ProductImage:
+    properties:
+      alt_text:
+        description: Alt text for accessibility
+        example: Red Rose Bouquet
+        type: string
+      image_id:
+        description: Unique identifier of the image
+        example: 1
+        type: integer
+      image_url:
+        description: URL of the image
+        example: https://example.com/images/rose.jpg
+        type: string
+      is_primary:
+        description: Whether this is the primary image
+        example: true
+        type: boolean
+      product_id:
+        description: Product ID this image belongs to
+        example: 1
+        type: integer
+    type: object
+  model.ProductSearchResponse:
+    properties:
+      filters:
+        allOf:
+        - $ref: '#/definitions/model.FilterOptions'
+        description: Filter options available
+      pagination:
+        allOf:
+        - $ref: '#/definitions/model.PaginationInfo'
+        description: Pagination information
+      products:
+        description: List of products
+        items:
+          $ref: '#/definitions/model.Product'
+        type: array
     type: object
   model.Response:
     properties:
@@ -308,31 +838,783 @@ definitions:
         example: "2024-03-15T08:00:00Z"
         type: string
     type: object
+  model.UserWithAddress:
+    properties:
+      created_at:
+        type: string
+      default_address:
+        $ref: '#/definitions/model.Address'
+      email:
+        type: string
+      firebase_uid:
+        type: string
+      full_name:
+        type: string
+      gender:
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
 host: localhost:8081
 info:
   contact:
     email: support@example.com
     name: API Support Team
     url: http://www.example.com/support
-  description: A modern RESTful API for managing your todos efficiently. This API
-    provides comprehensive endpoints for creating, reading, updating, and deleting
-    todo items.
+  description: A modern RESTful API for managing your flower store efficiently.
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: http://swagger.io/terms/
-  title: Todo List API
+  title: Flowo List API
   version: "1.0"
 paths:
-  /api/v1/cart/{userID}:
+  /api/recommendations:
     get:
-      description: Retrieve all items in the cart for a given user
+      consumes:
+      - application/json
+      description: Get personalized product recommendations based on user preferences
+        and behavior
       parameters:
-      - description: User ID
+      - description: User ID for personalized recommendations
+        in: query
+        name: firebase_uid
+        type: integer
+      - description: Session ID for anonymous users
+        in: query
+        name: session_id
+        type: string
+      - description: Type of recommendation
+        enum:
+        - personalized
+        - similar
+        - trending
+        - occasion_based
+        - price_based
+        in: query
+        name: recommendation_type
+        required: true
+        type: string
+      - description: Product ID for similar product recommendations
+        in: query
+        name: product_id
+        type: integer
+      - description: Occasion for occasion-based recommendations
+        in: query
+        name: occasion
+        type: string
+      - description: Minimum price for price-based recommendations
+        in: query
+        name: price_min
+        type: number
+      - description: Maximum price for price-based recommendations
+        in: query
+        name: price_max
+        type: number
+      - default: 10
+        description: Number of recommendations to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RecommendationResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get personalized recommendations
+      tags:
+      - recommendations
+  /api/recommendations/feedback:
+    post:
+      consumes:
+      - application/json
+      description: Record user actions on recommended products for improving future
+        recommendations
+      parameters:
+      - description: Recommendation feedback
+        in: body
+        name: feedback
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RecommendationFeedbackDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Record user feedback on recommendations
+      tags:
+      - recommendations
+  /api/recommendations/occasion/{occasion}:
+    get:
+      consumes:
+      - application/json
+      description: Get product recommendations for a specific occasion
+      parameters:
+      - description: Occasion name
         in: path
-        name: userID
+        name: occasion
+        required: true
+        type: string
+      - default: 10
+        description: Number of recommendations to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RecommendationResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get occasion-based recommendations
+      tags:
+      - recommendations
+  /api/recommendations/similar/{product_id}:
+    get:
+      consumes:
+      - application/json
+      description: Get products similar to a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: product_id
         required: true
         type: integer
+      - default: 10
+        description: Number of similar products to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RecommendationResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get similar products
+      tags:
+      - recommendations
+  /api/recommendations/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get performance statistics for the recommendation system
+      parameters:
+      - default: weekly
+        description: Time period for statistics
+        enum:
+        - daily
+        - weekly
+        - monthly
+        in: query
+        name: period
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RecommendationStatsDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get recommendation statistics
+      tags:
+      - recommendations
+  /api/recommendations/trending:
+    get:
+      consumes:
+      - application/json
+      description: Get currently trending products
+      parameters:
+      - default: weekly
+        description: Time period for trending analysis
+        enum:
+        - daily
+        - weekly
+        - monthly
+        in: query
+        name: period
+        type: string
+      - default: 10
+        description: Number of trending products to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RecommendationResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get trending products
+      tags:
+      - recommendations
+  /api/recommendations/users/{firebase_uid}:
+    get:
+      consumes:
+      - application/json
+      description: Get personalized product recommendations based on user's purchase
+        history and preferences
+      parameters:
+      - description: Firebase User ID
+        in: path
+        name: firebase_uid
+        required: true
+        type: integer
+      - default: 10
+        description: Number of recommendations to return
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RecommendationResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get personalized recommendations for a user
+      tags:
+      - recommendations
+  /api/recommendations/users/{firebase_uid}/preferences:
+    put:
+      consumes:
+      - application/json
+      description: Analyze user behavior and update their preferences for better recommendations
+      parameters:
+      - description: Firebase User ID
+        in: path
+        name: firebase_uid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Update user preferences
+      tags:
+      - recommendations
+  /api/v1/addresses:
+    get:
+      description: Retrieve all saved addresses for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.AddressResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all addresses of user
+      tags:
+      - addresses
+    post:
+      consumes:
+      - application/json
+      description: Add a new shipping address for the authenticated user
+      parameters:
+      - description: Address details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateAddressRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.AddressResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Add a new address
+      tags:
+      - addresses
+  /api/v1/addresses/{id}:
+    delete:
+      description: Delete a specific address by ID (must belong to the authenticated
+        user)
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete an address
+      tags:
+      - addresses
+  /api/v1/addresses/{id}/default:
+    put:
+      description: Mark an address as default shipping address for the authenticated
+        user
+      parameters:
+      - description: Address ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Set default address
+      tags:
+      - addresses
+  /api/v1/admin/orders:
+    get:
+      description: Retrieve all orders with optional filters (status, user, date range)
+      parameters:
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      - description: Filter by FirebaseUID
+        in: query
+        name: user
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Limit per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.AdminOrderResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all orders (admin only)
+      tags:
+      - admin-orders
+  /api/v1/admin/orders/{orderID}:
+    get:
+      description: Retrieve full details of a specific order including customer info
+      parameters:
+      - description: Order ID
+        in: path
+        name: orderID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AdminOrderDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get order details (admin)
+      tags:
+      - admin-orders
+  /api/v1/admin/orders/{orderID}/status:
+    put:
+      consumes:
+      - application/json
+      description: Allows admin to update the status of a specific order by order
+        ID
+      parameters:
+      - description: Order ID
+        in: path
+        name: orderID
+        required: true
+        type: integer
+      - description: Update status request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateOrderStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Update order status by ID (Admin only)
+      tags:
+      - admin-orders
+  /api/v1/admin/users:
+    get:
+      description: Retrieve all users and their default shipping address
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.UserWithAddress'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all users with default address (admin only)
+      tags:
+      - admin
+  /api/v1/auth/check-auth:
+    get:
+      description: Verify session cookie and return user information if authenticated
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check authentication status
+      tags:
+      - auth
+  /api/v1/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Send a password reset email to the user's email address
+      parameters:
+      - description: Forgot password data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/controller.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.ForgotPasswordResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Send password reset email
+      tags:
+      - auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates user with email and password using Firebase REST
+        API and returns user information with session
+      parameters:
+      - description: User login data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/controller.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login user
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      description: Clear session cookie and logout user (requires authentication)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Logout user
+      tags:
+      - auth
+  /api/v1/auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Validates email, creates Firebase user with temporary password,
+        and automatically sends password reset email
+      parameters:
+      - description: User signup data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/controller.SignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controller.SignUpResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Sign up a new user
+      tags:
+      - auth
+  /api/v1/cart:
+    get:
+      description: Retrieve all items in the cart for the authenticated user
       produces:
       - application/json
       responses:
@@ -342,14 +1624,16 @@ paths:
             items:
               $ref: '#/definitions/dto.CartItemResponse'
             type: array
-        "400":
-          description: Bad Request
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/model.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
       summary: Get cart items for user
       tags:
       - cart
@@ -377,10 +1661,16 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
       summary: Add product to cart
       tags:
       - cart
@@ -407,10 +1697,16 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
       summary: Remove product from cart
       tags:
       - cart
@@ -437,10 +1733,16 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
       summary: Update quantity of a product in cart
       tags:
       - cart
@@ -470,6 +1772,285 @@ paths:
       summary: Get all flower types
       tags:
       - flower-types
+  /api/v1/occasions:
+    get:
+      consumes:
+      - application/json
+      description: Get all available occasions for flower products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/model.Occasion'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get all occasions
+      tags:
+      - occasions
+  /api/v1/orders:
+    get:
+      description: Retrieve all orders associated with the authenticated user from
+        JWT (Firebase token)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.OrderResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all orders for the current user
+      tags:
+      - orders
+    post:
+      consumes:
+      - application/json
+      description: Create a new order for the current user with items from cart
+      parameters:
+      - description: Order details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new order
+      tags:
+      - orders
+  /api/v1/orders/{orderID}:
+    get:
+      description: Retrieve full details of a specific order (owner or admin only)
+      parameters:
+      - description: Order ID
+        in: path
+        name: orderID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get order details
+      tags:
+      - orders
+  /api/v1/orders/status:
+    get:
+      description: Retrieve the status of an order by query param order_id (owner
+        only)
+      parameters:
+      - description: Order ID
+        in: query
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get order status
+      tags:
+      - orders
+  /api/v1/payments/cancel:
+    post:
+      consumes:
+      - application/json
+      description: Cancel an order and update associated payment and inventory (owner
+        only)
+      parameters:
+      - description: Order ID
+        in: query
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Cancel an order
+      tags:
+      - payments
+  /api/v1/payments/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a payment link for an existing order. Requires authentication.
+      parameters:
+      - description: Create payment link request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreatePaymentLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaymentLinkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create PayOS payment link
+      tags:
+      - payments
+  /api/v1/payments/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint to receive PayOS webhook notifications. Publicly accessible
+        by PayOS.
+      parameters:
+      - description: PayOS webhook payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PayOSWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: PayOS webhook receiver
+      tags:
+      - payments
   /api/v1/pricing/rule:
     post:
       consumes:
@@ -787,13 +2368,52 @@ paths:
       summary: Get all products
       tags:
       - products
-  /api/v1/products/{productID}/reviews:
+  /api/v1/products/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get comprehensive product details including images, occasions,
+        ratings, and sales data
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.Product'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get detailed product information
+      tags:
+      - products
+  /api/v1/products/{id}/reviews:
     get:
       description: Retrieve reviews by product ID
       parameters:
       - description: Product ID
         in: path
-        name: productID
+        name: id
         required: true
         type: integer
       produces:
@@ -819,11 +2439,12 @@ paths:
     post:
       consumes:
       - application/json
-      description: Submit a review for a specific product
+      description: Submit a review for a specific product (user is detected automatically
+        from Firebase)
       parameters:
       - description: Product ID
         in: path
-        name: productID
+        name: id
         required: true
         type: integer
       - description: Review body
@@ -843,13 +2464,124 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
       summary: Create review for a product
       tags:
       - reviews
+  /api/v1/products/filters:
+    get:
+      consumes:
+      - application/json
+      description: Get all available filter options for product search including flower
+        types, occasions, and price range
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.FilterOptions'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Get available filter options
+      tags:
+      - products
+  /api/v1/products/search:
+    get:
+      consumes:
+      - application/json
+      description: Search and filter products by multiple criteria with pagination
+        and sorting
+      parameters:
+      - description: Search query for product name or description
+        in: query
+        name: query
+        type: string
+      - description: Filter by flower type
+        in: query
+        name: flower_type
+        type: string
+      - description: Filter by occasion
+        in: query
+        name: occasion
+        type: string
+      - description: Minimum price filter
+        in: query
+        name: price_min
+        type: number
+      - description: Maximum price filter
+        in: query
+        name: price_max
+        type: number
+      - description: Filter by product condition
+        enum:
+        - NewFlower
+        - OldFlower
+        - LowStock
+        in: query
+        name: condition
+        type: string
+      - description: Sort by option
+        enum:
+        - price_asc
+        - price_desc
+        - name_asc
+        - name_desc
+        - newest
+        - best_selling
+        in: query
+        name: sort_by
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: 'Items per page (default: 20, max: 100)'
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.ProductSearchResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      summary: Search products with advanced filters
+      tags:
+      - products
   /api/v1/todos:
     get:
       consumes:
@@ -1011,6 +2743,162 @@ paths:
       summary: Update a todo
       tags:
       - todos
+  /api/v1/users/email/{email}:
+    get:
+      description: Get user information using email address
+      parameters:
+      - description: User email
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user information by email
+      tags:
+      - users
+  /api/v1/users/profile:
+    get:
+      description: Get the profile information of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.CompleteUserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update the profile information of the currently authenticated user
+      parameters:
+      - description: Profile update data
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - users
+  /api/v1/users/uid/{uid}:
+    get:
+      description: Get user information using Firebase UID
+      parameters:
+      - description: Firebase UID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/model.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.Response'
+      security:
+      - BearerAuth: []
+      summary: Get user information by Firebase UID
+      tags:
+      - users
   /health:
     get:
       consumes:
