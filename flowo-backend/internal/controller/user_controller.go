@@ -37,6 +37,7 @@ func (ctrl *UserController) RegisterRoutes(rg *gin.RouterGroup, authMiddleware *
 	{
 		adminRoutes.Use(authMiddleware.RequireAuth())
 		adminRoutes.GET("/users", ctrl.GetAllUsers)
+		adminRoutes.DELETE("/users/:uid", ctrl.SoftDeleteUser)
 	}
 }
 
@@ -251,6 +252,44 @@ func (ctrl *UserController) GetAllUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, model.Response{
 		Message: "Users retrieved successfully",
 		Data:    users,
+	})
+}
+
+// SoftDeleteUser godoc
+// @Summary Soft delete a user (admin only)
+// @Description Mark user as deleted without removing data from DB
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param uid path string true "Firebase UID"
+// @Success 200 {object} model.Response
+// @Failure 400 {object} model.Response
+// @Failure 401 {object} model.Response
+// @Failure 404 {object} model.Response
+// @Failure 500 {object} model.Response
+// @Router /api/v1/admin/users/{uid} [delete]
+func (ctrl *UserController) SoftDeleteUser(c *gin.Context) {
+	uid := c.Param("uid")
+	if uid == "" {
+		c.JSON(http.StatusBadRequest, model.Response{
+			Message: "UID parameter is required",
+			Data:    nil,
+		})
+		return
+	}
+
+	err := ctrl.UserService.SoftDeleteUser(uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.Response{
+			Message: "Failed to soft delete user: " + err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.Response{
+		Message: "User soft deleted successfully",
+		Data:    nil,
 	})
 }
 

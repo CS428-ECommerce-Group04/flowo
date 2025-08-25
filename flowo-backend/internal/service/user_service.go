@@ -18,6 +18,7 @@ type UserService interface {
 	UpdateUserFromFirebase(firebaseUID string) (*model.User, error)
 	UpdateUserProfile(firebaseUID string, updateData *dto.UpdateProfileRequest) (*model.User, error)
 	GetAllUsers() ([]*model.UserWithAddress, error)
+	SoftDeleteUser(firebaseUID string) error
 }
 
 type userService struct {
@@ -82,7 +83,16 @@ func (s *userService) CreateUserFromFirebase(firebaseUID string, email string) (
 
 // GetUserByFirebaseUID retrieves user from local database
 func (s *userService) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
-	return s.userRepo.GetUserByFirebaseUID(firebaseUID)
+	user, err := s.userRepo.GetUserByFirebaseUID(firebaseUID)
+	if err != nil {
+		return nil, err
+	}
+	if user != nil {
+		if user.IsDeleted {
+			return nil, fmt.Errorf("account has been deactivated")
+		}
+	}
+	return user, nil
 }
 
 // GetUserByEmail retrieves user from local database by email
@@ -183,4 +193,16 @@ func (s *userService) UpdateUserProfile(firebaseUID string, updateData *dto.Upda
 
 func (s *userService) GetAllUsers() ([]*model.UserWithAddress, error) {
 	return s.userRepo.GetAllUsers()
+}
+
+func (s *userService) SoftDeleteUser(firebaseUID string) error {
+
+	user, err := s.userRepo.GetUserByFirebaseUID(firebaseUID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return fmt.Errorf("user not found or already deleted")
+	}
+	return s.userRepo.SoftDeleteUser(firebaseUID)
 }

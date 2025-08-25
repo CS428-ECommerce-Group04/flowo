@@ -128,8 +128,8 @@ func NewFirebaseAuth(cfg *config.Config) (*auth.Client, error) {
 	return authClient, nil
 }
 
-func NewAuthMiddleware(firebaseAuth *auth.Client) *middleware.AuthMiddleware {
-	return middleware.NewAuthMiddleware(firebaseAuth)
+func NewAuthMiddleware(firebaseAuth *auth.Client, userRepo repository.UserRepository) *middleware.AuthMiddleware {
+	return middleware.NewAuthMiddleware(firebaseAuth, userRepo)
 }
 
 func NewGinEngine(cfg *config.Config) *gin.Engine {
