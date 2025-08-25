@@ -162,14 +162,57 @@ func (r *orderRepository) GetOrderOwnerID(orderID int) (string, error) {
 	return firebaseUID, nil
 }
 
-func (r *orderRepository) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error) {
-	var order dto.OrderDetailResponse
-	var shippingAddrID, billingAddrID *int
+// func (r *orderRepository) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error) {
+// 	var order dto.OrderDetailResponse
+// 	var shippingAddrID, billingAddrID *int
 
-	err := r.DB.QueryRow("SELECT o.order_id, o.status, o.order_date, o.final_total_amount, o.shipping_method, o.shipping_address_id, o.billing_address_id FROM `Order` o WHERE o.order_id = ?",
-		orderID,
-	).Scan(&order.OrderID, &order.Status, &order.OrderDate, &order.TotalAmount,
-		&order.ShippingMethod, &shippingAddrID, &billingAddrID)
+// 	err := r.DB.QueryRow("SELECT o.order_id, o.status, o.order_date, o.final_total_amount, o.shipping_method, o.shipping_address_id, o.billing_address_id FROM `Order` o WHERE o.order_id = ?",
+// 		orderID,
+// 	).Scan(&order.OrderID, &order.Status, &order.OrderDate, &order.TotalAmount,
+// 		&order.ShippingMethod, &shippingAddrID, &billingAddrID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	rows, err := r.DB.Query(`
+// 		SELECT product_id, quantity, price_per_unit_at_purchase, item_subtotal
+// 		FROM OrderItem
+// 		WHERE order_id = ?`, orderID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var items []dto.OrderItemDetail
+// 	for rows.Next() {
+// 		var item dto.OrderItemDetail
+// 		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price, &item.Subtotal); err != nil {
+// 			return nil, err
+// 		}
+// 		items = append(items, item)
+// 	}
+// 	order.Items = items
+
+// 	if shippingAddrID != nil {
+// 		var addr dto.AddressResponse
+// 		err = r.DB.QueryRow(`
+// 			SELECT address_id, recipient_name, phone_number, street_address, city, postal_code, country
+// 			FROM Address WHERE address_id = ?`, *shippingAddrID).
+// 			Scan(&addr.AddressID, &addr.RecipientName, &addr.PhoneNumber,
+// 				&addr.StreetAddress, &addr.City, &addr.PostalCode, &addr.Country)
+// 		if err == nil {
+// 			order.ShippingAddress = &addr
+// 		}
+// 	}
+
+// 	return &order, nil
+// }
+
+func (r *orderRepository) GetOrderDetailByID(orderID int) (*dto.OrderDetailResponse, error) {
+
+	var order dto.OrderDetailResponse
+	err := r.DB.QueryRow(" SELECT o.order_id, o.status, o.order_date, o.final_total_amount, o.shipping_method FROM `Order` o WHERE o.order_id = ?", orderID).Scan(&order.OrderID, &order.Status, &order.OrderDate, &order.TotalAmount, &order.ShippingMethod)
+
 	if err != nil {
 		return nil, err
 	}
@@ -177,34 +220,22 @@ func (r *orderRepository) GetOrderDetailByID(orderID int) (*dto.OrderDetailRespo
 	rows, err := r.DB.Query(`
 		SELECT product_id, quantity, price_per_unit_at_purchase, item_subtotal
 		FROM OrderItem
-		WHERE order_id = ?`, orderID)
+		WHERE order_id = ?
+	`, orderID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
 	var items []dto.OrderItemDetail
 	for rows.Next() {
 		var item dto.OrderItemDetail
-		if err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price, &item.Subtotal); err != nil {
+		err := rows.Scan(&item.ProductID, &item.Quantity, &item.Price, &item.Subtotal)
+		if err != nil {
 			return nil, err
 		}
 		items = append(items, item)
 	}
+
 	order.Items = items
-
-	if shippingAddrID != nil {
-		var addr dto.AddressResponse
-		err = r.DB.QueryRow(`
-			SELECT address_id, recipient_name, phone_number, street_address, city, postal_code, country
-			FROM Address WHERE address_id = ?`, *shippingAddrID).
-			Scan(&addr.AddressID, &addr.RecipientName, &addr.PhoneNumber,
-				&addr.StreetAddress, &addr.City, &addr.PostalCode, &addr.Country)
-		if err == nil {
-			order.ShippingAddress = &addr
-		}
-	}
-
 	return &order, nil
 }
 
