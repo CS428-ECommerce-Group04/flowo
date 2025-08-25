@@ -45,7 +45,7 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/signup`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',

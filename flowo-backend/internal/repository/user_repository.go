@@ -13,6 +13,7 @@ type UserRepository interface {
 	UpdateUser(user *model.User) error
 	CheckUserExists(firebaseUID string) (bool, error)
 	GetAllUsers() ([]*model.UserWithAddress, error)
+	SoftDeleteUser(firebaseUID string) error
 }
 
 type userRepository struct {
@@ -23,13 +24,12 @@ func NewUserRepository(db *sql.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-// CreateUser creates a new user record in the database with minimal Firebase info
+// CreateUser
 func (r *userRepository) CreateUser(user *model.User) error {
 	query := `
-		INSERT INTO User (firebase_uid, username, email, full_name, gender, role, created_at, updated_at) 
-		VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+		INSERT INTO User (firebase_uid, username, email, full_name, gender, role, created_at, updated_at, is_deleted) 
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), FALSE)
 	`
-
 	_, err := r.db.Exec(query,
 		user.FirebaseUID,
 		user.Username,
@@ -38,23 +38,20 @@ func (r *userRepository) CreateUser(user *model.User) error {
 		user.Gender,
 		user.Role,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
-
 	return nil
 }
 
-// GetUserByFirebaseUID retrieves a user by their Firebase UID
+// GetUserByFirebaseUID
 func (r *userRepository) GetUserByFirebaseUID(firebaseUID string) (*model.User, error) {
 	user := &model.User{}
 	query := `
 		SELECT firebase_uid, username, email, full_name, gender, role, created_at, updated_at 
 		FROM User 
-		WHERE firebase_uid = ?
+		WHERE firebase_uid = ? AND is_deleted = FALSE
 	`
-
 	err := r.db.QueryRow(query, firebaseUID).Scan(
 		&user.FirebaseUID,
 		&user.Username,
@@ -65,27 +62,23 @@ func (r *userRepository) GetUserByFirebaseUID(firebaseUID string) (*model.User, 
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
-
 	if err == sql.ErrNoRows {
-		return nil, nil // User not found
+		return nil, nil
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by Firebase UID: %w", err)
 	}
-
 	return user, nil
 }
 
-// GetUserByEmail retrieves a user by their email address
+// GetUserByEmail
 func (r *userRepository) GetUserByEmail(email string) (*model.User, error) {
 	user := &model.User{}
 	query := `
 		SELECT firebase_uid, username, email, full_name, gender, role, created_at, updated_at 
 		FROM User 
-		WHERE email = ?
+		WHERE email = ? AND is_deleted = FALSE
 	`
-
 	err := r.db.QueryRow(query, email).Scan(
 		&user.FirebaseUID,
 		&user.Username,
@@ -96,26 +89,22 @@ func (r *userRepository) GetUserByEmail(email string) (*model.User, error) {
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
-
 	if err == sql.ErrNoRows {
-		return nil, nil // User not found
+		return nil, nil
 	}
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
-
 	return user, nil
 }
 
-// UpdateUser updates user information in the database
+// UpdateUser
 func (r *userRepository) UpdateUser(user *model.User) error {
 	query := `
 		UPDATE User 
 		SET username = ?, email = ?, full_name = ?, gender = ?, role = ?, updated_at = NOW() 
-		WHERE firebase_uid = ?
+		WHERE firebase_uid = ? AND is_deleted = FALSE
 	`
-
 	_, err := r.db.Exec(query,
 		user.Username,
 		user.Email,
@@ -124,27 +113,38 @@ func (r *userRepository) UpdateUser(user *model.User) error {
 		user.Role,
 		user.FirebaseUID,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
-
 	return nil
 }
 
-// CheckUserExists checks if a user exists by Firebase UID
+// CheckUserExists
 func (r *userRepository) CheckUserExists(firebaseUID string) (bool, error) {
 	var count int
-	query := "SELECT COUNT(*) FROM User WHERE firebase_uid = ?"
-
+	query := "SELECT COUNT(*) FROM User WHERE firebase_uid = ? AND is_deleted = FALSE"
 	err := r.db.QueryRow(query, firebaseUID).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("failed to check user existence: %w", err)
 	}
-
 	return count > 0, nil
 }
 
+// SoftDeleteUser
+func (r *userRepository) SoftDeleteUser(firebaseUID string) error {
+	query := `
+		UPDATE User 
+		SET is_deleted = TRUE, updated_at = NOW() 
+		WHERE firebase_uid = ?
+	`
+	_, err := r.db.Exec(query, firebaseUID)
+	if err != nil {
+		return fmt.Errorf("failed to soft delete user: %w", err)
+	}
+	return nil
+}
+
+// GetAllUsers
 func (r *userRepository) GetAllUsers() ([]*model.UserWithAddress, error) {
 	query := `
 		SELECT 
@@ -153,8 +153,8 @@ func (r *userRepository) GetAllUsers() ([]*model.UserWithAddress, error) {
 		FROM User u
 		LEFT JOIN Address a 
 			ON u.firebase_uid = a.firebase_uid AND a.is_default_shipping = true
+		WHERE u.is_deleted = FALSE
 	`
-
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query users with addresses: %w", err)
@@ -211,6 +211,5 @@ func (r *userRepository) GetAllUsers() ([]*model.UserWithAddress, error) {
 
 		users = append(users, &user)
 	}
-
 	return users, nil
 }

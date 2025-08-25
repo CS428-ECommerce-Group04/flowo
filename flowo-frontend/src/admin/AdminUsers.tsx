@@ -159,7 +159,7 @@ export default function AdminUsers() {
     const ok = confirm("Delete this user?");
     if (!ok) return;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/admin/users/${uid}`, {
+      const res = await fetch(`${API_BASE}/admin/users/${uid}`, {
         method: "DELETE",
         headers: { Accept: "application/json" },
         credentials: "include",

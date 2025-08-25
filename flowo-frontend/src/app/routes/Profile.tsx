@@ -38,6 +38,18 @@ type UIProfile = {
   photoUrl?: string;
 };
 
+type Address = {
+  address_id: number;
+  recipient_name: string;
+  phone_number: string;
+  street_address: string;
+  city: string;
+  postal_code: string;
+  country: string;
+  is_default_shipping: boolean;
+};
+
+
 function initials(name: string) {
   return name
     .split(/\s+/)
@@ -61,6 +73,20 @@ export default function Profile() {
   const [err, setErr] = useState<string | null>(null);
   const [profile, setProfile] = useState<UIProfile | null>(null);
   const [editing, setEditing] = useState(false);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [addrLoading, setAddrLoading] = useState(false);
+  const [addrErr, setAddrErr] = useState<string | null>(null);
+
+  // form state address 
+  const [newAddress, setNewAddress] = useState<Omit<Address, "address_id">>({
+    recipient_name: "",
+    phone_number: "",
+    street_address: "",
+    city: "",
+    postal_code: "",
+    country: "",
+    is_default_shipping: false,
+  });
 
   // local form state
   const [fullName, setFullName] = useState("");
@@ -106,7 +132,43 @@ export default function Profile() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  async function loadAddresses() {
+  setAddrLoading(true);
+  setAddrErr(null);
+  try {
+    const res = await makeApiRequest<Address[]>("/addresses");
+    setAddresses(Array.isArray(res) ? res : []);
+  } catch (e: any) {
+    setAddrErr(e?.message || "Failed to load addresses");
+  } finally {
+    setAddrLoading(false);
+  }
+  }
+
+  useEffect(() => { load(); loadAddresses(); }, []);
+
+  async function addAddress(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await makeApiRequest("/addresses", {
+        method: "POST",
+        body: JSON.stringify(newAddress),
+      });
+      await loadAddresses(); // refresh list
+      setNewAddress({
+        recipient_name: "",
+        phone_number: "",
+        street_address: "",
+        city: "",
+        postal_code: "",
+        country: "",
+        is_default_shipping: false,
+      });
+    } catch (e: any) {
+      alert(e?.message || "Failed to add address");
+    }
+  }
+
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -283,6 +345,89 @@ export default function Profile() {
               </div>
             )}
           </div>
+        </div>
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-green-800 mb-2">Shipping Addresses</h2>
+
+          {addrLoading ? (
+            <div className="text-slate-500">Loading addresses…</div>
+          ) : addrErr ? (
+            <div className="text-rose-600">{addrErr}</div>
+          ) : addresses.length === 0 ? (
+            <p className="text-slate-600">No addresses yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {addresses.map((a) => (
+                <li key={a.address_id} className="rounded-lg border p-4 bg-slate-50">
+                  <div className="font-medium">{a.recipient_name}</div>
+                  <div className="text-sm text-slate-600">{a.street_address}</div>
+                  <div className="text-sm text-slate-600">
+                    {a.city}, {a.postal_code}, {a.country}
+                  </div>
+                  <div className="text-sm text-slate-600">Phone: {a.phone_number}</div>
+                  {a.is_default_shipping && (
+                    <span className="inline-block mt-1 text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                      Default
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Add new address form */}
+          <form onSubmit={addAddress} className="mt-6 grid sm:grid-cols-2 gap-4 border-t pt-4">
+            <input
+              className="rounded-lg border px-3 py-2"
+              placeholder="Recipient Name"
+              value={newAddress.recipient_name}
+              onChange={(e) => setNewAddress({ ...newAddress, recipient_name: e.target.value })}
+            />
+            <input
+              className="rounded-lg border px-3 py-2"
+              placeholder="Phone Number"
+              value={newAddress.phone_number}
+              onChange={(e) => setNewAddress({ ...newAddress, phone_number: e.target.value })}
+            />
+            <input
+              className="sm:col-span-2 rounded-lg border px-3 py-2"
+              placeholder="Street Address"
+              value={newAddress.street_address}
+              onChange={(e) => setNewAddress({ ...newAddress, street_address: e.target.value })}
+            />
+            <input
+              className="rounded-lg border px-3 py-2"
+              placeholder="City"
+              value={newAddress.city}
+              onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+            />
+            <input
+              className="rounded-lg border px-3 py-2"
+              placeholder="Postal Code"
+              value={newAddress.postal_code}
+              onChange={(e) => setNewAddress({ ...newAddress, postal_code: e.target.value })}
+            />
+            <input
+              className="rounded-lg border px-3 py-2"
+              placeholder="Country"
+              value={newAddress.country}
+              onChange={(e) => setNewAddress({ ...newAddress, country: e.target.value })}
+            />
+            <label className="flex items-center gap-2 sm:col-span-2">
+              <input
+                type="checkbox"
+                checked={newAddress.is_default_shipping}
+                onChange={(e) => setNewAddress({ ...newAddress, is_default_shipping: e.target.checked })}
+              />
+              Set as default shipping address
+            </label>
+            <button
+              type="submit"
+              className="sm:col-span-2 rounded-lg bg-green-700 text-white px-4 py-2 hover:bg-green-800"
+            >
+              Add Address
+            </button>
+          </form>
         </div>
 
         {/* Help section */}

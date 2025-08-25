@@ -13,6 +13,7 @@ type User struct {
 	Role        string    `json:"role" db:"role"`                 // Default: 'RegisteredBuyer'
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	IsDeleted   bool      `gorm:"default:false" json:"is_deleted" db:"is_deleted"`
 }
 
 type UserWithAddress struct {

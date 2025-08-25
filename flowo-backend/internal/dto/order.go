@@ -27,15 +27,23 @@ type OrderItemRequest struct {
 	Quantity  int `json:"quantity" binding:"required"`
 }
 
+// type OrderDetailResponse struct {
+// 	OrderID        int               `json:"order_id"`
+// 	Status         string            `json:"status"`
+// 	OrderDate      time.Time         `json:"order_date"`
+// 	TotalAmount    float64           `json:"total_amount"`
+// 	ShippingMethod string            `json:"shipping_method"`
+// 	Items          []OrderItemDetail `json:"items"`
+
+// 	ShippingAddress *AddressResponse `json:"shipping_address,omitempty"`
+// }
 type OrderDetailResponse struct {
 	OrderID        int               `json:"order_id"`
 	Status         string            `json:"status"`
-	OrderDate      time.Time         `json:"order_date"`
+	OrderDate      string            `json:"order_date"`
 	TotalAmount    float64           `json:"total_amount"`
 	ShippingMethod string            `json:"shipping_method"`
 	Items          []OrderItemDetail `json:"items"`
-
-	ShippingAddress *AddressResponse `json:"shipping_address,omitempty"`
 }
 
 type OrderItemDetail struct {
@@ -63,7 +71,17 @@ type AdminOrderDetailResponse struct {
 	CustomerName  string `json:"customer_name"`
 	CustomerEmail string `json:"customer_email"`
 
-	Items []OrderItemDetail `json:"items"`
+	Items []AdminOrderItemDetail `json:"items"`
+
+	ShippingAddress *AddressResponse `json:"shipping_address,omitempty"`
+}
+
+type AdminOrderItemDetail struct {
+	ProductID   int     `json:"product_id"`
+	ProductName string  `json:"product_name"`
+	Quantity    int     `json:"quantity"`
+	Price       float64 `json:"price"`
+	Subtotal    float64 `json:"subtotal"`
 }
 
 // OrderStatusResponse is a minimal response used by frontend to poll order status

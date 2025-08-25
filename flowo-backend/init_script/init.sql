@@ -231,3 +231,6 @@ CREATE TABLE UserProductInteraction (
 -- Add is_active column to FlowerProduct
 ALTER TABLE FlowerProduct 
 ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;
+
+ALTER TABLE User ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE;
+

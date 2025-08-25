@@ -79,7 +79,7 @@ func (s *OrderService) CreateOrder(FirebaseUID string, req dto.CreateOrderReques
 	for _, item := range items {
 		subtotal += item.TotalPrice
 	}
-	shipping := 5.0
+	shipping := 7.0
 	finalTotal := subtotal + shipping
 
 	billingID := getBillingAddressID(req.BillingAddressID, defaultAddr.AddressID)

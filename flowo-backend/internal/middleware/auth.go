@@ -8,17 +8,21 @@ import (
 
 	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
+
+	"flowo-backend/internal/repository"
 )
 
 // AuthMiddleware represents the authentication middleware
 type AuthMiddleware struct {
 	firebaseAuth *auth.Client
+	userRepo     repository.UserRepository
 }
 
 // NewAuthMiddleware creates a new authentication middleware
-func NewAuthMiddleware(firebaseAuth *auth.Client) *AuthMiddleware {
+func NewAuthMiddleware(firebaseAuth *auth.Client, userRepo repository.UserRepository) *AuthMiddleware {
 	return &AuthMiddleware{
 		firebaseAuth: firebaseAuth,
+		userRepo:     userRepo,
 	}
 }
 
@@ -94,6 +98,22 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			})
 			c.Abort()
 			return
+		}
+
+		user, err := m.userRepo.GetUserByFirebaseUID(token.UID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "server_error", "message": "Database error"})
+			c.Abort()
+			return
+		}
+
+		if user != nil {
+			// check if user is soft deleted
+			if user.IsDeleted {
+				c.JSON(http.StatusForbidden, gin.H{"error": "forbidden", "message": "Your account has been deactivated"})
+				c.Abort()
+				return
+			}
 		}
 
 		// Store user information in the context
