@@ -63,7 +63,17 @@ type AdminOrderDetailResponse struct {
 	CustomerName  string `json:"customer_name"`
 	CustomerEmail string `json:"customer_email"`
 
-	Items []OrderItemDetail `json:"items"`
+	Items []AdminOrderItemDetail `json:"items"`
+
+	ShippingAddress *AddressResponse `json:"shipping_address,omitempty"`
+}
+
+type AdminOrderItemDetail struct {
+	ProductID   int     `json:"product_id"`
+	ProductName string  `json:"product_name"`
+	Quantity    int     `json:"quantity"`
+	Price       float64 `json:"price"`
+	Subtotal    float64 `json:"subtotal"`
 }
 
 // OrderStatusResponse is a minimal response used by frontend to poll order status

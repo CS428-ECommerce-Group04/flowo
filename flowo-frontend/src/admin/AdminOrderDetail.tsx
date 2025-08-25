@@ -11,6 +11,17 @@ type OrderItem = {
   product_name?: string; 
 };
 
+type ShippingAddress = {
+  address_id: number;
+  recipient_name: string;
+  phone_number: string;
+  street_address: string;
+  city: string;
+  postal_code: string;
+  country: string;
+  is_default_shipping: boolean;
+};
+
 type OrderDetail = {
   order_id: number;
   status: string;
@@ -20,7 +31,9 @@ type OrderDetail = {
   customer_name: string;
   customer_email: string;
   items: OrderItem[];
+  shipping_address: ShippingAddress;   
 };
+
 
 type Props = {
   orderId: number | null;
@@ -67,6 +80,18 @@ export default function AdminOrderDetail({ orderId, onClose }: Props) {
                 <p>{order.customer_name}</p>
                 <p className="text-slate-500 text-sm">{order.customer_email}</p>
               </div>
+              <div className="border rounded-lg p-4 bg-slate-50">
+                <h3 className="font-medium text-slate-700">Shipping Address</h3>
+                <p>{order.shipping_address.recipient_name}</p>
+                <p>{order.shipping_address.street_address}</p>
+                <p>
+                  {order.shipping_address.city}, {order.shipping_address.postal_code}
+                </p>
+                <p>{order.shipping_address.country}</p>
+                <p className="text-slate-500 text-sm">
+                  Phone: {order.shipping_address.phone_number}
+                </p>
+              </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -89,24 +114,26 @@ export default function AdminOrderDetail({ orderId, onClose }: Props) {
               <div>
                 <h3 className="font-medium text-slate-700 mb-2">Items</h3>
                 <table className="w-full text-sm border">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Product ID</th>
-                      <th className="px-3 py-2">Qty</th>
-                      <th className="px-3 py-2">Price</th>
-                      <th className="px-3 py-2">Subtotal</th>
+                 <thead className="bg-slate-100">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Product</th>
+                    <th className="px-3 py-2">Qty</th>
+                    <th className="px-3 py-2">Price</th>
+                    <th className="px-3 py-2">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.items.map((it, i) => (
+                    <tr key={i} className="border-t">
+                      <td className="px-3 py-2">
+                        {it.product_name} <span className="text-slate-400">#{it.product_id}</span>
+                      </td>
+                      <td className="px-3 py-2 text-center">{it.quantity}</td>
+                      <td className="px-3 py-2 text-right">${it.price.toFixed(2)}</td>
+                      <td className="px-3 py-2 text-right">${it.subtotal.toFixed(2)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {order.items.map((it, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-3 py-2">{it.product_id}</td>
-                        <td className="px-3 py-2 text-center">{it.quantity}</td>
-                        <td className="px-3 py-2 text-right">${it.price.toFixed(2)}</td>
-                        <td className="px-3 py-2 text-right">${it.subtotal.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
+                  ))}
+                </tbody>
                 </table>
               </div>
             </div>

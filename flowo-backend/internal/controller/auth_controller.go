@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 
 	"flowo-backend/config"
 	"flowo-backend/internal/middleware"
@@ -371,6 +373,38 @@ func (ac *AuthController) LoginHandler(c *gin.Context) {
 			"message": "Invalid or missing idToken in authentication response",
 		})
 		log.Error().Str("email", req.Email).Msg("idToken is missing or not a string in Firebase response")
+		return
+	}
+
+	token, err := ac.firebaseAuth.VerifyIDToken(c, idToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "invalid_token",
+			"message": "Invalid Firebase token",
+		})
+		log.Error().Err(err).Str("email", req.Email).Msg("Failed to verify Firebase ID token")
+		return
+	}
+
+	firebaseUID := token.UID
+
+	// Check local DB user
+	user, err := ac.userService.GetUserByFirebaseUID(firebaseUID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_server_error",
+			"message": "Failed to query user",
+		})
+		log.Error().Err(err).Str("firebase_uid", firebaseUID).Msg("Database error on login")
+		return
+	}
+
+	if user != nil && user.IsDeleted {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":   "account_deactivated",
+			"message": "Your account has been deactivated. Please contact support.",
+		})
+		log.Warn().Str("firebase_uid", firebaseUID).Msg("Login attempt for deactivated account")
 		return
 	}
 	sessionCookie, err := ac.firebaseAuth.SessionCookie(c, idToken, expiresIn)
