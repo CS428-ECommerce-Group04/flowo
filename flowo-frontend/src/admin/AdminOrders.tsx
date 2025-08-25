@@ -272,7 +272,7 @@ export default function AdminOrders() {
   const [debugRec, setDebugRec] = useState<DebugRecord | null>(null);
 
   async function load() {
-    const url = `${API_BASE}/admin/orders`;
+    const url = `${API_BASE}/admin/orders/`;
     const rec: DebugRecord = {
       url,
       apiBase: API_BASE,
