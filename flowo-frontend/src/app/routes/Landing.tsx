@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Button from "@/components/ui/Button";
 import Carousel from "@/components/ui/Carousel";
 import { useCart } from "@/store/cart";
@@ -61,7 +61,6 @@ const mapApiToUI = (p: ApiProduct): UIFlower => {
 
 export default function Landing() {
   const navigate = useNavigate();
-  const add = useCart((s) => s.add);
 
   // products store (shared cache)
   const products = useProductsStore((s) => s.list);
@@ -114,16 +113,88 @@ export default function Landing() {
     };
   }, [loaded, setAll]);
 
-  const handleAddToCart = (flower: UIFlower) => {
-    add({
-      id: flower.id,
-      name: flower.name,
-      price: flower.price,
-      qty: 1,
-      image: flower.image,
-      description: flower.description,
-      tags: flower.tags,
+  type AddToCartResponse = { message?: string; data?: any; error?: string };
+
+  async function addProductToCartApi(productId: number, quantity: number): Promise<AddToCartResponse> {
+    const res = await fetch(`${API_BASE}/cart/add`, {
+      method: "POST",
+      headers: { "Accept": "application/json", "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ product_id: productId, quantity }),
     });
+
+    const raw = await res.text();
+    let parsed: AddToCartResponse | undefined;
+    try { parsed = JSON.parse(raw); } catch { /* non-JSON */ }
+
+    if (!res.ok) {
+      const msg = parsed?.error || parsed?.message || `HTTP ${res.status}`;
+      const err: any = new Error(msg);
+      err.status = res.status;
+      throw err;
+    }
+
+    return { message: parsed?.message || "Product added to cart", data: parsed?.data };
+  }
+
+  // --- Cart store helpers (optimistic update) ---
+  function setCartFromApiPayload(items?: Array<{ product_id: number; quantity: number; price: number }>) {
+    if (!items) return false;
+    // Map API -> store shape (id, qty, price)
+    const mapped = items.map((it) => ({
+      id: it.product_id,
+      qty: it.quantity,
+      price: it.price,
+    }));
+    try {
+      (useCart as any).setState((s: any) => ({ ...s, items: mapped }));
+      (useCart as any).getState()?.updateCount?.();
+    } catch {}
+    return true;
+  }
+
+  function optimisticBumpCart(productId: number, qty: number, unitPrice: number) {
+    try {
+      (useCart as any).setState((s: any) => {
+        const items = Array.isArray(s.items) ? [...s.items] : [];
+        const idx = items.findIndex((i: any) => (i.id ?? i.product_id) === productId);
+        if (idx >= 0) {
+          const prev = items[idx];
+          const prevQty = prev.qty ?? prev.quantity ?? 0;
+          items[idx] = { ...prev, id: productId, qty: prevQty + qty, price: unitPrice };
+        } else {
+          items.push({ id: productId, qty, price: unitPrice });
+        }
+        return { ...s, items };
+      });
+      (useCart as any).getState()?.updateCount?.();
+    } catch {}
+  }
+
+  const handleAddToCart = async (flower: UIFlower) => {
+    const pid = Number(flower.id);
+    if (!Number.isFinite(pid)) {
+      console.error("Invalid product id for add-to-cart:", flower.id);
+      return;
+    }
+
+    try {
+      const result = await addProductToCartApi(pid, 1);
+
+      const applied = setCartFromApiPayload(result?.data?.items);
+      if (!applied) {
+        optimisticBumpCart(pid, 1, Number(flower.price) || 0);
+      }
+
+    } catch (e: any) {
+      if (e?.status === 401) {
+        // Not logged in → send them to login
+        navigate("/login");
+        return;
+      }
+      console.error("Add to cart failed:", e);
+      alert(e?.message || "Failed to add to cart");
+    }
   };
 
   return (

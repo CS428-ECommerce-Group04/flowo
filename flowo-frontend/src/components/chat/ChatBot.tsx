@@ -177,15 +177,7 @@ export default function ChatBot({ isOpen, onClose }: ChatBotProps) {
           
           if (products.length > 0) {
             const product = products[0];
-            cartStore.add({
-              id: String(product.id || product.product_id),
-              name: product.name,
-              price: product.current_price || product.base_price || 0,
-              qty: quantity,
-              image: product.image_url || '/images/placeholder.jpg',
-              description: product.description
-            });
-            
+            cartStore.add(product.id || product.product_id || 0, quantity || 1);
             response = `✅ Successfully added ${quantity} × **${product.name}** to your cart!\n\nCart now has ${cartStore.itemCount()} item(s). Total: $${cartStore.subtotal().toFixed(2)}`;
           } else {
             response = "Sorry, I couldn't find that product. Please check the product ID.";

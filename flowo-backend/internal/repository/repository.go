@@ -114,7 +114,8 @@ func (r *repository) GetAllProducts() ([]model.Product, error) {
 			  fp.base_price, fp.base_price as current_price, fp.status, fp.stock_quantity, 
 			  fp.created_at, fp.updated_at
 			  FROM FlowerProduct fp 
-			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id`
+			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id
+			  WHERE fp.is_active = TRUE`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -140,7 +141,7 @@ func (r *repository) GetProductByID(id uint) (*model.Product, error) {
 			  fp.created_at, fp.updated_at
 			  FROM FlowerProduct fp 
 			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id 
-			  WHERE fp.product_id = ?`
+			  WHERE fp.product_id = ? AND fp.is_active = TRUE`
 	row := r.db.QueryRow(query, id)
 
 	var product model.Product
@@ -177,7 +178,7 @@ func (r *repository) UpdateProduct(id uint, product *dto.ProductCreate) error {
 }
 
 func (r *repository) DeleteProduct(id uint) error {
-	query := "DELETE FROM FlowerProduct WHERE product_id = ?"
+	query := "UPDATE FlowerProduct SET is_active = FALSE WHERE product_id = ?"
 	_, err := r.db.Exec(query, id)
 	return err
 }
@@ -193,7 +194,7 @@ func (r *repository) GetProductsByFlowerType(flowerType string) ([]model.Product
 			  fp.created_at, fp.updated_at
 			  FROM FlowerProduct fp 
 			  JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id 
-			  WHERE fp.flower_type_id = ?`
+			  WHERE fp.flower_type_id = ? AND fp.is_active = TRUE`
 	rows, err := r.db.Query(query, flowerTypeID)
 	if err != nil {
 		return nil, err
@@ -249,7 +250,7 @@ func (r *repository) GetProductsByIDs(ids []int) (map[int]model.Product, error) 
 		       p.created_at, p.updated_at, f.name AS flower_type
 		FROM FlowerProduct p
 		JOIN FlowerType f ON p.flower_type_id = f.flower_type_id
-		WHERE p.product_id IN (` + placeholders + `)`
+		WHERE p.product_id IN (` + placeholders + `) AND p.is_active = TRUE`
 
 	args := make([]interface{}, len(ids))
 	for i, id := range ids {
@@ -290,7 +291,8 @@ func (r *repository) SearchProducts(query *dto.ProductSearchQuery) ([]model.Prod
 			   0 as review_count,
 			   999999 as sales_rank
 		FROM FlowerProduct fp 
-		JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id`
+		JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id
+		WHERE fp.is_active = TRUE`
 
 	var conditions []string
 	var args []interface{}
@@ -338,7 +340,7 @@ func (r *repository) SearchProducts(query *dto.ProductSearchQuery) ([]model.Prod
 	baseQuery += " ORDER BY " + orderBy
 
 	// Count total results with a simplified count query
-	countQuery := "SELECT COUNT(*) FROM FlowerProduct fp JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id"
+	countQuery := "SELECT COUNT(*) FROM FlowerProduct fp JOIN FlowerType ft ON fp.flower_type_id = ft.flower_type_id WHERE fp.is_active = TRUE"
 	if query.Occasion != "" {
 		countQuery += " JOIN ProductOccasion po ON fp.product_id = po.product_id JOIN Occasion oc ON po.occasion_id = oc.occasion_id"
 	}
@@ -428,7 +430,7 @@ func (r *repository) GetProductDetailByID(id uint) (*model.Product, error) {
 			WHERE o.status = 'Completed'
 			GROUP BY oi.product_id
 		) sales_data ON fp.product_id = sales_data.product_id
-		WHERE fp.product_id = ?
+		WHERE fp.product_id = ? AND fp.is_active = TRUE
 		GROUP BY fp.product_id, fp.name, fp.description, ft.name, fp.base_price, 
 				 fp.status, fp.stock_quantity, fp.created_at, fp.updated_at, sales_data.sales_rank`
 

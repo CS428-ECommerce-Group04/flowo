@@ -20,9 +20,14 @@ import AdminSettings from "@/admin/pages/Settings";
 import AdminMessages from "@/admin/pages/Messages";
 import AdminSupport from "@/admin/pages/Support";
 import AdminBilling from "@/admin/pages/Billing";
-import AdminReports from "@/admin/pages/Reports";
+import AdminReports from "@/admin/AdminReport";
 import AdminAnalytics from "@/admin/pages/Analytics";
 import AdminProductsTable from "@/admin/ProductCategories";
+import AdminUsers from "@/admin/AdminUsers";
+import AdminUserDetail from "@/admin/AdminUserDetail";
+import AdminOrders from "@/admin/AdminOrders";   
+import PricingRules from "@/admin/PricingRules";
+import Profile from "@/app/routes/Profile";
 export default function App() {
   return (
     <BrowserRouter>
@@ -38,6 +43,7 @@ export default function App() {
               <Header />
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/profile" element={<Profile />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
@@ -59,14 +65,19 @@ export default function App() {
           {/* admin */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
-            <Route path="products" element={<AdminProductsTable />} /> {/* NEW */}
+            <Route path="products" element={<AdminProductsTable />} /> 
+            <Route path= "orders" element= {<AdminOrders />} />
             <Route path="categories" element={<AdminProductsTable />} />
+            <Route path="pricing-rules" element={<PricingRules />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="support" element={<AdminSupport />} />
             <Route path="billing" element={<AdminBilling />} />
             <Route path="reports" element={<AdminReports />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="users/:id" element={<AdminUserDetail />} />
+            <Route path=" users/email/:email" element={<AdminUserDetail />} />
           </Route>
 
           {/* shorthand redirects */}
